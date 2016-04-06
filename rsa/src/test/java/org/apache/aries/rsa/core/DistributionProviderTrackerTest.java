@@ -79,4 +79,37 @@ public class DistributionProviderTrackerTest {
         tracker.removedService(providerRef, rsaReg);
         c.verify();
     }
+
+    @Test
+    public void testAddingWithNullValues() throws InvalidSyntaxException {
+        IMocksControl c = EasyMock.createControl();
+        DistributionProvider provider = c.createMock(DistributionProvider.class);
+
+        ServiceReference<DistributionProvider> providerRef = c.createMock(ServiceReference.class);
+        EasyMock.expect(providerRef.getProperty(RemoteConstants.REMOTE_INTENTS_SUPPORTED)).andReturn(null);
+        EasyMock.expect(providerRef.getProperty(RemoteConstants.REMOTE_CONFIGS_SUPPORTED)).andReturn(null);
+
+        BundleContext context = c.createMock(BundleContext.class);
+        String filterSt = String.format("(objectClass=%s)", DistributionProvider.class.getName());
+        Filter filter = FrameworkUtil.createFilter(filterSt);
+        EasyMock.expect(context.createFilter(filterSt)).andReturn(filter);
+        EasyMock.expect(context.getService(providerRef)).andReturn(provider);
+        ServiceRegistration rsaReg = c.createMock(ServiceRegistration.class);
+        EasyMock.expect(context.registerService(EasyMock.isA(String.class), EasyMock.isA(ServiceFactory.class),
+                                                EasyMock.isA(Dictionary.class)))
+            .andReturn(rsaReg).atLeastOnce();
+
+        context.addServiceListener(EasyMock.isA(ServiceListener.class), EasyMock.isA(String.class));
+        EasyMock.expectLastCall();
+
+        final BundleContext apiContext = c.createMock(BundleContext.class);
+        c.replay();
+        DistributionProviderTracker tracker = new DistributionProviderTracker(context) {
+            protected BundleContext getAPIContext() {
+                return apiContext;
+            };
+        };
+        tracker.addingService(providerRef);
+        c.verify();
+    }
 }

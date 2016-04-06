@@ -28,6 +28,7 @@ import org.osgi.framework.BundleException;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
@@ -51,8 +52,13 @@ public class DistributionProviderTracker extends ServiceTracker<DistributionProv
                                                                     provider);
         RemoteServiceadminFactory rsaf = new RemoteServiceadminFactory(rsaCore);
         Dictionary<String, Object> props = new Hashtable<String, Object>();
-        props.put("remote.intents.supported", reference.getProperty("remote.intents.supported"));
-        props.put("remote.configs.supported", reference.getProperty("remote.configs.supported"));
+        Object value = reference.getProperty(RemoteConstants.REMOTE_INTENTS_SUPPORTED);
+        value = value == null ? "" : value;
+        props.put(RemoteConstants.REMOTE_INTENTS_SUPPORTED, value);
+
+        value = reference.getProperty(RemoteConstants.REMOTE_CONFIGS_SUPPORTED);
+        value = value == null ? "" : value;
+        props.put(RemoteConstants.REMOTE_CONFIGS_SUPPORTED, value);
         LOG.info("Registering RemoteServiceAdmin for provider " + provider.getClass().getName());
         return context.registerService(RemoteServiceAdmin.class.getName(), rsaf, props);
     }
