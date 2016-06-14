@@ -34,5 +34,6 @@
     <modules>
       <module>local</module>
       <module>zookeeper</module>
+      <module>config</module>
     </modules>
 </project>
