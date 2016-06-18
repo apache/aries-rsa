@@ -28,6 +28,8 @@ import java.util.Hashtable;
 
 @SuppressWarnings("deprecation")
 public class Activator implements BundleActivator {
+    private static final String FACTORY_PID = "org.apache.aries.rsa.discovery.config";
+
     private ServiceTracker<EndpointListener, EndpointListener> listenerTracker;
     private ConfigDiscovery configDiscovery;
     private ServiceRegistration<ManagedServiceFactory> registration;
@@ -37,7 +39,7 @@ public class Activator implements BundleActivator {
         listenerTracker = new EPListenerTracker(context, configDiscovery);
         listenerTracker.open();
         registration = context.registerService(ManagedServiceFactory.class, configDiscovery, new Hashtable<String, Object>() {{
-            put(Constants.SERVICE_PID, "org.apache.aries.rsa.discovery.config");
+            put(Constants.SERVICE_PID, FACTORY_PID);
         }});
     }
 

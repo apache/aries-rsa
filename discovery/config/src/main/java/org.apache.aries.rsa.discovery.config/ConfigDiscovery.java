@@ -107,23 +107,9 @@ class ConfigDiscovery implements ManagedServiceFactory {
     }
 
     private void addDeclaredRemoteService(String pid, Dictionary config) {
-        EndpointDescription endpoint = new EndpointDescription(filterProperties(toMap(config)));
+        EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(config));
         endpointDescriptions.put(endpoint, pid);
         addedEndpointDescription(endpoint);
-    }
-
-    private Map<String, ?> filterProperties(Map<String, ?> map) {
-        return map; // todo
-    }
-
-    private Map<String, ?> toMap(Dictionary config) {
-        HashMap<String, Object> map = new HashMap<>();
-        Enumeration keys = config.keys();
-        while (keys.hasMoreElements()) {
-            String key = (String) keys.nextElement();
-            map.put(key, config.get(key));
-        }
-        return map;
     }
 
     private void removeServiceDeclaredInConfig(String pid) {
