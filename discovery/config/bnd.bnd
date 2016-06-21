@@ -1,0 +1,2 @@
+Bundle-Activator: org.apache.aries.rsa.discovery.config.Activator
+Private-Package: org.apache.aries.rsa.discovery.config

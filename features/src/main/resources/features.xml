@@ -28,6 +28,11 @@
         <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.local/${project.version}</bundle>
     </feature>
 
+    <feature name="aries-rsa-discovery-config" version="${project.version}">
+        <feature>aries-rsa-core</feature>
+        <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.config/${project.version}</bundle>
+    </feature>
+
     <feature name="aries-rsa-discovery-zookeeper" version="${project.version}">
         <feature>aries-rsa-core</feature>
         <bundle>mvn:org.apache.zookeeper/zookeeper/${zookeeper.version}</bundle>
