@@ -19,20 +19,6 @@
 
 package org.apache.aries.rsa.itests.felix;
 
-import static org.ops4j.pax.exam.CoreOptions.composite;
-import static org.ops4j.pax.exam.CoreOptions.junitBundles;
-import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
-import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.CoreOptions.vmOption;
-import static org.ops4j.pax.exam.CoreOptions.when;
-import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-
-import javax.inject.Inject;
-
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.options.MavenArtifactProvisionOption;
@@ -40,6 +26,15 @@ import org.ops4j.pax.exam.options.OptionalCompositeOption;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.cm.ConfigurationAdmin;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+
+import static org.ops4j.pax.exam.CoreOptions.*;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.factoryConfiguration;
+import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 public class RsaTestBase {
     protected static final String ZK_PORT = "15201";
@@ -116,6 +111,36 @@ public class RsaTestBase {
             );
     }
 
+    protected static Option rsaCoreConfigDiscovery() {
+        return composite(junitBundles(),
+                         localRepo(),
+                         systemProperty("pax.exam.osgi.unresolved.fail").value("true"),
+                         systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("INFO"),
+                         systemProperty("aries.rsa.hostname").value("localhost"),
+                         mvn("org.apache.felix", "org.apache.felix.configadmin"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.core"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.spi"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.topology-manager"),
+                         mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.config")
+                         //CoreOptions.vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005")
+            );
+    }
+
+    protected static Option rsaCore() {
+        return composite(junitBundles(),
+                         localRepo(),
+                         systemProperty("pax.exam.osgi.unresolved.fail").value("true"),
+                         systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("INFO"),
+                         systemProperty("aries.rsa.hostname").value("localhost"),
+                         mvn("org.apache.felix", "org.apache.felix.configadmin"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.core"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.spi"),
+                         mvn("org.apache.aries.rsa", "org.apache.aries.rsa.topology-manager"),
+                         mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.local")
+                         //CoreOptions.vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005")
+            );
+    }
+
     protected static Option rsaTcp() {
         return mvn("org.apache.aries.rsa.provider", "org.apache.aries.rsa.provider.tcp");
     }
@@ -132,7 +157,18 @@ public class RsaTestBase {
             .put("zookeeper.port", ZK_PORT)
             .asOption();
     }
-    
+
+    protected static Option configTcpConfigDiscovery() {
+        return factoryConfiguration("org.apache.aries.rsa.discovery.config")
+            .put("service.imported", "true")
+            .put("service.imported.configs", "aries.tcp")
+            .put("objectClass", "org.apache.aries.rsa.examples.echotcp.api.EchoService")
+            .put("endpoint.id", "tcp://localhost:8201")
+            .put("aries.tcp.hostname", "localhost")
+            .put("aries.tcp.port", "8201")
+            .asOption();
+    }
+
     protected static Option configZKServer() {
         return newConfiguration("org.apache.aries.rsa.discovery.zookeeper.server")
             .put("clientPort", ZK_PORT).asOption();

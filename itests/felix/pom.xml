@@ -59,6 +59,11 @@
         </dependency>
         <dependency>
             <groupId>org.apache.aries.rsa.discovery</groupId>
+            <artifactId>org.apache.aries.rsa.discovery.config</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa.discovery</groupId>
             <artifactId>org.apache.aries.rsa.discovery.zookeeper</artifactId>
             <version>${project.version}</version>
         </dependency>
