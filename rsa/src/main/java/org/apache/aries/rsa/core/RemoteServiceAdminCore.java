@@ -467,7 +467,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 for (Iterator<ExportRegistration> it2 = value.iterator(); it2.hasNext();) {
                     ExportRegistration er = it2.next();
                     if (er.equals(eri)) {
-                        eventProducer.notifyRemoval(eri);
+                        eventProducer.notifyRemoval(eri.getExportReferenceAlways());
                         it2.remove();
                         if (value.isEmpty()) {
                             it.remove();

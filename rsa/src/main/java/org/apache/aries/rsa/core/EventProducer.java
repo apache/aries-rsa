@@ -64,8 +64,8 @@ public class EventProducer {
         }
     }
 
-    public void notifyRemoval(ExportRegistration er) {
-        notify(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, er.getExportReference(), null);
+    public void notifyRemoval(ExportReference er) {
+        notify(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, er, null);
     }
 
     public void notifyRemoval(ImportRegistration ir) {

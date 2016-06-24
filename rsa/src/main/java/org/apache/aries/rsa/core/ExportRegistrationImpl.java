@@ -78,6 +78,16 @@ public class ExportRegistrationImpl implements ExportRegistration {
         }
     }
 
+    /**
+     * Returns the ExportReference even if this
+     * instance is closed or has an exception.
+     *
+     * @return the export reference
+     */
+    public ExportReference getExportReferenceAlways() {
+        return exportReference;
+    }
+
     public ExportReference getExportReference() {
         if (exportReference == null) {
             throw new IllegalStateException(getException());
