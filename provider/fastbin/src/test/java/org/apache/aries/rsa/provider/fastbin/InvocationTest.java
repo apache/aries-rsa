@@ -18,6 +18,9 @@
  */
 package org.apache.aries.rsa.provider.fastbin;
 
+import static org.fusesource.hawtdispatch.Dispatch.createQueue;
+import static org.junit.Assert.*;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -42,9 +45,6 @@ import org.apache.aries.rsa.provider.fastbin.test.StringValue;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.junit.Test;
-
-import static org.fusesource.hawtdispatch.Dispatch.createQueue;
-import static org.junit.Assert.assertEquals;
 
 public class InvocationTest {
     final static long MILLIS_IN_A_NANO = TimeUnit.MILLISECONDS.toNanos(1);
@@ -102,6 +102,40 @@ public class InvocationTest {
             hello.protobuf(stringValue("Hiram Async"), future2);
             assertEquals("Hello Hiram Async!", future2.get(2, TimeUnit.SECONDS).getValue());
 
+        }
+        finally {
+            server.stop();
+            client.stop();
+        }
+    }
+
+
+    @Test
+    public void testObjectMethods() throws Exception {
+
+        DispatchQueue queue = Dispatch.createQueue();
+        HashMap<String, SerializationStrategy> map = new HashMap<String, SerializationStrategy>();
+        map.put("protobuf", new ProtobufSerializationStrategy());
+
+        ServerInvokerImpl server = new ServerInvokerImpl("tcp://localhost:0", queue, map);
+        server.start();
+
+        ClientInvokerImpl client = new ClientInvokerImpl(queue, map);
+        client.start();
+        final HelloImpl serviceImpl = new HelloImpl();
+        try {
+            server.registerService("service-id", new ServerInvoker.ServiceFactory() {
+                public Object get() {
+                    return serviceImpl;
+                }
+                public void unget() {
+                }
+            }, HelloImpl.class.getClassLoader());
+
+            InvocationHandler handler = client.getProxy(server.getConnectAddress(), "service-id", HelloImpl.class.getClassLoader(),FastBinProvider.PROTOCOL_VERSION);
+            Hello hello  = (Hello) Proxy.newProxyInstance(HelloImpl.class.getClassLoader(), new Class[] { Hello.class }, handler);
+            assertNotEquals("Hashcode should be handled by the proxy and not be a remote call",-7, hello.hashCode());
+            assertFalse("equals should be handled by the proxy and not be a remote call",hello.equals(serviceImpl));
         }
         finally {
             server.stop();
@@ -578,6 +612,11 @@ public class InvocationTest {
             return 'f';
         }
 
+        @Override
+        public int hashCode()
+        {
+            return -7;
+        }
     }
 
 

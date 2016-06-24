@@ -295,7 +295,29 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
         }
 
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return request(this, address, service, classLoader, method, args);
+            try {
+                if(method.getDeclaringClass()==Object.class) {
+                    //shortcut for equals, hashcode,...
+                    return method.invoke(this, args);
+                }
+                return request(this, address, service, classLoader, method, args);
+            }
+            catch (Throwable e) {
+                if (e instanceof ExecutionException) {
+                    ExecutionException executionException = (ExecutionException)e;
+                    e = executionException.getCause();
+                }
+                if (e instanceof RuntimeException) {
+                    RuntimeException runtimeException = (RuntimeException)e;
+                    throw runtimeException;
+                }
+                Class< ? >[] exceptionTypes = method.getExceptionTypes();
+                for (Class< ? > exceptionType : exceptionTypes) {
+                    if(exceptionType.isAssignableFrom(e.getClass()))
+                        throw e;
+                }
+                throw new ServiceException(e.getMessage(), e);
+            }
         }
 
     }
