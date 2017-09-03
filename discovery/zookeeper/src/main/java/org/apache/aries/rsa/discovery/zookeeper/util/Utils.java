@@ -30,6 +30,10 @@ public final class Utils {
     }
 
     public static String getZooKeeperPath(String name) {
+        if (name != null && name.startsWith(".")) {
+            name = name.substring(1);
+        }
+
         return name == null || name.isEmpty() ? PATH_PREFIX : PATH_PREFIX + '/' + name.replace('.', '/');
     }
 
