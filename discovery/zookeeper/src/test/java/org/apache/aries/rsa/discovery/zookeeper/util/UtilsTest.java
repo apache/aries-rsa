@@ -28,6 +28,9 @@ public class UtilsTest extends TestCase {
         assertEquals(Utils.PATH_PREFIX + '/' + "org/example/Test",
             Utils.getZooKeeperPath("org.example.Test"));
 
+        assertEquals(Utils.PATH_PREFIX + '/' + "camelBlueprint/componentResolver/properties",
+                Utils.getZooKeeperPath(".camelBlueprint.componentResolver.properties"));
+
         // used for the recursive discovery
         assertEquals(Utils.PATH_PREFIX, Utils.getZooKeeperPath(null));
         assertEquals(Utils.PATH_PREFIX, Utils.getZooKeeperPath(""));
