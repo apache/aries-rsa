@@ -38,7 +38,7 @@ public class MultiMap<T> {
     public synchronized void put(String key, T value) {
         Set<T> values = map.get(key);
         if (values == null) {
-            values = new HashSet<>();
+            values = Collections.synchronizedSet(new HashSet<T>());
             map.put(key, values);
         }
         values.add(value);
@@ -67,7 +67,7 @@ public class MultiMap<T> {
         }
     }
 
-    public void clear() {
+    public synchronized void clear() {
         map.clear();
     }
 }

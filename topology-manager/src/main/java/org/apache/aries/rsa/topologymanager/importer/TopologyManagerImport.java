@@ -19,6 +19,7 @@
 package org.apache.aries.rsa.topologymanager.importer;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,7 +67,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         = new MultiMap<ImportRegistration>();
     
     public TopologyManagerImport(BundleContext bc) {
-        this.rsaSet = new HashSet<RemoteServiceAdmin>();
+        this.rsaSet = Collections.synchronizedSet(new HashSet<RemoteServiceAdmin>());
         bctx = bc;
         execService = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
     }
@@ -88,15 +89,19 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     private void closeAllImports() {
         importPossibilities.clear();
-        for (String filter : importedServices.keySet()) {
-            unImportForGoneEndpoints(filter);
+        synchronized (importedServices) {
+            for (String filter : importedServices.keySet()) {
+                unImportForGoneEndpoints(filter);
+            }
         }
     }
 
     public void add(RemoteServiceAdmin rsa) {
         rsaSet.add(rsa);
-        for (String filter : importPossibilities.keySet()) {
-            triggerSyncronizeImports(filter);
+        synchronized (importPossibilities) {
+            for (String filter : importPossibilities.keySet()) {
+                triggerSyncronizeImports(filter);
+            }
         }
     }
     
@@ -134,23 +139,28 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     private void importServices(String filter) {
         Set<ImportRegistration> importRegistrations = importedServices.get(filter);
-        for (EndpointDescription endpoint : importPossibilities.get(filter)) {
-            // TODO but optional: if the service is already imported and the endpoint is still
-            // in the list of possible imports check if a "better" endpoint is now in the list
-            if (!alreadyImported(endpoint, importRegistrations)) {
-                ImportRegistration ir = importService(endpoint);
-                if (ir != null) {
-                    // import was successful
-                    importedServices.put(filter, ir);
+        Set<EndpointDescription> endpoints = importPossibilities.get(filter);
+        synchronized (endpoints) {
+            for (EndpointDescription endpoint : endpoints) {
+                // TODO but optional: if the service is already imported and the endpoint is still
+                // in the list of possible imports check if a "better" endpoint is now in the list
+                if (!alreadyImported(endpoint, importRegistrations)) {
+                    ImportRegistration ir = importService(endpoint);
+                    if (ir != null) {
+                        // import was successful
+                        importedServices.put(filter, ir);
+                    }
                 }
             }
         }
     }
 
     private boolean alreadyImported(EndpointDescription endpoint, Set<ImportRegistration> importRegistrations) {
-        for (ImportRegistration ir : importRegistrations) {
-            if (endpoint.equals(ir.getImportReference().getImportedEndpoint())) {
-                return true;
+        synchronized (importRegistrations) {
+            for (ImportRegistration ir : importRegistrations) {
+                if (endpoint.equals(ir.getImportReference().getImportedEndpoint())) {
+                    return true;
+                }
             }
         }
         return false;
@@ -163,14 +173,16 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
      * @return import registration of the first successful import
      */
     private ImportRegistration importService(EndpointDescription endpoint) {
-        for (RemoteServiceAdmin rsa : rsaSet) {
-            ImportRegistration ir = rsa.importService(endpoint);
-            if (ir != null) {
-                if (ir.getException() == null) {
-                    LOG.debug("Service import was successful {}", ir);
-                    return ir;
-                } else {
-                    LOG.info("Error importing service " + endpoint, ir.getException());
+        synchronized (rsaSet) {
+            for (RemoteServiceAdmin rsa : rsaSet) {
+                ImportRegistration ir = rsa.importService(endpoint);
+                if (ir != null) {
+                    if (ir.getException() == null) {
+                        LOG.debug("Service import was successful {}", ir);
+                        return ir;
+                    } else {
+                        LOG.info("Error importing service " + endpoint, ir.getException());
+                    }
                 }
             }
         }
@@ -180,10 +192,12 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     private void unImportForGoneEndpoints(String filter) {
         Set<ImportRegistration> importRegistrations = new HashSet<>(importedServices.get(filter));
         Set<EndpointDescription> endpoints = importPossibilities.get(filter);
-        for (ImportRegistration ir : importRegistrations) {
-            EndpointDescription endpoint = ir.getImportReference().getImportedEndpoint();
-            if (!endpoints.contains(endpoint)) {
-                unImport(ir.getImportReference());
+        synchronized (importRegistrations) {
+            for (ImportRegistration ir : importRegistrations) {
+                EndpointDescription endpoint = ir.getImportReference().getImportedEndpoint();
+                if (!endpoints.contains(endpoint)) {
+                    unImport(ir.getImportReference());
+                }
             }
         }
     }
@@ -192,9 +206,12 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         List<ImportRegistration> removed = new ArrayList<ImportRegistration>();
         HashSet<String> imported = new HashSet<>(importedServices.keySet());
         for (String key : imported) {
-            for (ImportRegistration ir : importedServices.get(key)) {
-                if (ir.getImportReference().equals(ref)) {
-                    removed.add(ir);
+            Set<ImportRegistration> importRegistrations = importedServices.get(key);
+            synchronized (importRegistrations) {
+                for (ImportRegistration ir : importRegistrations) {
+                    if (ir.getImportReference().equals(ref)) {
+                        removed.add(ir);
+                    }
                 }
             }
         }
