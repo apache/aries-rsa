@@ -46,7 +46,6 @@ public class BaseActivator implements BundleActivator, Runnable {
 
     protected ExecutorService executor = new ThreadPoolExecutor(0, 1, 0L, TimeUnit.MILLISECONDS,
         new LinkedBlockingQueue<>());
-    private AtomicBoolean scheduled = new AtomicBoolean();
 
     private long schedulerStopTimeout = TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS);
 
@@ -65,28 +64,26 @@ public class BaseActivator implements BundleActivator, Runnable {
     @Override
     public void start(BundleContext context) throws Exception {
         bundleContext = context;
-        scheduled.set(true);
-        doOpen();
-        scheduled.set(false);
+        synchronized (this) {
+            doOpen();
+        }
         // if it's a managed service we'll get a configuration update
-        // that will start it, otherwise we start it here manually
+        // that will start it, otherwise we do it here manually
         if (managedServiceRegistration == null) {
-            try {
-                doStart();
-            } catch (Exception e) {
-                logger.warn("Error starting activator", e);
-                doStop();
-            }
+            reconfigure();
         }
     }
 
     @Override
     public void stop(BundleContext context) throws Exception {
-        scheduled.set(true);
-        doClose();
+        synchronized (this) {
+            doClose();
+        }
         executor.shutdown();
         executor.awaitTermination(schedulerStopTimeout, TimeUnit.MILLISECONDS);
-        doStop();
+        synchronized (this) {
+            doStop();
+        }
     }
 
     protected void doOpen() throws Exception {
@@ -218,20 +215,19 @@ public class BaseActivator implements BundleActivator, Runnable {
     }
 
     protected void reconfigure() {
-        if (scheduled.compareAndSet(false, true)) {
-            executor.submit(this);
-        }
+        executor.submit(this);
     }
 
     @Override
     public void run() {
-        scheduled.set(false);
-        doStop();
-        try {
-            doStart();
-        } catch (Exception e) {
-            logger.warn("Error starting activator", e);
+        synchronized (this) {
             doStop();
+            try {
+                doStart();
+            } catch (Throwable t) {
+                logger.warn("Error (re)starting activator", t);
+                doStop();
+            }
         }
     }
 
