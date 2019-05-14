@@ -225,6 +225,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             }
             final BundleContext serviceContext = serviceBundle.getBundleContext();
             final Object serviceO = serviceContext.getService(serviceReference);
+            if (serviceO == null) {
+                throw new IllegalStateException("service object is null");
+            }
             final Class<?>[] interfaces = getInterfaces(serviceO, interfaceNames);
             final Map<String, Object> eprops = createEndpointProps(serviceProperties, interfaces);
             
