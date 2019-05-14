@@ -70,7 +70,7 @@ public class RsaTestBase {
         }
     }
 
-    protected int getFreePort() throws IOException {
+    protected static int getFreePort() throws IOException {
         try (ServerSocket socket = new ServerSocket()) {
             socket.setReuseAddress(true); // enables quickly reopening socket on same port
             socket.bind(new InetSocketAddress(0)); // zero finds a free port
@@ -178,10 +178,14 @@ public class RsaTestBase {
             .asOption();
     }
 
-    protected static Option configFastBinPort(String port) {
+    protected static Option configFastBinPort(int port) {
         return newConfiguration("org.apache.aries.rsa.provider.fastbin") //
             .put("uri", "tcp://0.0.0.0:" + port) //
             .asOption();
+    }
+
+    protected static Option configFastBinFreePort() throws IOException {
+        return configFastBinPort(getFreePort());
     }
 
 }
