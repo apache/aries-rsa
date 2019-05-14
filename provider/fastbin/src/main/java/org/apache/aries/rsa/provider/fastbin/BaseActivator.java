@@ -68,6 +68,8 @@ public class BaseActivator implements BundleActivator, Runnable {
         scheduled.set(true);
         doOpen();
         scheduled.set(false);
+        // if it's a managed service we'll get a configuration update
+        // that will start it, otherwise we start it here manually
         if (managedServiceRegistration == null) {
             try {
                 doStart();
@@ -75,8 +77,6 @@ public class BaseActivator implements BundleActivator, Runnable {
                 logger.warn("Error starting activator", e);
                 doStop();
             }
-        } else {
-            reconfigure();
         }
     }
 
