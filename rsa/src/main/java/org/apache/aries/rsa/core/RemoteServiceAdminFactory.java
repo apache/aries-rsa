@@ -46,6 +46,6 @@ public class RemoteServiceAdminFactory implements ServiceFactory<RemoteServiceAd
                                           RemoteServiceAdmin serviceObject) {
         LOG.debug("RemoteServiceAdmin ServiceInstance removed for Bundle {}", b.getSymbolicName());
         instances--;
-        ((RemoteServiceAdminInstance)serviceObject).close(instances == 0);
+        ((RemoteServiceAdminInstance)serviceObject).close(b, instances == 0);
     }
 }

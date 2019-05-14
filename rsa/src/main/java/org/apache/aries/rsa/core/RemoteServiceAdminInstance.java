@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
@@ -78,9 +79,9 @@ public class RemoteServiceAdminInstance implements RemoteServiceAdmin {
         });
     }
 
-    public void close(boolean closeAll) {
+    public void close(Bundle bundle, boolean closeAll) {
         closed = true;
-        rsaCore.removeExportRegistrations(bctx.getBundle());
+        rsaCore.removeExportRegistrations(bundle);
         if (closeAll) {
             rsaCore.close();
         }
