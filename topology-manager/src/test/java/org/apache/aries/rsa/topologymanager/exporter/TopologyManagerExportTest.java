@@ -108,7 +108,7 @@ public class TopologyManagerExportTest {
 
     @Test
     public void testExportExistingMultipleInterfaces() throws Exception {
-        List<String> exportedInterfaces = Arrays.asList("a.b.C","foo.Bar");
+        List<String> exportedInterfaces = Arrays.asList("a.b.C", "foo.Bar");
         final ServiceReference sref = createUserService(exportedInterfaces);
         expectServiceExported(sref, createEndpoint());
 

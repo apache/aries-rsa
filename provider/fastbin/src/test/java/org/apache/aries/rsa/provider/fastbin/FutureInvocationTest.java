@@ -95,7 +95,7 @@ public class FutureInvocationTest
 
     @Test
     public void testInvokeCompletableFuture() throws Exception {
-        assertEquals("Hello",testService.helloAsync().get(5, TimeUnit.SECONDS));
+        assertEquals("Hello", testService.helloAsync().get(5, TimeUnit.SECONDS));
     }
 
     @Test
@@ -112,7 +112,7 @@ public class FutureInvocationTest
         assertEquals(threadCount, results.size());
         for (Future<String> future : results)
         {
-            assertEquals("Hello",future.get());
+            assertEquals("Hello", future.get());
         }
     }
 
@@ -120,7 +120,7 @@ public class FutureInvocationTest
 
     @Test
     public void testInvokeFuture() throws Exception {
-        assertEquals("Hello",testService.helloAsyncStandardFuture().get(500, TimeUnit.SECONDS));
+        assertEquals("Hello", testService.helloAsyncStandardFuture().get(500, TimeUnit.SECONDS));
     }
 
     @Test
@@ -138,7 +138,7 @@ public class FutureInvocationTest
         assertEquals(threadCount, results.size());
         for (Future<String> future : results)
         {
-            assertEquals("Hello",future.get());
+            assertEquals("Hello", future.get());
         }
     }
 

@@ -49,7 +49,7 @@ public class Activator extends BaseActivator implements ManagedService {
     protected void doStart() throws Exception {
         INSTANCE = this;
         String uri = getString("uri", "tcp://0.0.0.0:2543");
-        LOG.info("Binding Fastbin Server to {}",uri);
+        LOG.info("Binding Fastbin Server to {}", uri);
         String exportedAddress = getString("exportedAddress", null);
         if (exportedAddress == null) {
             exportedAddress = UuidGenerator.getHostName();

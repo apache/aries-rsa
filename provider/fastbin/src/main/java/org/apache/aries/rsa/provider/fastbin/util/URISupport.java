@@ -261,12 +261,12 @@ public class URISupport {
         return new URI(stripPrefix(uri.getSchemeSpecificPart().trim(), "//"));
     }
 
-    public static String createQueryString(Map<String,String> options) throws URISyntaxException {
+    public static String createQueryString(Map<String, String> options) throws URISyntaxException {
         try {
             if (options.size() > 0) {
                 StringBuilder rc = new StringBuilder();
                 boolean first = true;
-                for (Map.Entry<String,String> entry : options.entrySet()) {
+                for (Map.Entry<String, String> entry : options.entrySet()) {
                     if (first) {
                         first = false;
                     } else {

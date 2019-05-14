@@ -36,7 +36,7 @@ public class Chunk implements Serializable {
     private boolean last;
 
     public Chunk(byte[] data, int chunkNumber) {
-        this(data,chunkNumber,false);
+        this(data, chunkNumber, false);
     }
 
     public Chunk(byte[] data, int chunkNumber, boolean last) {

@@ -71,7 +71,7 @@ public class OutputStreamProxyTest {
         assertEquals(10+charSize, out.size());
         byte[] byteArray = out.toByteArray();
         for (int i = 0; i < byteArray.length; i++) {
-            assertEquals('x',byteArray[i]);
+            assertEquals('x', byteArray[i]);
         }
     }
 

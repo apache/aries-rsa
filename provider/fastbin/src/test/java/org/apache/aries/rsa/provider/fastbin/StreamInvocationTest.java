@@ -97,7 +97,7 @@ public class StreamInvocationTest {
 
     @Test
     public void testToString() throws IOException {
-        assertEquals("Test",testService.toString(new ByteArrayInputStream("Test".getBytes())));
+        assertEquals("Test", testService.toString(new ByteArrayInputStream("Test".getBytes())));
 
     }
 
@@ -109,7 +109,7 @@ public class StreamInvocationTest {
         System.out.println("Transfered 1MB of data in "+(System.currentTimeMillis()-time)+"ms");
         assertEquals(1000000, result.length());
         for(int i=0;i<result.length();i++) {
-            assertEquals('a',result.charAt(i));
+            assertEquals('a', result.charAt(i));
         }
 
     }
@@ -117,7 +117,7 @@ public class StreamInvocationTest {
 
     @Test
     public void testToStream() throws IOException {
-        assertEquals("Test",new BufferedReader(new InputStreamReader(testService.toStream("Test"))).readLine());
+        assertEquals("Test", new BufferedReader(new InputStreamReader(testService.toStream("Test"))).readLine());
 
     }
 
@@ -131,7 +131,7 @@ public class StreamInvocationTest {
         System.out.println("Transfered 1MB of data in "+(System.currentTimeMillis()-time)+"ms");
         assertEquals(1000000, result.length());
         for(int i=0;i<result.length();i++) {
-            assertEquals('a',result.charAt(i));
+            assertEquals('a', result.charAt(i));
         }
 
     }
@@ -141,7 +141,7 @@ public class StreamInvocationTest {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         testService.intoStream(result, "Test");
         Thread.sleep(100);
-        assertEquals("Test",new String(result.toByteArray()));
+        assertEquals("Test", new String(result.toByteArray()));
 
     }
 
@@ -151,7 +151,7 @@ public class StreamInvocationTest {
         MessageDigest digester = MessageDigest.getInstance("MD5");
         byte[] digest = digester.digest(testString.getBytes());
         Future<byte[]> future = testService.digest(new ByteArrayInputStream(testString.getBytes()));
-        assertArrayEquals(digest,future.get());
+        assertArrayEquals(digest, future.get());
 
     }
 

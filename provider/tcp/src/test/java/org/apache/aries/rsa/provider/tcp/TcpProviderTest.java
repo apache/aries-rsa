@@ -172,7 +172,7 @@ public class TcpProviderTest {
             public boolean test(String x) {
                 return "Finished".equals(x);
             }
-        }).then(new Success<String,Object>() {
+        }).then(new Success<String, Object>() {
             @Override
             public Promise<Object> call(Promise<String> x)
                     throws Exception {

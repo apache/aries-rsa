@@ -168,7 +168,7 @@ public class RemoteServiceAdminCoreTest {
 
     @Test
     public void testImportWithMultipleInterfaces() {
-        expect(apiContext.registerService(EasyMock.aryEq(new String[]{"es.schaaf.my.class","java.lang.Runnable"}), anyObject(), (Dictionary<String, ? >)anyObject())).andReturn(null);
+        expect(apiContext.registerService(EasyMock.aryEq(new String[]{"es.schaaf.my.class", "java.lang.Runnable"}), anyObject(), (Dictionary<String, ? >)anyObject())).andReturn(null);
 
         c.replay();
 
@@ -197,7 +197,7 @@ public class RemoteServiceAdminCoreTest {
             .getImportedEndpoint());
 
         EndpointDescription importedEndpoint = ireg.getImportReference().getImportedEndpoint();
-        assertEquals(2,importedEndpoint.getInterfaces().size());
+        assertEquals(2, importedEndpoint.getInterfaces().size());
 
         c.verify();
     }

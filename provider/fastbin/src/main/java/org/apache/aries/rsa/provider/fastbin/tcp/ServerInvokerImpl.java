@@ -136,9 +136,9 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
         private Class<?> decodeClass(String s) throws ClassNotFoundException {
             if( s.startsWith("[")) {
                 Class<?> nested = decodeClass(s.substring(1));
-                return Array.newInstance(nested,0).getClass();
+                return Array.newInstance(nested, 0).getClass();
             }
-            String c = s.substring(0,1);
+            String c = s.substring(0, 1);
             if( c.equals("L") ) {
                 return loader.loadClass(s.substring(1));
             } else {
@@ -340,7 +340,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
         }
 
         private SendTask(DataByteArrayInputStream bais, long correlation, Transport transport, String errorMessage) {
-            this(new ServiceException(errorMessage), bais, null, correlation, new MethodData(new BlockingInvocationStrategy(), ObjectSerializationStrategy.INSTANCE, null),transport);
+            this(new ServiceException(errorMessage), bais, null, correlation, new MethodData(new BlockingInvocationStrategy(), ObjectSerializationStrategy.INSTANCE, null), transport);
         }
 
         public void run() {
@@ -350,7 +350,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
                 baos.writeInt(0); // make space for the size field.
                 baos.writeVarLong(correlation);
             } catch (IOException e) { // should not happen
-                LOGGER.error("Failed to write to buffer",e);
+                LOGGER.error("Failed to write to buffer", e);
                 throw new RuntimeException(e);
             }
 

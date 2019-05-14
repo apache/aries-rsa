@@ -42,7 +42,7 @@ public class TcpEndpoint implements Endpoint {
         String hostName = parser.getHostname();
         int numThreads =  parser.getNumThreads();
         tcpServer = new TCPServer(service, hostName, port, numThreads);
-        String endpointId = String.format("tcp://%s:%s",hostName, tcpServer.getPort());
+        String endpointId = String.format("tcp://%s:%s", hostName, tcpServer.getPort());
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
         effectiveProperties.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, "");
         effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList("osgi.basic", "osgi.async"));

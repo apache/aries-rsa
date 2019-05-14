@@ -95,7 +95,7 @@ public class PromiseInvocationTest
 
     @Test
     public void testInvoke() throws Exception {
-        assertEquals("Hello",testService.helloPromise().getValue());
+        assertEquals("Hello", testService.helloPromise().getValue());
     }
 
     @Test
@@ -112,7 +112,7 @@ public class PromiseInvocationTest
         assertEquals(threadCount, results.size());
         for (Future<String> future : results)
         {
-            assertEquals("Hello",future.get());
+            assertEquals("Hello", future.get());
         }
     }
 

@@ -257,7 +257,7 @@ public class TcpTransport implements Transport {
                 }
             }
         } catch (Exception e) {
-            LOG.warn("Failed to resolve local host address",e);
+            LOG.warn("Failed to resolve local host address", e);
         }
         return host;
     }

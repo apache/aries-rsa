@@ -189,9 +189,9 @@ public class InvocationTest {
 
             InvocationHandler handler = client.getProxy(server.getConnectAddress(), "service-id", HelloImpl.class.getClassLoader());
             Hello hello  = (Hello) Proxy.newProxyInstance(HelloImpl.class.getClassLoader(), new Class[] { Hello.class }, handler);
-            assertNotEquals("Hashcode should be handled by the proxy and not be a remote call",-7, hello.hashCode());
-            assertFalse("equals should be handled by the proxy and not be a remote call",hello.equals(serviceImpl));
-            assertTrue("the proxy must equal itself",hello.equals(hello));
+            assertNotEquals("Hashcode should be handled by the proxy and not be a remote call", -7, hello.hashCode());
+            assertFalse("equals should be handled by the proxy and not be a remote call", hello.equals(serviceImpl));
+            assertTrue("the proxy must equal itself", hello.equals(hello));
             assertFalse(hello.equals(null));
             assertFalse(serviceImpl.equals(hello));
         }

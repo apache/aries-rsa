@@ -54,17 +54,17 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ClientInvokerImpl.class);
 
     @SuppressWarnings("rawtypes")
-    private final static Map<Class,String> CLASS_TO_PRIMITIVE = new HashMap<>(8, 1.0F);
+    private final static Map<Class, String> CLASS_TO_PRIMITIVE = new HashMap<>(8, 1.0F);
 
     static {
-        CLASS_TO_PRIMITIVE.put(boolean.class,"Z");
-        CLASS_TO_PRIMITIVE.put(byte.class,"B");
-        CLASS_TO_PRIMITIVE.put(char.class,"C");
-        CLASS_TO_PRIMITIVE.put(short.class,"S");
-        CLASS_TO_PRIMITIVE.put(int.class,"I");
-        CLASS_TO_PRIMITIVE.put(long.class,"J");
-        CLASS_TO_PRIMITIVE.put(float.class,"F");
-        CLASS_TO_PRIMITIVE.put(double.class,"D");
+        CLASS_TO_PRIMITIVE.put(boolean.class, "Z");
+        CLASS_TO_PRIMITIVE.put(byte.class, "B");
+        CLASS_TO_PRIMITIVE.put(char.class, "C");
+        CLASS_TO_PRIMITIVE.put(short.class, "S");
+        CLASS_TO_PRIMITIVE.put(int.class, "I");
+        CLASS_TO_PRIMITIVE.put(long.class, "J");
+        CLASS_TO_PRIMITIVE.put(float.class, "F");
+        CLASS_TO_PRIMITIVE.put(double.class, "D");
     }
 
     protected final AtomicLong correlationGenerator = new AtomicLong();
