@@ -35,7 +35,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <baseline>1.9.0</baseline>
         <baseline.skip>true</baseline.skip>
-        <zookeeper.version>3.4.13</zookeeper.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
         <rsa.version>1.0.0</rsa.version>
         <slf4j.version>1.7.14</slf4j.version>
         <log4j.version>1.2.6</log4j.version>
