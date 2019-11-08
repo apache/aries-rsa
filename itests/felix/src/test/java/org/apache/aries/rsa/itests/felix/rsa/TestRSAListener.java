@@ -20,6 +20,7 @@ package org.apache.aries.rsa.itests.felix.rsa;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.ops4j.pax.exam.CoreOptions.vmOption;
 
 import java.util.concurrent.TimeoutException;
 
@@ -57,7 +58,8 @@ public class TestRSAListener extends RsaTestBase implements RemoteServiceAdminLi
          rsaCore(), //
          rsaProviderFastBin(), //
          echoTcpService(), //
-         configFastBinFreePort()
+         configFastBinFreePort(),
+                vmOption("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
         };
     }
 

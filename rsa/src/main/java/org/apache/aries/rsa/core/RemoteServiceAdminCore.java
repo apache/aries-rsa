@@ -379,7 +379,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             List<ExportReference> ers = new ArrayList<>();
             for (Collection<ExportRegistration> exportRegistrations : exportedServices.values()) {
                 for (ExportRegistration er : exportRegistrations) {
-                    if (er.getExportReference() != null) {
+                    if (er.getException() == null && er.getExportReference() != null) {
                         ers.add(new ExportReferenceImpl(er.getExportReference()));
                     }
                 }
@@ -502,7 +502,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         synchronized (exportedServices) {
             for (Collection<ExportRegistration> value : exportedServices.values()) {
                 for (ExportRegistration er : value) {
-                    if (er.getExportReference().getExportedService().equals(sref)) {
+                    if (er.getException() != null &&
+                            er.getExportReference() != null &&
+                            er.getExportReference().getExportedService().equals(sref)) {
                         regs.add(er);
                     }
                 }
@@ -530,7 +532,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 for (Iterator<ExportRegistration> it2 = value.iterator(); it2.hasNext();) {
                     ExportRegistration er = it2.next();
                     if (er.equals(eri)) {
-                        eventProducer.notifyRemoval(eri.getExportReference());
+                        if (eri.getException() == null && eri.getExportReference() != null) {
+                            eventProducer.notifyRemoval(eri.getExportReference());
+                        }
                         it2.remove();
                         if (value.isEmpty()) {
                             it.remove();
@@ -569,7 +573,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             for (Collection<ExportRegistration> regs : exportedServices.values()) {
                 if (!regs.isEmpty()) {
                     ExportRegistration exportRegistration = regs.iterator().next();
-                    if (exportRegistration.getException() == null) {
+                    if (exportRegistration.getException() == null && exportRegistration.getExportReference() != null) {
                         Bundle regBundle = exportRegistration.getExportReference().getExportedService().getBundle();
                         if (exportingBundle.equals(regBundle)) {
                             bundleRegs.addAll(regs);

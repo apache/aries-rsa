@@ -148,7 +148,7 @@ public class RsaTestBase {
     }
     
     protected static Option debug() {
-        return CoreOptions.vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005");
+        return CoreOptions.vmOption("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005");
     }
     
     protected static Option rsaDiscoveryConfig() {
