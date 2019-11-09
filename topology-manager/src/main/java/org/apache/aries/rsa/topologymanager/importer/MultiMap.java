@@ -61,7 +61,7 @@ public class MultiMap<T> {
     }
 
     public synchronized Set<String> keySet() {
-        return Collections.unmodifiableSet(map.keySet());
+        return Collections.unmodifiableSet(new HashSet<>(map.keySet()));
     }
 
     public synchronized void remove(T toRemove) {
