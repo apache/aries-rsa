@@ -19,10 +19,10 @@
 package org.apache.aries.rsa.topologymanager.importer;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.Map;;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Minimal implementation of a synchronized map
@@ -32,7 +32,7 @@ public class MultiMap<T> {
     private Map<String, Set<T>> map;
     
     public MultiMap() {
-        map = new ConcurrentHashMap<>();
+        map = new HashMap<>();
     }
     
     public synchronized void put(String key, T value) {
@@ -45,7 +45,11 @@ public class MultiMap<T> {
     }
     
     public synchronized Set<T> get(String key) {
-        return map.getOrDefault(key, Collections.<T>emptySet());
+        if (map.containsKey(key)) {
+            return Collections.unmodifiableSet(new HashSet<>(map.get(key)));
+        } else {
+            return Collections.<T>emptySet();
+        }
     }
 
     public synchronized void remove(String key, T value) {
@@ -57,12 +61,11 @@ public class MultiMap<T> {
     }
 
     public synchronized Set<String> keySet() {
-        return map.keySet();
+        return Collections.unmodifiableSet(map.keySet());
     }
 
-    public void remove(T toRemove) {
-        Set<String> keys = new HashSet<>(map.keySet());
-        for (String key : keys) {
+    public synchronized void remove(T toRemove) {
+        for (String key : map.keySet()) {
             remove(key, toRemove);
         }
     }

@@ -176,7 +176,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     }
 
     private void unImportForGoneEndpoints(String filter) {
-        Set<ImportRegistration> importRegistrations = new HashSet<>(importedServices.get(filter));
+        Set<ImportRegistration> importRegistrations = importedServices.get(filter);
         Set<EndpointDescription> endpoints = importPossibilities.get(filter);
         for (ImportRegistration ir : importRegistrations) {
             EndpointDescription endpoint = ir.getImportReference().getImportedEndpoint();
