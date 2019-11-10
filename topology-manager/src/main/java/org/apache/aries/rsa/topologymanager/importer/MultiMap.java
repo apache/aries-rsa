@@ -65,12 +65,14 @@ public class MultiMap<T> {
     }
 
     public synchronized void remove(T toRemove) {
-        for (String key : map.keySet()) {
+        // Use copy of keySet, as subsequent remove may modify the keySet itself
+        Set<String> keys = new HashSet<>(map.keySet());
+        for (String key : keys) {
             remove(key, toRemove);
         }
     }
 
-    public void clear() {
+    public synchronized void clear() {
         map.clear();
     }
 }
