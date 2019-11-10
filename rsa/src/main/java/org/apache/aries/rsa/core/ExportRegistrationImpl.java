@@ -78,8 +78,8 @@ public class ExportRegistrationImpl implements ExportRegistration {
     }
 
     // create a new (parent) instance which failed to be exported with the given exception
-    public ExportRegistrationImpl(Throwable exception, CloseHandler closeHandler, EventProducer sender) {
-        this(null, closeHandler, sender, null, null, exception);
+    public ExportRegistrationImpl(Throwable exception, ServiceReference sref, CloseHandler closeHandler, EventProducer sender) {
+        this(null, closeHandler, sender, new ExportReferenceImpl(sref, null), null, exception);
     }
 
     private void ensureParent() {

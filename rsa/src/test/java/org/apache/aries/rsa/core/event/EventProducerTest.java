@@ -94,11 +94,12 @@ public class EventProducerTest {
 
     @Test
     public void testPublishErrorNotification() throws Exception {
+        final ServiceReference sref = c.createMock(ServiceReference.class);
         c.replay();
 
         EventProducer eventProducer = new EventProducer(bc);
         final Exception exportException = new Exception();
-        ExportRegistrationImpl ereg = new ExportRegistrationImpl(exportException, closeHandler, eventProducer);
+        ExportRegistrationImpl ereg = new ExportRegistrationImpl(exportException, sref, closeHandler, eventProducer);
         eventProducer.publishNotification(Arrays.<ExportRegistration>asList(ereg));
 
         RemoteServiceAdminEvent rsae = capturedEvent.getValue();

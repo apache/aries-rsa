@@ -245,7 +245,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             // TCK expects this for garbage input
             throw e;
         } catch (Exception e) {
-            return new ExportRegistrationImpl(e, closeHandler, eventProducer);
+            return new ExportRegistrationImpl(e, serviceReference, closeHandler, eventProducer);
         }
     }
 
@@ -502,7 +502,11 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         synchronized (exportedServices) {
             for (Collection<ExportRegistration> value : exportedServices.values()) {
                 for (ExportRegistration er : value) {
-                    if (er.getException() != null &&
+                    if (er instanceof ExportRegistrationImpl) {
+                        if (((ExportRegistrationImpl) er).getExportReferenceAlways().getExportedService().equals(sref)) {
+                            regs.add(er);
+                        }
+                    } else if (er.getException() != null &&
                             er.getExportReference() != null &&
                             er.getExportReference().getExportedService().equals(sref)) {
                         regs.add(er);
