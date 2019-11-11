@@ -98,7 +98,7 @@ public class Activator implements BundleActivator {
     public void doStart(final BundleContext bc, ExportPolicy policy) {
         LOG.debug("TopologyManager: start()");
         notifier = new EndpointListenerNotifier();
-        exportExecutor = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new NamedThreadFactory("TopologyManagerExporter-%d"));
+        exportExecutor = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new NamedThreadFactory(TopologyManagerExport.class.getSimpleName() + "-%d"));
         exportManager = new TopologyManagerExport(notifier, exportExecutor, policy);
         epeListenerTracker = new EndpointEventListenerTracker(bc, exportManager);
         importManager = new TopologyManagerImport(bc);
