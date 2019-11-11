@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.aries.rsa.topologymanager.NamedThreadFactory;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
@@ -66,7 +67,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     public TopologyManagerImport(BundleContext bc) {
         this.rsaSet = new HashSet<>();
         bctx = bc;
-        execService = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+        execService = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new NamedThreadFactory("TopologyManagerImporter-%d"));
     }
     
     public void start() {
@@ -80,6 +81,8 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         try {
             execService.awaitTermination(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
+            LOG.info("Interrupted while waiting for {} to terminate", execService);
+            Thread.currentThread().interrupt();
         }
         closeAllImports();
     }
@@ -147,7 +150,12 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     private boolean alreadyImported(EndpointDescription endpoint, Set<ImportRegistration> importRegistrations) {
         for (ImportRegistration ir : importRegistrations) {
-            if (endpoint.equals(ir.getImportReference().getImportedEndpoint())) {
+            final ImportReference importReference = ir.getImportReference();
+            if (importReference == null) {
+                LOG.debug("ImportRegistration {} already closed", ir);
+                continue;
+            }
+            if (endpoint.equals(importReference.getImportedEndpoint())) {
                 return true;
             }
         }
@@ -179,9 +187,18 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         Set<ImportRegistration> importRegistrations = importedServices.get(filter);
         Set<EndpointDescription> endpoints = importPossibilities.get(filter);
         for (ImportRegistration ir : importRegistrations) {
-            EndpointDescription endpoint = ir.getImportReference().getImportedEndpoint();
+            final ImportReference importReference = ir.getImportReference();
+            if (importReference == null) {
+                LOG.debug("Unable to get ImportReference for ImportRegistration {}: already closed", ir);
+                continue;
+            }
+            EndpointDescription endpoint = importReference.getImportedEndpoint();
+            if (endpoint == null) {
+                LOG.debug("Unable to get EndpointDescription of ImportReference for ImportRegistration {}: already closed", ir);
+                continue;
+            }
             if (!endpoints.contains(endpoint)) {
-                unImport(ir.getImportReference());
+                unImport(importReference);
             }
         }
     }
@@ -191,7 +208,12 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         HashSet<String> imported = new HashSet<>(importedServices.keySet());
         for (String key : imported) {
             for (ImportRegistration ir : importedServices.get(key)) {
-                if (ir.getImportReference().equals(ref)) {
+                final ImportReference importReference = ir.getImportReference();
+                if (importReference == null) {
+                    LOG.debug("Unable to get ImportReference for ImportRegistration {}: already closed", ir);
+                    continue;
+                }
+                if (importReference.equals(ref)) {
                     removed.add(ir);
                 }
             }
@@ -230,5 +252,5 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         }
         triggerSynchronizeImports(filter);
     }
-    
+
 }
