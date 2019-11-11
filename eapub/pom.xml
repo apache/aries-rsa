@@ -26,7 +26,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>org.apache.aries.rsa.eapub</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Event Publisher</name>
     <description>The Remote Service Event Admin Publisher</description>
 

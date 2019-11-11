@@ -30,8 +30,13 @@ import org.apache.aries.rsa.topologymanager.exporter.EndpointListenerNotifier;
 import org.apache.aries.rsa.topologymanager.exporter.TopologyManagerExport;
 import org.apache.aries.rsa.topologymanager.importer.TopologyManagerImport;
 import org.apache.aries.rsa.topologymanager.importer.local.EndpointListenerManager;
+import org.osgi.annotation.bundle.Capability;
+import org.osgi.annotation.bundle.Header;
+import org.osgi.annotation.bundle.Requirement;
+import org.osgi.annotation.bundle.Requirements;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.InvalidSyntaxException;
@@ -44,6 +49,22 @@ import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Capability( //
+        namespace = "osgi.remoteserviceadmin.topology", //
+        attribute = {"policy:List<String>=promiscous"}, //
+        version = "1.1.0"
+)
+@Requirements({
+@Requirement(
+        namespace = "osgi.remoteserviceadmin.discovery",
+        filter = "(&(version>=1.0)(!(version>=2.0)))"
+        ),
+@Requirement(
+        namespace = "osgi.remoteserviceadmin.distribution",
+        filter = "(&(version>=1.0)(!(version>=2.0)))"
+        )
+})
+@Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 public class Activator implements BundleActivator {
     public static final String RSA_EXPORT_POLICY_FILTER = "rsa.export.policy.filter";
     static final String DOSGI_SERVICES = "(" + RemoteConstants.SERVICE_EXPORTED_INTERFACES + "=*)";

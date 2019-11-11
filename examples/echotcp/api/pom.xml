@@ -27,5 +27,5 @@
   </parent>
   <groupId>org.apache.aries.rsa.examples.echotcp</groupId>
   <artifactId>org.apache.aries.rsa.examples.echotcp.api</artifactId>
-  <packaging>bundle</packaging>
+  <packaging>jar</packaging>
 </project>

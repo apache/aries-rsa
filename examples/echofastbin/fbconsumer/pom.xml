@@ -27,7 +27,7 @@
     </parent>
     <groupId>org.apache.aries.rsa.examples.echofastbin</groupId>
     <artifactId>org.apache.aries.rsa.examples.echofastbin.fbconsumer</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>

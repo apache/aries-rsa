@@ -27,7 +27,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
     <artifactId>org.apache.aries.rsa.spi</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin SPI</name>
 
     <properties>

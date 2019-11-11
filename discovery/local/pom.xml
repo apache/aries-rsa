@@ -30,11 +30,12 @@
     
     <groupId>org.apache.aries.rsa.discovery</groupId>
     <artifactId>org.apache.aries.rsa.discovery.local</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Discovery Local</name>
 
     <properties>
         <topDirectoryLocation>../..</topDirectoryLocation>
+        <bnd.baseline.skip>true</bnd.baseline.skip>
     </properties>
 
     <dependencies>

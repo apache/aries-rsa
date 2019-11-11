@@ -29,7 +29,7 @@
 
     <groupId>org.apache.aries.rsa.discovery</groupId>
     <artifactId>org.apache.aries.rsa.discovery.zookeeper</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Discovery Zookeeper</name>
 
     <properties>

@@ -55,7 +55,7 @@ public class TestRSAListener extends RsaTestBase implements RemoteServiceAdminLi
         return new Option[] //
         {
          rsaCore(), //
-         rsaProviderFastBin(), //
+         rsaProviderTcp(), //
          echoTcpService(), //
          configFastBinFreePort()
         };

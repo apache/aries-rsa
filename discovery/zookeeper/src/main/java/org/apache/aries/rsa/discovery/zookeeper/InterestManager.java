@@ -25,7 +25,6 @@ import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
@@ -49,23 +48,23 @@ public class InterestManager {
 
     private Set<Interest> interests = ConcurrentHashMap.newKeySet();
     
-    @Reference
-    private ZookeeperEndpointRepository repository;
-
     private ZookeeperEndpointListener listener;
     
     public InterestManager() {
     }
     
-    public InterestManager(ZookeeperEndpointRepository repository) {
-        this.repository = repository;
-    }
-    
-    @Activate
-    public void activate() {
+    // Using ARepository name to make sure it is injected first
+    @Reference
+    public void bindARepository(ZookeeperEndpointRepository repository) {
         this.listener = repository.createListener(this::onEndpointChanged);
     }
     
+    @Deactivate
+    public void deactivate() {
+        this.listener.close();
+        interests.clear();
+    }
+
     private void onEndpointChanged(EndpointEvent event, String filter) {
         interests.forEach(interest -> interest.notifyListener(event));
     }
@@ -96,12 +95,6 @@ public class InterestManager {
         interests.remove(new Interest(sref));
     }
 
-    @Deactivate
-    public void close() {
-        this.listener.close();
-        interests.clear();
-    }
-
     private void addInterest(ServiceReference<?> sref, Object epListener) {
         if (isOurOwnEndpointEventListener(sref)) {
             LOG.debug("Skipping our own EndpointEventListener");
@@ -109,7 +102,9 @@ public class InterestManager {
         }
         Interest interest = new Interest(sref, epListener);
         update(interest);
-        listener.sendExistingEndpoints(interest);
+        if (listener != null) {
+            listener.sendExistingEndpoints(interest);
+        }
     }
 
     private void update(Interest interest) {

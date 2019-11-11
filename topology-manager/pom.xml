@@ -29,7 +29,7 @@
     </parent>
     
     <artifactId>org.apache.aries.rsa.topology-manager</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Topology Manager</name>
 
     <properties>

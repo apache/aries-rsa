@@ -28,7 +28,7 @@
 
 	<groupId>org.apache.aries.rsa.provider</groupId>
 	<artifactId>org.apache.aries.rsa.provider.tcp</artifactId>
-	<packaging>bundle</packaging>
+	<packaging>jar</packaging>
 	<name>Aries Remote Service Admin provider TCP</name>
 	<description>Provider for Java Serialization over TCP</description>
 

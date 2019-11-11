@@ -30,7 +30,7 @@
 
     <groupId>org.apache.aries.rsa.discovery</groupId>
     <artifactId>org.apache.aries.rsa.discovery.command</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Discovery Gogo Commands</name>
 
     <properties>

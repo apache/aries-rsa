@@ -60,16 +60,16 @@ public class ZookeeperEndpointListener implements Closeable {
         watchRecursive(ZookeeperEndpointRepository.PATH_PREFIX);
     }
     
-    @Override
-    public void close() {
-        // TODO unregister watchers
-        endpoints.clear();
-    }
-    
     public void sendExistingEndpoints(Interest interest) {
         endpoints.values().stream()
             .map(endpoint -> new EndpointEvent(EndpointEvent.ADDED, endpoint))
             .forEach(interest::notifyListener);
+    }
+
+    @Override
+    public void close() {
+        // TODO unregister watchers
+        endpoints.clear();
     }
 
     private void process(WatchedEvent event) {

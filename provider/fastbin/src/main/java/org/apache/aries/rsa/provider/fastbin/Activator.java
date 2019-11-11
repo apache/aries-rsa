@@ -26,11 +26,20 @@ import org.apache.aries.rsa.provider.fastbin.io.ClientInvoker;
 import org.apache.aries.rsa.provider.fastbin.io.ServerInvoker;
 import org.apache.aries.rsa.provider.fastbin.util.UuidGenerator;
 import org.apache.aries.rsa.spi.DistributionProvider;
+import org.osgi.annotation.bundle.Capability;
+import org.osgi.annotation.bundle.Header;
+import org.osgi.framework.Constants;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Capability( //
+        namespace = "osgi.remoteserviceadmin.distribution", //
+        attribute = {"configs:List<String>=aries.fastbin"}, //
+        version = "1.1.0"
+)
+@Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 public class Activator extends BaseActivator implements ManagedService {
 
 	private static final Logger LOG = LoggerFactory.getLogger(Activator.class);

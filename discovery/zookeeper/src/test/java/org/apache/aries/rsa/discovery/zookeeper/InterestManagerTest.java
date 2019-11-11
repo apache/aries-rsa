@@ -25,7 +25,6 @@ import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
@@ -47,13 +46,13 @@ public class InterestManagerTest {
     @Mock
     private ZookeeperEndpointListener listener;
 
-    @InjectMocks
     private InterestManager im;
     
     @Test
     public void testEndpointListenerTrackerCustomizer() {
         when(repository.createListener(Mockito.any())).thenReturn(listener);
-        im.activate();
+        im = new InterestManager();
+        im.bindARepository(repository);
         ServiceReference<EndpointEventListener> sref = createService("(objectClass=mine)");
         ServiceReference<EndpointEventListener> sref2 = createService("(objectClass=mine)");
         // sref has no scope -> nothing should happen

@@ -15,10 +15,6 @@
 #    KIND, either express or implied.  See the License for the
 #    specific language governing permissions and limitations
 #    under the License.
-Bundle-Activator:  org.apache.aries.rsa.provider.tcp.Activator
-Provide-Capability: osgi.remoteserviceadmin.distribution;\
-	configs:List<String>="aries.tcp"; version:Version=1.1.0
 Private-Package: \
 	org.apache.aries.rsa.util,\
-	org.apache.aries.rsa.provider.tcp*,\
 	org.osgi.util.converter

@@ -94,8 +94,8 @@ public class ZookeeperDiscoveryTest {
     public void test() throws IOException, URISyntaxException, KeeperException, InterruptedException {
         ZookeeperEndpointRepository repository = new ZookeeperEndpointRepository(zk, parser);
         repository.activate();
-        InterestManager im = new InterestManager(repository);
-        im.activate();
+        InterestManager im = new InterestManager();
+        im.bindARepository(repository);
         
         String scope = "("+ Constants.OBJECTCLASS +"=*)";
         Mockito.when(sref.getProperty(Mockito.eq(EndpointEventListener.ENDPOINT_LISTENER_SCOPE))).thenReturn(scope);
@@ -119,7 +119,7 @@ public class ZookeeperDiscoveryTest {
         assertThat(events.get(1).getType(), equalTo(EndpointEvent.REMOVED));
         assertThat(events.get(0).getEndpoint(), equalTo(endpoint));
         assertThat(events.get(1).getEndpoint(), equalTo(endpoint));
-        im.close();
+        im.deactivate();
     }
     
     private EndpointDescription read(String path) throws KeeperException, InterruptedException {

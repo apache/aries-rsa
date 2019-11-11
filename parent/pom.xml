@@ -33,8 +33,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <baseline>1.9.0</baseline>
-        <baseline.skip>true</baseline.skip>
+        <bnd.version>4.2.0</bnd.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <rsa.version>1.0.0</rsa.version>
         <slf4j.version>1.7.14</slf4j.version>
@@ -237,12 +236,6 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-bundle-plugin</artifactId>
-                    <version>4.2.0</version>
-                    <extensions>true</extensions>
-                </plugin>
-                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.8.1</version>
@@ -275,29 +268,41 @@
 
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <obrRepository>NONE</obrRepository>
-                    <instructions>
-                        <Export-Package>!*</Export-Package>
-                        <_include>-bnd.bnd</_include>
-                    </instructions>
-                </configuration>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-maven-plugin</artifactId>
+                <version>${bnd.version}</version>
                 <executions>
                     <execution>
-                        <id>baseline</id>
+                        <goals>
+                            <goal>bnd-process</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-baseline-maven-plugin</artifactId>
+                <version>${bnd.version}</version>
+                <executions>
+                    <execution>
+                        <id>bnd-baseline</id>
                         <goals>
                             <goal>baseline</goal>
                         </goals>
-                        <configuration>
-                            <comparisonVersion>${baseline}</comparisonVersion>
-                            <skip>${baseline.skip}</skip>
-                            <failOnError>true</failOnError>
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <failOnMissing>false</failOnMissing>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -15,12 +15,10 @@
 #    KIND, either express or implied.  See the License for the
 #    specific language governing permissions and limitations
 #    under the License.
-Private-Package: org.apache.aries.rsa.discovery.local
 Export-Package: \
-	org.osgi.xmlns.rsa.v1_0
+	org.osgi.xmlns.rsa.v1_0;version=1.0.0
 Provide-Capability: osgi.extender;osgi.extender="osgi.remoteserviceadmin";\
 	version:Version="1.1.0";\
 	uses:="org.osgi.service.remoteserviceadmin",\
 	osgi.remoteserviceadmin.discovery;\
 	protocols:List<String>="local"; version:Version=1.1.0
--privatepackage: org.apache.aries.rsa.discovery.endpoint

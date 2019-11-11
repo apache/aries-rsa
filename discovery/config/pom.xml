@@ -28,7 +28,7 @@
 
     <groupId>org.apache.aries.rsa.discovery</groupId>
     <artifactId>org.apache.aries.rsa.discovery.config</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Aries Remote Service Admin Discovery Config</name>
 
     <properties>

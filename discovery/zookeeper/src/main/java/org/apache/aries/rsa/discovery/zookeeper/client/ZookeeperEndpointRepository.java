@@ -75,7 +75,7 @@ public class ZookeeperEndpointRepository {
         try {
             createPath(PATH_PREFIX);
         } catch (Exception e) {
-            throw new IllegalStateException("Unable to create base path");
+            throw new IllegalStateException("Unable to create base path", e);
         }
     }
     

@@ -18,9 +18,18 @@
  */
 package org.apache.aries.rsa.core;
 
+import org.osgi.annotation.bundle.Header;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 
+@org.osgi.annotation.bundle.Capability( //
+        namespace = "osgi.service", //
+        attribute = {"objectClass:List<String>=org.osgi.service.remoteserviceadmin.RemoteServiceAdmin"}, //
+        uses = { RemoteServiceAdmin.class}
+)
+@Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 public class Activator implements BundleActivator {
 
     private DistributionProviderTracker tracker;
