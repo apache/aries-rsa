@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -19,9 +19,9 @@
 package org.apache.aries.rsa.topologymanager.importer;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -47,24 +47,24 @@ import org.slf4j.LoggerFactory;
 public class TopologyManagerImport implements EndpointEventListener, RemoteServiceAdminListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TopologyManagerImport.class);
-    private ExecutorService execService;
 
+    private final ExecutorService execService;
     private final BundleContext bctx;
-    private Set<RemoteServiceAdmin> rsaSet;
-    private boolean stopped;
+    private final Set<RemoteServiceAdmin> rsaSet;
+    private volatile boolean stopped;
 
     /**
      * List of Endpoints by matched filter that were reported by the EndpointListener and can be imported
      */
-    private final MultiMap<EndpointDescription> importPossibilities = new MultiMap<>();
+    private final MultiMap<String, EndpointDescription> importPossibilities = new MultiMap<>();
 
     /**
      * List of already imported Endpoints by their matched filter
      */
-    private final MultiMap<ImportRegistration> importedServices = new MultiMap<>();
+    private final MultiMap<String, ImportRegistration> importedServices = new MultiMap<>();
     
     public TopologyManagerImport(BundleContext bc) {
-        this.rsaSet = new HashSet<>();
+        this.rsaSet = new CopyOnWriteArraySet<>();
         bctx = bc;
         execService = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
     }
@@ -188,7 +188,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     private void unImport(ImportReference ref) {
         List<ImportRegistration> removed = new ArrayList<>();
-        HashSet<String> imported = new HashSet<>(importedServices.keySet());
+        Set<String> imported = importedServices.keySet();
         for (String key : imported) {
             for (ImportRegistration ir : importedServices.get(key)) {
                 if (ir.getImportReference().equals(ref)) {

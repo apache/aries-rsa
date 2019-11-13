@@ -1,5 +1,4 @@
-package org.apache.aries.rsa.itests.felix.fastbin;
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -17,6 +16,7 @@ package org.apache.aries.rsa.itests.felix.fastbin;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.aries.rsa.itests.felix.fastbin;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.equalTo;

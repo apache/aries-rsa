@@ -1,5 +1,4 @@
-package org.apache.aries.rsa.itests.felix.discovery.config;
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -17,7 +16,7 @@ package org.apache.aries.rsa.itests.felix.discovery.config;
  * specific language governing permissions and limitations
  * under the License.
  */
-
+package org.apache.aries.rsa.itests.felix.discovery.config;
 
 import org.apache.aries.rsa.examples.echotcp.api.EchoService;
 import org.apache.aries.rsa.itests.felix.RsaTestBase;

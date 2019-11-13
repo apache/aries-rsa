@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -19,60 +19,56 @@
 package org.apache.aries.rsa.topologymanager.importer;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * Minimal implementation of a synchronized map
+ * Minimal implementation of a thread-safe map where each key can have multiple values.
+ *
+ * @param <K> the key type
+ * @param <V> the value type
  */
-public class MultiMap<T> {
+public class MultiMap<K, V> {
 
-    private Map<String, Set<T>> map;
+    private Map<K, Set<V>> map;
     
     public MultiMap() {
-        map = new HashMap<>();
+        map = new ConcurrentHashMap<>();
     }
     
-    public synchronized void put(String key, T value) {
-        Set<T> values = map.get(key);
-        if (values == null) {
-            values = new HashSet<>();
-            map.put(key, values);
-        }
-        values.add(value);
-    }
-    
-    public synchronized Set<T> get(String key) {
-        if (map.containsKey(key)) {
-            return Collections.unmodifiableSet(new HashSet<>(map.get(key)));
-        } else {
-            return Collections.<T>emptySet();
-        }
+    public void put(K key, V value) {
+        map.compute(key, (k, v) -> {
+            if (v == null) {
+                v = new CopyOnWriteArraySet<>();
+            }
+            v.add(value);
+            return v;
+        });
     }
 
-    public synchronized void remove(String key, T value) {
-        Set<T> values = map.get(key);
-        values.remove(value);
-        if (values.isEmpty()) {
-            map.remove(key);
-        }
+    public Set<V> get(K key) {
+        Set<V> values = map.get(key);
+        return values == null ? Collections.emptySet() : Collections.unmodifiableSet(values);
     }
 
-    public synchronized Set<String> keySet() {
-        return Collections.unmodifiableSet(new HashSet<>(map.keySet()));
+    public void remove(K key, V value) {
+        // reminder: returning null from the compute lambda will remove the mapping
+        map.compute(key, (k, v) -> v != null && v.remove(value) && v.isEmpty() ? null : v);
     }
 
-    public synchronized void remove(T toRemove) {
-        // Use copy of keySet, as subsequent remove may modify the keySet itself
-        Set<String> keys = new HashSet<>(map.keySet());
-        for (String key : keys) {
-            remove(key, toRemove);
+    public void remove(V value) {
+        for (K key : map.keySet()) {
+            remove(key, value);
         }
     }
 
-    public synchronized void clear() {
+    public Set<K> keySet() {
+        return map.keySet();
+    }
+
+    public void clear() {
         map.clear();
     }
 }

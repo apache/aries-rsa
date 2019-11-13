@@ -16,31 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.aries.rsa.core;
+package org.apache.aries.rsa.provider.tcp;
 
-import org.osgi.annotation.bundle.Header;
+import java.util.Dictionary;
+import java.util.Hashtable;
+
+import org.apache.aries.rsa.spi.DistributionProvider;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
+import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
-@org.osgi.annotation.bundle.Capability( //
-        namespace = "osgi.service", //
-        attribute = {"objectClass:List<String>=org.osgi.service.remoteserviceadmin.RemoteServiceAdmin"}, //
-        uses = { RemoteServiceAdmin.class}
-)
-@Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 public class Activator implements BundleActivator {
 
-    private DistributionProviderTracker tracker;
-
-    public void start(BundleContext bundlecontext) throws Exception {
-        tracker = new DistributionProviderTracker(bundlecontext);
-        tracker.open();
+    @Override
+    public void start(BundleContext context) throws Exception {
+        DistributionProvider provider = new TCPProvider();
+        Dictionary<String, Object> props = new Hashtable<>();
+        props.put(RemoteConstants.REMOTE_INTENTS_SUPPORTED, new String[]{ "osgi.basic", "osgi.async" });
+        props.put(RemoteConstants.REMOTE_CONFIGS_SUPPORTED, provider.getSupportedTypes());
+        context.registerService(DistributionProvider.class, provider, props);
     }
 
+    @Override
     public void stop(BundleContext context) throws Exception {
-        tracker.close();
+        // unregister happens automatically
     }
 
 }

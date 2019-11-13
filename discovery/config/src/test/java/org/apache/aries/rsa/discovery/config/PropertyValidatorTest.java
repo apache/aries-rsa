@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.aries.rsa.discovery.config;
 
 import org.hamcrest.core.Is;
