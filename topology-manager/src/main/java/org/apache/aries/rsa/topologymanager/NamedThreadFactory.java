@@ -33,13 +33,10 @@ public class NamedThreadFactory implements ThreadFactory {
     private final String namePattern;
 
     /**
-     * @param namePattern Name pattern to use when constructing Threads
+     * @param context Class name will be used to name threads created by this ThreadFactory.
      */
-    public NamedThreadFactory(String namePattern) {
-        if (namePattern == null || !namePattern.contains("%d")) {
-            throw new IllegalArgumentException("Name pattern should not be null and must contain %d placeholder.");
-        }
-        this.namePattern = namePattern;
+    public NamedThreadFactory(Class<?> context) {
+        this.namePattern = context.getSimpleName() + "-%d";
     }
 
     @Override
