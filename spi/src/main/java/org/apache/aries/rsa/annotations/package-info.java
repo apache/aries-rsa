@@ -17,10 +17,6 @@
  * under the License.
  */
 
-@org.apache.aries.rsa.annotations.RSADiscoveryProvider(protocols = "local")
-@org.osgi.annotation.bundle.Capability(
-        namespace = "osgi.extender",
-        attribute = "osgi.extender='osgi.remoteserviceadmin'",
-        version = "1.1.0",
-        uses = org.osgi.service.remoteserviceadmin.EndpointDescription.class)
-package org.apache.aries.rsa.discovery.local;
+@org.osgi.annotation.bundle.Export
+@org.osgi.annotation.versioning.Version("1.0.0")
+package org.apache.aries.rsa.annotations;

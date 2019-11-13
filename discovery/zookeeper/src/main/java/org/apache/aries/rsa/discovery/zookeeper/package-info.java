@@ -16,9 +16,5 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-@org.osgi.annotation.bundle.Capability( //
-        namespace = "osgi.remoteserviceadmin.discovery", //
-        attribute = {"protocols:List<String>=zookeeper"}, //
-        version = "1.1.0"
-)
+@org.apache.aries.rsa.annotations.RSADiscoveryProvider(protocols = "zookeeper")
 package org.apache.aries.rsa.discovery.zookeeper;

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.aries.rsa.annotations.RSADistributionProvider;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
@@ -39,11 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
-@org.osgi.annotation.bundle.Capability( //
-        namespace = "osgi.remoteserviceadmin.distribution", //
-        attribute = {"protocols:List<String>=aries.tcp"}, //
-        version = "1.1.0"
-)
+@RSADistributionProvider(configs="aries.tcp")
 @Component(property = { //
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.basic,osgi.async",
         RemoteConstants.REMOTE_CONFIGS_SUPPORTED + "=" + TCPProvider.TCP_CONFIG_TYPE //
