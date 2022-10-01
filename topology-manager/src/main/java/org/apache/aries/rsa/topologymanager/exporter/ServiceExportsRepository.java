@@ -138,8 +138,8 @@ public class ServiceExportsRepository implements Closeable {
 
     public List<EndpointDescription> getAllEndpoints() {
         List<EndpointDescription> endpoints = new ArrayList<>();
-        for (ServiceReference<?> sref : exportsMap.keySet()) {
-            Collection<ExportRegistrationHolder> exports = exportsMap.get(sref);
+
+        for (Collection<ExportRegistrationHolder> exports : exportsMap.values()) {
             for (ExportRegistrationHolder reg : exports) {
                 ExportReference exportRef = reg.getRegistration().getExportReference();
                 if (exportRef != null) {
