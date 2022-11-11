@@ -18,16 +18,6 @@
  */
 package org.apache.aries.rsa.topologymanager.exporter;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
-
 import org.apache.aries.rsa.spi.ExportPolicy;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.Bundle;
@@ -42,6 +32,16 @@ import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Executor;
 
 /**
  * Manages exported endpoints of DOSGi services and notifies EndpointListeners of changes.
@@ -121,7 +121,9 @@ public class TopologyManagerExport implements ServiceListener {
     }
 
     private void remove(ServiceReference<?> sref) {
-        toBeExported.remove(sref);
+        synchronized (toBeExported) {
+            toBeExported.remove(sref);
+        }
         for (RemoteServiceAdmin rsa : endpointRepo.keySet()) {
             ServiceExportsRepository repo = endpointRepo.get(rsa);
             repo.removeService(sref);
@@ -134,8 +136,10 @@ public class TopologyManagerExport implements ServiceListener {
 
     public void add(RemoteServiceAdmin rsa) {
         endpointRepo.put(rsa,  new ServiceExportsRepository(rsa, notifier));
-        for (ServiceReference<?> serviceRef : toBeExported) {
-            exportInBackground(serviceRef);
+        synchronized (toBeExported) {
+            for (ServiceReference<?> serviceRef : toBeExported) {
+                exportInBackground(serviceRef);
+            }
         }
     }
 
@@ -156,9 +160,11 @@ public class TopologyManagerExport implements ServiceListener {
 
     private void doExport(final ServiceReference<?> sref) {
         LOG.debug("Exporting service {}", sref);
-        toBeExported.add(sref);
+        synchronized (toBeExported) {
+            toBeExported.add(sref);
+        }
         if (endpointRepo.size() == 0) {
-            LOG.error("Unable to export service from bundle {}, interfaces: {} as no RemoteServiceAdmin is available. Marked for later export.",
+            LOG.info("Unable to export service from bundle {}, interfaces: {} as no RemoteServiceAdmin is available. Marked for later export.",
                     getSymbolicName(sref.getBundle()),
                     sref.getProperty(org.osgi.framework.Constants.OBJECTCLASS));
             return;
