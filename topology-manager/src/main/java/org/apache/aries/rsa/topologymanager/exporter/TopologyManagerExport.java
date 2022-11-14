@@ -113,17 +113,15 @@ public class TopologyManagerExport implements ServiceListener {
         }
     }
 
-    private void modified(ServiceReference<?> sref) {
+    private synchronized void modified(ServiceReference<?> sref) {
         for (RemoteServiceAdmin rsa : endpointRepo.keySet()) {
             ServiceExportsRepository repo = endpointRepo.get(rsa);
             repo.modifyService(sref);
         }
     }
 
-    private void remove(ServiceReference<?> sref) {
-        synchronized (toBeExported) {
-            toBeExported.remove(sref);
-        }
+    private synchronized void remove(ServiceReference<?> sref) {
+        toBeExported.remove(sref);
         for (RemoteServiceAdmin rsa : endpointRepo.keySet()) {
             ServiceExportsRepository repo = endpointRepo.get(rsa);
             repo.removeService(sref);
@@ -134,16 +132,14 @@ public class TopologyManagerExport implements ServiceListener {
         return typeNames.get(event.getType());
     }
 
-    public void add(RemoteServiceAdmin rsa) {
+    public synchronized void add(RemoteServiceAdmin rsa) {
         endpointRepo.put(rsa,  new ServiceExportsRepository(rsa, notifier));
-        synchronized (toBeExported) {
-            for (ServiceReference<?> serviceRef : toBeExported) {
-                exportInBackground(serviceRef);
-            }
+        for (ServiceReference<?> serviceRef : toBeExported) {
+            exportInBackground(serviceRef);
         }
     }
 
-    public void remove(RemoteServiceAdmin rsa) {
+    public synchronized void remove(RemoteServiceAdmin rsa) {
         ServiceExportsRepository repo = endpointRepo.remove(rsa);
         if (repo != null) {
             repo.close();
@@ -158,11 +154,9 @@ public class TopologyManagerExport implements ServiceListener {
         });
     }
 
-    private void doExport(final ServiceReference<?> sref) {
+    private synchronized void doExport(final ServiceReference<?> sref) {
         LOG.debug("Exporting service {}", sref);
-        synchronized (toBeExported) {
-            toBeExported.add(sref);
-        }
+        toBeExported.add(sref);
         if (endpointRepo.size() == 0) {
             LOG.info("Unable to export service from bundle {}, interfaces: {} as no RemoteServiceAdmin is available. Marked for later export.",
                     getSymbolicName(sref.getBundle()),
@@ -229,7 +223,7 @@ public class TopologyManagerExport implements ServiceListener {
         return bundle == null ? null : bundle.getSymbolicName();
     }
 
-    public void addEPListener(EndpointEventListener epListener, Set<Filter> filters) {
+    public synchronized void addEPListener(EndpointEventListener epListener, Set<Filter> filters) {
         Collection<EndpointDescription> endpoints = new ArrayList<>();
         for (RemoteServiceAdmin rsa : endpointRepo.keySet()) {
             ServiceExportsRepository repo = endpointRepo.get(rsa);
