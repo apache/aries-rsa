@@ -67,14 +67,14 @@ public class ServiceExportsRepository implements Closeable {
             return registration;
         }
 
-        void close() {
+        synchronized void close() {
             if (reference != null) {
                 notifier.sendEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
                 registration.close();
             }
         }
 
-        public void update(ServiceReference<?> sref) {
+        synchronized public void update(ServiceReference<?> sref) {
             EndpointDescription updatedEndpoint = registration.update(getServiceProps(sref));
             if (reference != null) {
                 this.endpoint = updatedEndpoint;
@@ -97,7 +97,7 @@ public class ServiceExportsRepository implements Closeable {
         this.notifier = notifier;
     }
 
-    public void close() {
+    public synchronized void close() {
         LOG.debug("Closing registry for RemoteServiceAdmin {}", rsa.getClass().getName());
         for (ServiceReference<?> sref : exportsMap.keySet()) {
             removeService(sref);
@@ -136,11 +136,10 @@ public class ServiceExportsRepository implements Closeable {
         }
     }
 
-    public List<EndpointDescription> getAllEndpoints() {
+    public synchronized List<EndpointDescription> getAllEndpoints() {
         List<EndpointDescription> endpoints = new ArrayList<>();
 
-        final ArrayList<Collection<ExportRegistrationHolder>> values = new ArrayList(exportsMap.values());
-        for (Collection<ExportRegistrationHolder> exports : values) {
+        for (Collection<ExportRegistrationHolder> exports : exportsMap.values()) {
             for (ExportRegistrationHolder reg : exports) {
                 ExportReference exportRef = reg.getRegistration().getExportReference();
                 if (exportRef != null) {
