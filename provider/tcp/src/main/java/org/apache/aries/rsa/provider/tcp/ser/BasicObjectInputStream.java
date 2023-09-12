@@ -24,6 +24,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.osgi.framework.Version;
 import org.slf4j.Logger;
@@ -32,7 +34,7 @@ import org.slf4j.LoggerFactory;
 public class BasicObjectInputStream extends ObjectInputStream {
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-    private ClassLoader loader;
+    private final Set<ClassLoader> loaders = new LinkedHashSet<>(); // retains insertion order
 
     public BasicObjectInputStream(InputStream in, ClassLoader loader) throws IOException {
         super(in);
@@ -42,19 +44,28 @@ public class BasicObjectInputStream extends ObjectInputStream {
                 return null;
             }
         });
-        this.loader = loader;
+        loaders.add(loader); // the original classloader goes first
     }
 
     @Override
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-        try {
-            String className = desc.getName();
-            // Must use Class.forName instead of loader.loadClass to handle cases like array of user classes
-            return Class.forName(className, false, loader);
-        } catch (ClassNotFoundException e) {
-            log.debug("Error loading class using classloader of user bundle. Trying our own ClassLoader now", e);
-            return super.resolveClass(desc);
+        String className = desc.getName();
+        ClassNotFoundException exception = null;
+        for (ClassLoader loader : loaders) {
+            try {
+                // Must use Class.forName instead of loader.loadClass to handle cases like array of user classes
+                Class<?> cls = Class.forName(className, false, loader);
+                loaders.add(cls.getClassLoader()); // save transitive classloaders for other transitive classes
+                return cls;
+            } catch (ClassNotFoundException e) {
+                if (exception == null)
+                    exception = e;
+                else
+                    exception.addSuppressed(e);
+            }
         }
+        log.debug("Error loading class using classloader of user bundle. Trying our own ClassLoader now", exception);
+        return super.resolveClass(desc);
     }
 
     @Override
@@ -64,6 +75,7 @@ public class BasicObjectInputStream extends ObjectInputStream {
             return Version.parseVersion(versionMarker.getVersion());
         } else if (obj instanceof DTOMarker) {
             DTOMarker dtoMarker = (DTOMarker)obj;
+            ClassLoader loader = loaders.iterator().next(); // original provided classloader
             return dtoMarker.getDTO(loader);
         } else {
             return super.resolveObject(obj);
