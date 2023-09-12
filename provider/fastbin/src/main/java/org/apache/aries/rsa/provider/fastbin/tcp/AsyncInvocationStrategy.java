@@ -95,25 +95,25 @@ public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
     @Override
     protected void encodeRequest(SerializationStrategy serializationStrategy, ClassLoader loader, Method method, Object[] args, DataByteArrayOutputStream requestStream) throws Exception {
         Class<?>[] new_types = payloadTypes(method);
-        Object[] new_args = new Object[args.length-1];
+        Object[] new_args = new Object[args.length - 1];
         System.arraycopy(args, 0, new_args, 0, new_args.length);
         serializationStrategy.encodeRequest(loader, new_types, new_args, requestStream);
     }
 
     @Override
     protected ResponseFuture createResponse(SerializationStrategy serializationStrategy, ClassLoader loader, Method method, Object[] args) throws Exception {
-        return new AsyncResponseFuture(loader, method, (AsyncCallback) args[args.length-1], serializationStrategy, Dispatch.getCurrentQueue());
+        return new AsyncResponseFuture(loader, method, (AsyncCallback) args[args.length - 1], serializationStrategy, Dispatch.getCurrentQueue());
     }
 
     protected Class getResultType(Method method) {
         Type[] types = method.getGenericParameterTypes();
-        ParameterizedType t = (ParameterizedType) types[types.length-1];
+        ParameterizedType t = (ParameterizedType) types[types.length - 1];
         return (Class) t.getActualTypeArguments()[0];
     }
 
     private static Class<?>[] payloadTypes(Method method) {
         Class<?>[] types = method.getParameterTypes();
-        Class<?>[] new_types = new Class<?>[types.length-1];
+        Class<?>[] new_types = new Class<?>[types.length - 1];
         System.arraycopy(types, 0, new_types, 0, new_types.length);
         return new_types;
     }
@@ -125,7 +125,7 @@ public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
 
             Object[] new_args = new Object[method.getParameterTypes().length];
             serializationStrategy.decodeRequest(loader, payloadTypes(method), requestStream, new_args);
-            new_args[new_args.length-1] = new AsyncCallback<Object>() {
+            new_args[new_args.length - 1] = new AsyncCallback<Object>() {
                 public void onSuccess(Object result) {
                     helper.send(null, result);
                 }

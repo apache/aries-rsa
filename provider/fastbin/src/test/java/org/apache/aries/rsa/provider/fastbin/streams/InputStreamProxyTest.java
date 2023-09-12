@@ -42,7 +42,7 @@ public class InputStreamProxyTest {
     public void testUnsignedBytes() throws IOException {
         int length = 1024;
         ByteArrayOutputStream out = new ByteArrayOutputStream(length);
-        for(int i=0;i<length;i++) {
+        for(int i = 0; i < length; i++) {
             out.write((byte)i);
         }
         byte[] data = out.toByteArray();
@@ -73,7 +73,7 @@ public class InputStreamProxyTest {
 
     @Test
     public void testReadFullyExceedsChunkSize() throws IOException {
-        int charSize = StreamProviderImpl.CHUNK_SIZE+10;
+        int charSize = StreamProviderImpl.CHUNK_SIZE + 10;
         OwnInputStream in = fillStream('c', charSize);
         int id = streamProvider.registerStream(in);
         @SuppressWarnings("resource")
@@ -87,7 +87,7 @@ public class InputStreamProxyTest {
 
     @Test
     public void testReadFullyExceedsChunkSize2() throws IOException {
-        int charSize = StreamProviderImpl.CHUNK_SIZE*2;
+        int charSize = StreamProviderImpl.CHUNK_SIZE * 2;
         OwnInputStream in = fillStream('c', charSize);
         int id = streamProvider.registerStream(in);
         @SuppressWarnings("resource")
@@ -107,7 +107,7 @@ public class InputStreamProxyTest {
         InputStreamProxy fixture = new InputStreamProxy(id, "");
         fixture.setStreamProvider(streamProvider);
         assertEquals('c', fixture.read());
-        assertEquals(StreamProviderImpl.CHUNK_SIZE-1, fixture.available());
+        assertEquals(StreamProviderImpl.CHUNK_SIZE - 1, fixture.available());
         assertEquals('c', fixture.read());
         assertEquals('c', fixture.read());
         assertEquals('c', fixture.read());
@@ -116,9 +116,9 @@ public class InputStreamProxyTest {
         fixture.read(target);
         assertEquals("ccccc", new String(target));
 
-        target = new byte[1000000-10];
+        target = new byte[1000000 - 10];
         assertEquals(target.length, fixture.read(target));
-        assertEquals(1000000-10, new String(target).length());
+        assertEquals(1000000 - 10, new String(target).length());
         assertEquals(-1, fixture.read(target));
     }
 

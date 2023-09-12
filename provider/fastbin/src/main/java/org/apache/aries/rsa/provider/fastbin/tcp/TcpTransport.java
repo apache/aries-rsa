@@ -208,7 +208,7 @@ public class TcpTransport implements Transport {
                             channel.finishConnect();
                             readSource.setCancelHandler(null);
                             readSource.cancel();
-                            readSource=null;
+                            readSource = null;
                             socketState = new CONNECTED();
                             onConnected();
                         } catch (IOException e) {
@@ -302,14 +302,14 @@ public class TcpTransport implements Transport {
     }
 
     private void dispose() {
-        if( readSource!=null ) {
+        if( readSource != null ) {
             readSource.cancel();
-            readSource=null;
+            readSource = null;
         }
 
-        if( writeSource!=null ) {
+        if( writeSource != null ) {
             writeSource.cancel();
-            writeSource=null;
+            writeSource = null;
         }
         this.codec = null;
     }
@@ -383,7 +383,7 @@ public class TcpTransport implements Transport {
             long initial = codec.getReadCounter();
             // Only process up to 64k worth of data at a time so we can give
             // other connections a chance to process their requests.
-            while( codec.getReadCounter()-initial < 1024*64 ) {
+            while( codec.getReadCounter() - initial < 1024 * 64 ) {
                 Object command = codec.read();
                 if ( command!=null ) {
                     try {
@@ -559,7 +559,7 @@ public class TcpTransport implements Transport {
                 if( read_suspended ) {
                     read_suspended = false;
                     resumeRead();
-                    for( int i=0; i < read_resume_counter ; i++ ) {
+                    for( int i = 0; i < read_resume_counter ; i++ ) {
                         resumeRead();
                     }
                 }
@@ -824,7 +824,7 @@ public class TcpTransport implements Transport {
         private boolean disposed;
 
         public CANCELED(boolean disposed) {
-            this.disposed=disposed;
+            this.disposed = disposed;
         }
 
         void onStop(Runnable onCompleted) {

@@ -126,7 +126,7 @@ public class InputStreamProxy extends InputStream implements Serializable {
     public int available() throws IOException {
         if(buffer == null)
             return 0;
-        return buffer.length-position;
+        return buffer.length - position;
     }
 
     @Override

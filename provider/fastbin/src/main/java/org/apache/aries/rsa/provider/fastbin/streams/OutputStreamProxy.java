@@ -110,7 +110,7 @@ public class OutputStreamProxy extends OutputStream implements Serializable {
         int processed = 0;
         while(processed < len) {
             int available = buffer.length - position;
-            int chunkLength = Math.min(len-processed, available);
+            int chunkLength = Math.min(len - processed, available);
             System.arraycopy(b, off, buffer, position, chunkLength);
             position += chunkLength;
             processed += chunkLength;

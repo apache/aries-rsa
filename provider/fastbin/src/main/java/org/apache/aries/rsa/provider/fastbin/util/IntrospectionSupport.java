@@ -262,7 +262,7 @@ public final class IntrospectionSupport {
                 map.keySet().retainAll(Arrays.asList(fields));
             }
 
-            boolean useMultiLine=false;
+            boolean useMultiLine = false;
             LinkedHashMap<String, String> props = new LinkedHashMap<>();
             for (Entry<String, Object> entry : map.entrySet()) {
                 String key = entry.getKey();
@@ -270,7 +270,7 @@ public final class IntrospectionSupport {
                 if( entry.getValue() !=null ) {
                     value = entry.getValue().toString();
                     if( value!=null && ( value.indexOf('\n')>=0 || (key.length()+value.length())>70 ) ) {
-                        useMultiLine=true;
+                        useMultiLine = true;
                     }
                 }
                 props.put(key, value);
