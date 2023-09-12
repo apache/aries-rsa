@@ -57,7 +57,7 @@ public class EndpointPropertiesParser {
     }
 
     public String getHostname() {
-        String hostName =  getString(HOSTNAME_KEY, System.getProperty(HOSTNAME_KEY));
+        String hostName = getString(HOSTNAME_KEY, System.getProperty(HOSTNAME_KEY));
         if (hostName == null) {
             hostName = LocalHostUtil.getLocalIp();
         }
