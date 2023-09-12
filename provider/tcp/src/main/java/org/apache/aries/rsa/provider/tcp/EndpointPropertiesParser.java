@@ -24,10 +24,13 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 
 public class EndpointPropertiesParser {
     static final String PORT_KEY = "aries.rsa.port";
-    static final String DYNAMIC_PORT = "0";
     static final String HOSTNAME_KEY = "aries.rsa.hostname";
+    static final String THREADS_KEY = "aries.rsa.numThreads";
     static final String TIMEOUT_KEY = "osgi.basic.timeout";
-    static final String DEFAULT_TIMEOUT_MILLIS = "300000";
+
+    static final int DYNAMIC_PORT = 0;
+    static final int DEFAULT_TIMEOUT_MILLIS = 300000;
+    static final int DEFAULT_NUM_THREADS = 10;
 
     private Map<String, Object> ep;
 
@@ -43,8 +46,9 @@ public class EndpointPropertiesParser {
         return getInt(TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
     }
 
-    int getInt(String key, String defaultValue) {
-        return Integer.parseInt(getString(key, defaultValue));
+    int getInt(String key, int defaultValue) {
+        Object value = ep.get(key);
+        return value != null ? Integer.parseInt(value.toString()) : defaultValue;
     }
 
     String getString(String key, String defaultValue) {
@@ -65,6 +69,6 @@ public class EndpointPropertiesParser {
     }
 
     public int getNumThreads() {
-        return getInt("aries.rsa.numThreads", "10");
+        return getInt(THREADS_KEY, DEFAULT_NUM_THREADS);
     }
 }
