@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -98,6 +99,7 @@ public class TcpInvocationHandler implements InvocationHandler {
     }
 
     private Object handleSyncCall(Method method, Object[] args) throws Throwable {
+        Throwable error;
         Object result;
         try (
                 Socket socket = openSocket();
@@ -105,19 +107,25 @@ public class TcpInvocationHandler implements InvocationHandler {
             ) {
             socket.setSoTimeout(timeoutMillis);
             out.writeObject(method.getName());
-
             out.writeObject(args);
             out.flush();
-            result = parseResult(socket);
+
+            try (ObjectInputStream in = new BasicObjectInputStream(socket.getInputStream(), cl)) {
+                error = (Throwable) in.readObject();
+                result = readReplaceVersion(in.readObject());
+            }
+            if (error == null)
+                return result;
+            else if (error instanceof InvocationTargetException)
+                error = error.getCause(); // exception thrown from remotely invoked method (not our problem)
+            else
+                throw error; // exception thrown by provider itself
         } catch (SocketTimeoutException e) {
             throw new ServiceException("Timeout calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
         } catch (Throwable e) {
             throw new ServiceException("Error calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
         }
-        if (result instanceof Throwable) {
-            throw (Throwable)result;
-        }
-        return result;
+        throw error;
     }
 
     private Socket openSocket() throws UnknownHostException, IOException {
@@ -132,12 +140,6 @@ public class TcpInvocationHandler implements InvocationHandler {
                 }
             }
         });
-    }
-
-    private Object parseResult(Socket socket) throws Throwable {
-        try (ObjectInputStream in = new BasicObjectInputStream(socket.getInputStream(), cl)) {
-            return readReplaceVersion(in.readObject());
-        }
     }
 
     private Object readReplaceVersion(Object readObject) {

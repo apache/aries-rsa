@@ -86,36 +86,40 @@ public class TCPServer implements Closeable, Runnable {
     private void handleCall(ObjectInputStream ois, ObjectOutputStream objectOutput) throws Exception {
         String methodName = (String)ois.readObject();
         Object[] args = (Object[])ois.readObject();
-        Object result = invoker.invoke(methodName, args);
-        result = resolveAsync(result);
-        if (result instanceof InvocationTargetException) {
-            result = ((InvocationTargetException) result).getCause();
+        Throwable error = null;
+        Object result = null;
+        try {
+            result = resolveAsync(invoker.invoke(methodName, args));
+        } catch (Throwable t) {
+            error = t;
         }
+        objectOutput.writeObject(error);
         objectOutput.writeObject(result);
     }
 
     @SuppressWarnings("unchecked")
-    private Object resolveAsync(Object result) throws InterruptedException {
+    private Object resolveAsync(Object result) throws InterruptedException, Throwable {
+        // exceptions are wrapped in an InvocationTargetException just like in a sync invoke
         if (result instanceof Future) {
             Future<Object> fu = (Future<Object>) result;
             try {
                 result = fu.get();
             } catch (ExecutionException e) {
-                result = e.getCause();
+                throw new InvocationTargetException(e.getCause());
             }
         } else if (result instanceof CompletionStage) {
             CompletionStage<Object> fu = (CompletionStage<Object>) result;
             try {
                 result = fu.toCompletableFuture().get();
             } catch (ExecutionException e) {
-                result = e.getCause();
+                throw new InvocationTargetException(e.getCause());
             }
         } else if (result instanceof Promise) {
             Promise<Object> fu = (Promise<Object>) result;
             try {
                 result = fu.getValue();
             } catch (InvocationTargetException e) {
-                result = e.getCause();
+                throw e;
             }
         }
         return result;
