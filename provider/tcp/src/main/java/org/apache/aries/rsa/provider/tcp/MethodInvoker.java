@@ -42,14 +42,10 @@ public class MethodInvoker {
         this.primTypes.put(Character.TYPE, Character.class);
     }
 
-    public Object invoke(String methodName, Object[] args) {
+    public Object invoke(String methodName, Object[] args) throws Exception {
         Class<?>[] parameterTypesAr = getTypes(args);
-        try {
-            Method method = getMethod(methodName, parameterTypesAr);
-            return method.invoke(service, args);
-        } catch (Throwable e) {
-            return e;
-        }
+        Method method = getMethod(methodName, parameterTypesAr);
+        return method.invoke(service, args);
     }
 
     private Method getMethod(String methodName, Class<?>[] parameterTypesAr) {
