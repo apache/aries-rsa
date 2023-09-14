@@ -52,6 +52,7 @@ public class TCPServer implements Closeable, Runnable {
         this.invoker = new MethodInvoker(service);
         try {
             this.serverSocket = new ServerSocket(port);
+            this.serverSocket.setReuseAddress(true);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
