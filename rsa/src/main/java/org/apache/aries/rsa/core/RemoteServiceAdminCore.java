@@ -87,6 +87,12 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         this.closeHandler = new CloseHandler() {
             public void onClose(ExportRegistration exportReg) {
                 removeExportRegistration(exportReg);
+                ExportReference exportReference = exportReg.getExportReference();
+                if (exportReference != null) {
+                    ServiceReference<?> serviceReference = exportReference.getExportedService();
+                    if (serviceReference != null)
+                        getBundleContext(serviceReference).ungetService(serviceReference);
+                }
             }
 
             public void onClose(ImportRegistration importReg) {
@@ -210,6 +216,14 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         return null;
     }
 
+    private static BundleContext getBundleContext(ServiceReference<?> serviceReference) {
+        Bundle serviceBundle = serviceReference.getBundle();
+        if (serviceBundle == null) {
+            throw new IllegalStateException("Service is already unregistered");
+        }
+        return serviceBundle.getBundleContext();
+    }
+
     private ExportRegistration exportService(
             final List<String> interfaceNames,
             final ServiceReference<?> serviceReference,
@@ -218,19 +232,14 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
         try {
             checkPermission(new EndpointPermission("*", EndpointPermission.EXPORT));
-            Bundle serviceBundle = serviceReference.getBundle();
-            if (serviceBundle == null) {
-                throw new IllegalStateException("Service is already unregistered");
-            }
-            final BundleContext serviceContext = serviceBundle.getBundleContext();
-            final Object serviceO = serviceContext.getService(serviceReference);
+            final BundleContext serviceContext = getBundleContext(serviceReference);
+            final Object serviceO = serviceContext.getService(serviceReference); // unget it when export is closed
             if (serviceO == null) {
                 throw new IllegalStateException("service object is null (service was unregistered?)");
             }
             final Class<?>[] interfaces = getInterfaces(serviceO, interfaceNames);
             final Map<String, Object> eprops = createEndpointProps(serviceProperties, interfaces);
 
-            // TODO unget service when export is destroyed
             Endpoint endpoint = AccessController.doPrivileged(new PrivilegedAction<Endpoint>() {
                 public Endpoint run() {
                     return provider.exportService(serviceO, serviceContext, eprops, interfaces);
@@ -357,6 +366,10 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                     if (!copiedEndpoints.contains(epd)) {
                         copiedEndpoints.add(epd);
                         copy.add(new ExportRegistrationImpl(exportRegistrationImpl));
+                        // also increase service reference count
+                        ServiceReference<?> serviceReference = exportRegistration.getExportReference().getExportedService();
+                        BundleContext serviceContext = getBundleContext(serviceReference);
+                        serviceContext.getService(serviceReference); // unget it when export is closed
                     }
                 }
             }

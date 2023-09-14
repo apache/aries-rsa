@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.aries.rsa.core.event.EventProducer;
 import org.apache.aries.rsa.spi.DistributionProvider;
@@ -360,7 +361,20 @@ public class RemoteServiceAdminCoreTest {
             }
         }).anyTimes();
         Runnable svcObject = c.createMock(Runnable.class);
-        expect(bc.getService(sref)).andReturn(svcObject).anyTimes();
+        AtomicInteger refCount = new AtomicInteger();
+        expect(bc.getService(sref)).andAnswer(new IAnswer<Object>() {
+            @Override
+            public Object answer() throws Throwable {
+                refCount.incrementAndGet();
+                return svcObject;
+            }
+        }).anyTimes();
+        expect(bc.ungetService(sref)).andAnswer(new IAnswer<Boolean>() {
+            @Override
+            public Boolean answer() throws Throwable {
+                return refCount.decrementAndGet() > 0;
+            }
+        }).anyTimes();
         return sref;
     }
 
