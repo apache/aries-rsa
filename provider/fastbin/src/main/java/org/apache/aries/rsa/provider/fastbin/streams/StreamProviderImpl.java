@@ -30,7 +30,7 @@ public class StreamProviderImpl implements StreamProvider {
     private ConcurrentHashMap<Integer, Closeable> streams = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Integer, AtomicInteger> chunks = new ConcurrentHashMap<>();
     private AtomicInteger counter = new AtomicInteger(0);
-    protected static final int CHUNK_SIZE = 4096*16; //64k
+    protected static final int CHUNK_SIZE = 4096 * 16; //64k
     private static final byte[] EMPTY = new byte[0];
 
     ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>(){

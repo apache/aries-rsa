@@ -53,7 +53,7 @@ public class OutputStreamProxyTest {
 
     @Test
     public void testWriteMixed() throws IOException {
-        int charSize = StreamProviderImpl.CHUNK_SIZE*2;
+        int charSize = StreamProviderImpl.CHUNK_SIZE * 2;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         int id = streamProvider.registerStream(out);
         OutputStreamProxy fixture = new OutputStreamProxy(id, "");
@@ -68,7 +68,7 @@ public class OutputStreamProxyTest {
         }
         fixture.write(temp.toByteArray());
         fixture.close();
-        assertEquals(10+charSize, out.size());
+        assertEquals(10 + charSize, out.size());
         byte[] byteArray = out.toByteArray();
         for (int i = 0; i < byteArray.length; i++) {
             assertEquals('x', byteArray[i]);

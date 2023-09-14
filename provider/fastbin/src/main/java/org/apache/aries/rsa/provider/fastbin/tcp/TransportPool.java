@@ -202,7 +202,7 @@ public abstract class TransportPool implements Service {
         }
 
         public void onRefill(final Transport transport) {
-            while (pending.size() > 0 &&  !transport.full()) {
+            while (pending.size() > 0 && !transport.full()) {
                 Pair pair = pending.removeFirst();
                 boolean accepted = doOffer(transport, pair.command, pair.id);
                 assert accepted: "Should have been accepted since the transport was not full";

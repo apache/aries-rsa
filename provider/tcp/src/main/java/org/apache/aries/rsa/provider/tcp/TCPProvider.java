@@ -22,8 +22,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,33 +57,29 @@ public class TCPProvider implements DistributionProvider {
         return new String[] {TCP_CONFIG_TYPE};
     }
 
+    private static <T> Set<T> union(Collection<T>... collections) {
+        Set<T> union = new HashSet<>();
+        for (Collection<T> c : collections)
+            if (c != null)
+                union.addAll(c);
+        return union;
+    }
+
     @Override
     public Endpoint exportService(Object serviceO,
                                   BundleContext serviceContext,
                                   Map<String, Object> effectiveProperties,
                                   Class[] exportedInterfaces) {
-
         effectiveProperties.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, getSupportedTypes());
-        Set<String> intents = getCombinedIntents(effectiveProperties);
+        Set<String> intents = union(
+            StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS)),
+            StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA)));
         intents.removeAll(Arrays.asList(SUPPORTED_INTENTS));
         if (!intents.isEmpty()) {
             logger.warn("Unsupported intents found: {}. Not exporting service", intents);
             return null;
         }
         return new TcpEndpoint(serviceO, effectiveProperties);
-    }
-
-    private Set<String> getCombinedIntents(Map<String, Object> effectiveProperties) {
-        Set<String> combinedIntents = new HashSet<>();
-        List<String> intents = StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS));
-        if (intents != null) {
-            combinedIntents.addAll(intents);
-        }
-        List<String> intentsExtra = StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA));
-        if (intentsExtra != null) {
-            combinedIntents.addAll(intentsExtra);
-        }
-        return combinedIntents;
     }
 
     @Override

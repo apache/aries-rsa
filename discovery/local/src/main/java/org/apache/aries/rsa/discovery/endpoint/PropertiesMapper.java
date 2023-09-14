@@ -244,7 +244,7 @@ class PropertiesMapper {
                 propEl.getContent().add(factory.createArray(arrayEl));
                 for (Object o : normalizeArray(val)) {
                     setValueType(propEl, o);
-                    ValueType valueType =  new ValueType();
+                    ValueType valueType = new ValueType();
                     valueType.getContent().add(o.toString());
                     arrayEl.getValue().add(valueType);
                 }

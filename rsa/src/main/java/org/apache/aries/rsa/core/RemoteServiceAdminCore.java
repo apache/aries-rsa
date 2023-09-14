@@ -476,9 +476,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             imReg.setClientServiceFactory(csf);
 
             /**
-             *  Export the factory using the api context as it has very few imports.
-             *  If the bundle publishing the factory does not import the service interface
-             *  package then the factory is visible for all consumers which we want.
+             * Export the factory using the api context as it has very few imports.
+             * If the bundle publishing the factory does not import the service interface
+             * package then the factory is visible for all consumers which we want.
              */
             ServiceRegistration<?> csfReg = apictx.registerService(interfaceNames, csf, serviceProps);
             imReg.setImportedServiceRegistration(csfReg);

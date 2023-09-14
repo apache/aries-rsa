@@ -221,7 +221,7 @@ public class InvocationTest {
             InvocationHandler handler = client.getProxy(server.getConnectAddress(), "service-id", HelloImpl.class.getClassLoader());
             Hello hello = (Hello) Proxy.newProxyInstance(HelloImpl.class.getClassLoader(), new Class[] { Hello.class }, handler);
 
-            char[] chars = new char[65*1024];
+            char[] chars = new char[65 * 1024];
             String payload = new String(chars);
 
             final List<AsyncCallbackFuture<String>> futures = new ArrayList<>();
@@ -274,7 +274,7 @@ public class InvocationTest {
             final AtomicInteger responses = new AtomicInteger(0);
             final AtomicInteger failures = new AtomicInteger(0);
 
-            char[] chars = new char[65*1024];
+            char[] chars = new char[65 * 1024];
             final String payload = new String(chars);
 
             Thread[] threads = new Thread[BENCHMARK_CLIENTS];
@@ -338,7 +338,7 @@ public class InvocationTest {
             InvocationHandler handler = client.getProxy(server.getConnectAddress(), "service-id", HelloImpl.class.getClassLoader());
             Hello hello = (Hello) Proxy.newProxyInstance(HelloImpl.class.getClassLoader(), new Class[] { Hello.class }, handler);
 
-            char[] chars = new char[65*1024];
+            char[] chars = new char[65 * 1024];
             String payload = new String(chars);
 
             for(int i = 0; i < 100; i++) {
@@ -395,11 +395,11 @@ public class InvocationTest {
                                 final long start = System.nanoTime();
                                 response = hello.hello("Fabric");
                                 final long end = System.nanoTime();
-                                latencies[(thread_idx* BENCHMARK_INVOCATIONS_PER_CLIENT)+i] = end-start;
+                                latencies[(thread_idx * BENCHMARK_INVOCATIONS_PER_CLIENT) + i] = end - start;
 
                                 assertEquals("Hello Fabric!", response);
                             } catch (Throwable t) {
-                                latencies[(thread_idx* BENCHMARK_INVOCATIONS_PER_CLIENT)+i] = -1;
+                                latencies[(thread_idx * BENCHMARK_INVOCATIONS_PER_CLIENT) + i] = -1;
                                 failures.incrementAndGet();
                                 if (t instanceof UndeclaredThrowableException) {
                                     t = ((UndeclaredThrowableException) t).getUndeclaredThrowable();
@@ -423,8 +423,8 @@ public class InvocationTest {
                     latency_sum += latency;
                 }
             }
-            double latency_avg = ((latency_sum * 1.0d)/requests.get()) / MILLIS_IN_A_NANO;
-            double request_rate = ((requests.get() * 1.0d)/(end-start)) * SECONDS_IN_A_NANO;
+            double latency_avg = ((latency_sum * 1.0d) / requests.get()) / MILLIS_IN_A_NANO;
+            double request_rate = ((requests.get() * 1.0d) / (end - start)) * SECONDS_IN_A_NANO;
 
             System.err.println(String.format("Requests/Second: %,.2f", request_rate));
             System.err.println(String.format("Average request latency: %,.2f ms", latency_avg));
@@ -484,14 +484,14 @@ public class InvocationTest {
         }
 
         public void onSuccess(StringValue.Getter result) {
-            latencies[(thread_idx*nbInvocationsPerThread)+i] = System.nanoTime() -start;
+            latencies[(thread_idx * nbInvocationsPerThread) + i] = System.nanoTime() - start;
             i++;
             sendNext();
         }
 
         public void onFailure(Throwable t) {
             failures.incrementAndGet();
-            latencies[(thread_idx*nbInvocationsPerThread)+i] = -1;
+            latencies[(thread_idx * nbInvocationsPerThread) + i] = -1;
             i++;
             if (t instanceof UndeclaredThrowableException) {
                 t = ((UndeclaredThrowableException) t).getUndeclaredThrowable();
@@ -549,8 +549,8 @@ public class InvocationTest {
                     latency_sum += latency;
                 }
             }
-            double latency_avg = ((latency_sum * 1.0d)/requests.get()) / MILLIS_IN_A_NANO;
-            double request_rate = ((requests.get() * 1.0d)/(end-start)) * SECONDS_IN_A_NANO;
+            double latency_avg = ((latency_sum * 1.0d) / requests.get()) / MILLIS_IN_A_NANO;
+            double request_rate = ((requests.get() * 1.0d) / (end - start)) * SECONDS_IN_A_NANO;
 
             System.err.println(String.format("Requests/Second: %,.2f", request_rate));
             System.err.println(String.format("Average request latency: %,.2f ms", latency_avg));

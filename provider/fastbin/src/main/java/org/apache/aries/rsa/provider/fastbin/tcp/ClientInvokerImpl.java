@@ -180,8 +180,8 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
             sb.append(method.getName());
             sb.append(",");
             Class<?>[] types = method.getParameterTypes();
-            for(int i=0; i < types.length; i++) {
-                if( i!=0 ) {
+            for(int i = 0; i < types.length; i++) {
+                if( i != 0 ) {
                     sb.append(",");
                 }
                 sb.append(encodeClassName(types[i]));
@@ -232,7 +232,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
         // and #2 reduce CPU load done in the execution queue since it's
         // serially executed.
 
-        DataByteArrayOutputStream baos = new DataByteArrayOutputStream((int) (handler.lastRequestSize*1.10));
+        DataByteArrayOutputStream baos = new DataByteArrayOutputStream((int) (handler.lastRequestSize * 1.10));
         baos.writeInt(0); // we don't know the size yet...
         baos.writeVarLong(correlation);
         writeBuffer(baos, service);

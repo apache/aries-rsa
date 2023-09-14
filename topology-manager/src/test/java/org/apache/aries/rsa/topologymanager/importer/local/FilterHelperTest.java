@@ -35,7 +35,7 @@ public class FilterHelperTest {
     }
 
     @Test
-    public void testClass()  {
+    public void testClass() {
         testWithClassName(FilterHelperTest.class.getName());
     }
 

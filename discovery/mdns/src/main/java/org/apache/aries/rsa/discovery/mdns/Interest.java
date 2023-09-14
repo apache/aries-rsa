@@ -93,7 +93,7 @@ public class Interest {
     public void endpointChanged(EndpointDescription ed) {
     	List<String> scopes = this.scopes.get();
     	Optional<String> currentScope = getFirstMatch(ed, scopes);
-    	boolean alreadyAdded =  added.containsKey(ed.getId());
+    	boolean alreadyAdded = added.containsKey(ed.getId());
     	EndpointEvent event;
     	String filter;
         if (currentScope.isPresent()) {
