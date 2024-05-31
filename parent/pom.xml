@@ -34,7 +34,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <bnd.version>6.4.0</bnd.version>
-        <zookeeper.version>3.4.14</zookeeper.version>
+        <zookeeper.version>3.8.4</zookeeper.version>
         <slf4j.version>1.7.36</slf4j.version>
         <hawtdispatch.version>1.22</hawtdispatch.version>
         <hawtbuf.version>1.11</hawtbuf.version>
