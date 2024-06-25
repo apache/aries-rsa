@@ -110,7 +110,7 @@ public class TcpProvider implements DistributionProvider {
         if (endpoint.getNumThreads() > server.getNumThreads()) {
             server.setNumThreads(endpoint.getNumThreads());
         }
-        server.addService(endpoint.description().getId(), serviceO);
+        server.addService(endpoint.description(), serviceO);
     }
 
     private synchronized void removeServer(TcpEndpoint endpoint) {

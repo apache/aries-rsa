@@ -31,6 +31,7 @@ import java.util.concurrent.*;
 
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectOutputStream;
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectInputStream;
+import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.util.promise.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,8 +66,8 @@ public class TcpServer implements Closeable, Runnable {
         return this.serverSocket.getLocalPort();
     }
 
-    public void addService(String endpointId, Object service) {
-        invokers.put(endpointId, new MethodInvoker(service));
+    public void addService(EndpointDescription endpoint, Object service) {
+        invokers.put(endpoint.getId(), new MethodInvoker(service, endpoint.getInterfaces()));
     }
 
     public void removeService(String endpointId) {

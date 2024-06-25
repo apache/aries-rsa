@@ -21,6 +21,7 @@ package org.apache.aries.rsa.provider.tcp;
 import org.junit.Test;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.function.Function;
 
 import static org.junit.Assert.*;
 
@@ -110,6 +111,21 @@ public class MethodInvokerTest {
         }
         MethodInvoker invoker = new MethodInvoker(new Tester());
         assertThrows(NoSuchMethodException.class, () -> invoker.invoke("f", new Object[] { 1, 2 }));
+    }
+
+    @Test
+    public void testNonIntefaceMethod() throws Exception {
+        class Tester implements Function<String, Integer> {
+            public int f(String s) { return s == null ? 0 : s.length(); }
+
+            @Override
+            public Integer apply(String s) { return f(s); }
+        }
+        MethodInvoker invoker = new MethodInvoker(new Tester(), Tester.class.getInterfaces());
+        // invoke method in interface
+        assertEquals(0, invoker.invoke("apply", new Object[]{ "" }));
+        // invoke method not in interface
+        assertThrows(NoSuchMethodException.class, () -> invoker.invoke("f", new Object[]{ "" }));
     }
 
 }
