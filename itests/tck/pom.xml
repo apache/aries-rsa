@@ -28,7 +28,7 @@
     <name>Aries Remote Service Admin itests tck</name>
 
     <properties>
-        <paxlogging.version>1.11.2</paxlogging.version>
+        <paxlogging.version>1.11.17</paxlogging.version>
     </properties>
 
     <dependencies>
