@@ -36,7 +36,7 @@
         <bnd.version>6.4.0</bnd.version>
         <zookeeper.version>3.9.1_1</zookeeper.version>
         <netty.version>4.1.101.Final</netty.version>
-        <slf4j.version>2.0.13</slf4j.version>
+        <slf4j.version>2.0.17</slf4j.version>
         <hawtdispatch.version>1.22</hawtdispatch.version>
         <hawtbuf.version>1.11</hawtbuf.version>
         <exam.version>4.13.5</exam.version>
