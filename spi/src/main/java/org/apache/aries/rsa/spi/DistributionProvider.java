@@ -30,7 +30,7 @@ public interface DistributionProvider {
 
     /**
      * Called by RemoteServiceAdmin to export a service.
-     *
+     * <p>
      * The Distribution provider will be called if no config type was set or
      * if it supports the config type.
      *
@@ -46,14 +46,19 @@ public interface DistributionProvider {
                            Class[] exportedInterfaces);
 
     /**
+     * Called by RemoteServiceAdmin to import a service,
+     * i.e. get a proxy that can be used to access the remote service.
+     * <p>
      * @param cl classloader of the consumer bundle
      * @param consumerContext bundle context of the consumer bundle
      * @param interfaces interfaces of the service to proxy
      * @param endpoint description of the remote endpoint
-     * @return service proxy to be given to the requesting bundle
+     * @return an ImportedService that provides the service proxy
+     *         to be given to the requesting bundle, and can be closed
+     *         when the service is no longer used
      */
-    Object importEndpoint(ClassLoader cl,
-                          BundleContext consumerContext,
-                          Class[] interfaces,
-                          EndpointDescription endpoint);
+    ImportedService importEndpoint(ClassLoader cl,
+                                   BundleContext consumerContext,
+                                   Class[] interfaces,
+                                   EndpointDescription endpoint);
 }
