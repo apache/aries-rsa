@@ -64,6 +64,16 @@ public class TcpInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        // handle Object methods locally so we can use equals, HashMap, etc. normally
+        if (method.getDeclaringClass() == Object.class) {
+            switch (method.getName()) {
+                case "equals": return proxy == args[0];
+                case "hashCode": return System.identityHashCode(proxy);
+                case "toString": return proxy.getClass().getName() + "@"
+                    + Integer.toHexString(System.identityHashCode(proxy));
+            }
+        }
+        // handle remote invocation
         if (Future.class.isAssignableFrom(method.getReturnType()) ||
             CompletionStage.class.isAssignableFrom(method.getReturnType())) {
             return createFutureResult(method, args);
