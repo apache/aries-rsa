@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.aries.rsa.core.event.EventProducer;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.easymock.IMocksControl;
@@ -429,7 +430,7 @@ public class RemoteServiceAdminCoreTest {
         }
 
         @Override
-        public Object importEndpoint(ClassLoader cl, BundleContext consumerContext, Class[] interfaces,
+        public ImportedService importEndpoint(ClassLoader cl, BundleContext consumerContext, Class[] interfaces,
                 EndpointDescription endpoint) {
             return null;
         }

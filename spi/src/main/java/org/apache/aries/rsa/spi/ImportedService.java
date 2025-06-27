@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +16,33 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-@org.osgi.annotation.bundle.Export
-@org.osgi.annotation.versioning.Version("2.0.0")
 package org.apache.aries.rsa.spi;
+
+import java.io.Closeable;
+import java.io.IOException;
+
+/**
+ * Wraps an imported service proxy, while allowing it to be properly
+ * closed to release resources, close connections, etc.
+ */
+public interface ImportedService extends Closeable {
+
+    /**
+     * Returns the service proxy to be used by consumer bundles.
+     *
+     * @return the service proxy
+     */
+    Object getService();
+
+    /**
+     * Close the service and release its resources.
+     * <p>
+     * Implementations should override this to release resources
+     * associated with the service, close connections, etc.
+     * when the service is no longer used.
+     *
+     * @throws IOException if an error occurs
+     */
+    default void close() throws IOException {
+    }
+}
