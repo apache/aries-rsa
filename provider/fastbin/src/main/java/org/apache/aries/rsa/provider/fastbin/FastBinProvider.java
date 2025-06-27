@@ -35,6 +35,7 @@ import org.apache.aries.rsa.provider.fastbin.tcp.ServerInvokerImpl;
 import org.apache.aries.rsa.provider.fastbin.util.UuidGenerator;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
@@ -172,15 +173,16 @@ public class FastBinProvider implements DistributionProvider {
     }
 
     @Override
-    public Object importEndpoint(ClassLoader cl,
-                                 BundleContext consumerContext,
-                                 Class[] interfaces,
-                                 EndpointDescription endpoint)
+    public ImportedService importEndpoint(ClassLoader cl,
+                                          BundleContext consumerContext,
+                                          Class[] interfaces,
+                                          EndpointDescription endpoint)
             throws IntentUnsatisfiedException {
 
         String address = (String) endpoint.getProperties().get(FASTBIN_ADDRESS);
         InvocationHandler handler = client.getProxy(address, endpoint.getId(), cl);
-        return Proxy.newProxyInstance(cl, interfaces, handler);
+        Object service = Proxy.newProxyInstance(cl, interfaces, handler);
+        return () -> service;
     }
 
 }

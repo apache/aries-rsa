@@ -29,6 +29,7 @@ import org.apache.aries.rsa.examples.echotcp.api.EchoService;
 import org.apache.aries.rsa.itests.felix.RsaTestBase;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.hamcrest.Matchers;
@@ -67,10 +68,11 @@ public class TestDiscoveryExport extends RsaTestBase {
     @Test
     public void testDiscoveryExport() throws Exception {
         EndpointDescription epd = getEndpoint();
-        EchoService service = (EchoService)tcpProvider
-            .importEndpoint(EchoService.class.getClassLoader(),
-                            bundleContext, new Class[]{EchoService.class}, epd);
+        ImportedService importedService = tcpProvider.importEndpoint(EchoService.class.getClassLoader(),
+            bundleContext, new Class[]{EchoService.class}, epd);
+        EchoService service = (EchoService)importedService.getService();
         Assert.assertEquals("test", service.echo("test"));
+        importedService.close();
     }
 
     private EndpointDescription getEndpoint() throws Exception {
