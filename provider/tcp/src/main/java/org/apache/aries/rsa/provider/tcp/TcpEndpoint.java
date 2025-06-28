@@ -34,6 +34,7 @@ import org.osgi.service.remoteserviceadmin.RemoteConstants;
 public class TcpEndpoint implements Endpoint {
 
     private String hostname;
+    private String bindAddress;
     private int port;
     private int numThreads;
     private Consumer<TcpEndpoint> closeCallback;
@@ -51,6 +52,7 @@ public class TcpEndpoint implements Endpoint {
         EndpointPropertiesParser parser = new EndpointPropertiesParser(effectiveProperties);
         port = parser.getPort(); // this may initially be 0 for dynamic port
         hostname = parser.getHostname();
+        bindAddress = parser.getBindAddress();
         numThreads =  parser.getNumThreads();
         updateEndpointDescription(effectiveProperties);
     }
@@ -70,6 +72,10 @@ public class TcpEndpoint implements Endpoint {
 
     public String getHostname() {
         return hostname;
+    }
+
+    public String getBindAddress() {
+        return bindAddress;
     }
 
     public int getPort() {

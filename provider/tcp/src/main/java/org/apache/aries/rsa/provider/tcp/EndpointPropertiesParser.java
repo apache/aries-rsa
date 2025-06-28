@@ -30,6 +30,7 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 public class EndpointPropertiesParser {
     static final String PORT_KEY = "aries.rsa.port";
     static final String HOSTNAME_KEY = "aries.rsa.hostname";
+    static final String BIND_ADDRESS_KEY = "aries.rsa.bindAddress";
     static final String ID_KEY = "aries.rsa.id";
     static final String THREADS_KEY = "aries.rsa.numThreads";
     static final String TIMEOUT_KEY = "osgi.basic.timeout";
@@ -73,6 +74,10 @@ public class EndpointPropertiesParser {
             hostName = LocalHostUtil.getLocalIp();
         }
         return hostName;
+    }
+
+    public String getBindAddress() {
+        return getString(BIND_ADDRESS_KEY, System.getProperty(BIND_ADDRESS_KEY));
     }
 
     public String getId() {

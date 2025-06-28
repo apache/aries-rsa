@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -48,10 +49,14 @@ public class TcpServer implements Closeable, Runnable {
     private volatile boolean running;
     private ThreadPoolExecutor executor;
 
-    public TcpServer(String localip, int port, int numThreads) {
+    public TcpServer(String bindAddress, int port, int numThreads) {
         try {
-            this.serverSocket = new ServerSocket(port);
+            InetSocketAddress address = bindAddress == null || bindAddress.isEmpty()
+                ? new InetSocketAddress(port)
+                : new InetSocketAddress(bindAddress, port);
+            this.serverSocket = new ServerSocket();
             this.serverSocket.setReuseAddress(true);
+            this.serverSocket.bind(address);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

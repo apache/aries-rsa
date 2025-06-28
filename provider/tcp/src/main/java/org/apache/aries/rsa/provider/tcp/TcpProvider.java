@@ -101,7 +101,7 @@ public class TcpProvider implements DistributionProvider {
         int port = endpoint.getPort();
         TcpServer server = servers.get(port);
         if (server == null || port == 0) {
-            server = new TcpServer(endpoint.getHostname(), port, endpoint.getNumThreads());
+            server = new TcpServer(endpoint.getBindAddress(), port, endpoint.getNumThreads());
             port = server.getPort(); // get the real port
             endpoint.setPort(port);
             servers.put(port, server);
