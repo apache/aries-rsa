@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Reflectively invokes the methods of a service object
@@ -30,7 +31,7 @@ import java.util.List;
  */
 public class MethodInvoker {
 
-    private HashMap<Object, Object> primTypes;
+    private Map<Object, Object> primTypes;
     private Object service;
     private Class<?>[] interfaces;
 
@@ -93,15 +94,14 @@ public class MethodInvoker {
 
     private Method getMethod(String methodName, Class<?>[] parameterTypesAr) throws NoSuchMethodException {
         try {
+            // fast path - exact match
             Method method = service.getClass().getMethod(methodName, parameterTypesAr);
             return verifyInterface(method);
         } catch (NoSuchMethodException e) {
+            // fallback - search all methods for name, params count, assignable param types, null values, etc.
             Method[] methods = service.getClass().getMethods();
             for (Method method : methods) {
-                if (!method.getName().equals(methodName)) {
-                    continue;
-                }
-                if (allParamsMatch(method.getParameterTypes(), parameterTypesAr)) {
+                if (method.getName().equals(methodName) && allParamsMatch(method.getParameterTypes(), parameterTypesAr)) {
                     return verifyInterface(method);
                 }
             }
