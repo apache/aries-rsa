@@ -47,6 +47,7 @@ import org.apache.aries.rsa.provider.tcp.myservice.ExpectedTestException;
 import org.apache.aries.rsa.provider.tcp.myservice.MyService;
 import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.util.EndpointHelper;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
@@ -67,6 +68,8 @@ public class TcpProviderTest {
     private static MyService myServiceProxy2;
     private static Endpoint ep;
     private static Endpoint ep2;
+    private static ImportedService importedService;
+    private static ImportedService importedService2;
 
     protected static int getFreePort() throws IOException {
         try (ServerSocket socket = new ServerSocket()) {
@@ -93,16 +96,18 @@ public class TcpProviderTest {
         props.put("aries.rsa.id", "service2");
         ep2 = provider.exportService(new MyServiceImpl("service2"), bc, props, exportedInterfaces);
         assertThat(ep.description().getId(), startsWith("tcp://localhost:"));
-        myServiceProxy = (MyService)provider.importEndpoint(
-            MyService.class.getClassLoader(),
-            bc,
-            exportedInterfaces,
-            ep.description());
-        myServiceProxy2 = (MyService)provider.importEndpoint(
-            MyService.class.getClassLoader(),
-            bc,
-            exportedInterfaces,
-            ep2.description());
+        importedService = provider.importEndpoint(
+                MyService.class.getClassLoader(),
+                bc,
+                exportedInterfaces,
+                ep.description());
+        myServiceProxy = (MyService)importedService.getService();
+        importedService2 = provider.importEndpoint(
+                MyService.class.getClassLoader(),
+                bc,
+                exportedInterfaces,
+                ep2.description());
+        myServiceProxy2 = (MyService)importedService2.getService();
     }
 
     @Test
@@ -221,7 +226,10 @@ public class TcpProviderTest {
 
     @AfterClass
     public static void close() throws IOException {
+        importedService.close();
+        importedService2.close();
         ep.close();
+        ep2.close();
     }
 
     private void runPerfTest(final MyService myServiceProxy2) throws InterruptedException {

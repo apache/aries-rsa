@@ -69,7 +69,7 @@ public class TestDiscoveryExport extends RsaTestBase {
         EndpointDescription epd = getEndpoint();
         EchoService service = (EchoService)tcpProvider
             .importEndpoint(EchoService.class.getClassLoader(),
-                            bundleContext, new Class[]{EchoService.class}, epd);
+                            bundleContext, new Class[]{EchoService.class}, epd).getService();
         Assert.assertEquals("test", service.echo("test"));
     }
 
