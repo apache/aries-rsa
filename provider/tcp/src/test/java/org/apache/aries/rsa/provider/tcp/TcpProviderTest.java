@@ -49,9 +49,9 @@ import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.apache.aries.rsa.util.EndpointHelper;
 import org.easymock.EasyMock;
-import org.junit.AfterClass;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceException;
@@ -63,10 +63,11 @@ public class TcpProviderTest {
 
     private static final int TIMEOUT = 200;
     private static final int NUM_CALLS = 100;
-    private static MyService myServiceProxy;
-    private static MyService myServiceProxy2;
-    private static Endpoint ep;
-    private static Endpoint ep2;
+
+    private MyService myServiceProxy;
+    private MyService myServiceProxy2;
+    private Endpoint ep;
+    private Endpoint ep2;
 
     protected static int getFreePort() throws IOException {
         try (ServerSocket socket = new ServerSocket()) {
@@ -76,8 +77,8 @@ public class TcpProviderTest {
         }
     }
 
-    @BeforeClass
-    public static void createServerAndProxy() throws IOException {
+    @Before
+    public void createServerAndProxy() throws IOException {
         Class<?>[] exportedInterfaces = new Class[] {MyService.class};
         TcpProvider provider = new TcpProvider();
         Map<String, Object> props = new HashMap<>();
@@ -103,6 +104,13 @@ public class TcpProviderTest {
             bc,
             exportedInterfaces,
             ep2.description());
+    }
+
+
+    @After
+    public void close() throws IOException {
+        ep.close();
+        ep2.close();
     }
 
     @Test
@@ -217,11 +225,6 @@ public class TcpProviderTest {
         } catch (InvocationTargetException e) {
             throw e.getCause();
         }
-    }
-
-    @AfterClass
-    public static void close() throws IOException {
-        ep.close();
     }
 
     private void runPerfTest(final MyService myServiceProxy2) throws InterruptedException {
