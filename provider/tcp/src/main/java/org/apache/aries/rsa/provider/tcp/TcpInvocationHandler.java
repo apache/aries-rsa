@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -141,6 +142,12 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
         }
     }
 
+    private int getPoolSize() {
+        synchronized (pool) {
+            return pool.size() + acquired; // both idle and active
+        }
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         // handle Object methods locally so we can use equals, HashMap, etc. normally
@@ -195,20 +202,33 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
 
     private Object handleSyncCall(Method method, Object[] args) throws Throwable {
         Connection conn = null;
-        Throwable error;
-        Object result;
+        Throwable error = null;
+        Object result = null;
 
         try {
-            conn = acquireConnection();
-
-            // write invocation data
-            conn.out.writeObject(method.getName());
-            conn.out.writeObject(args);
-            conn.out.flush();
-            conn.out.reset();
-            // read result data
-            error = (Throwable)conn.in.readObject();
-            result = readReplaceVersion(conn.in.readObject());
+             // try at most all existing connections (which may be stale) plus one new
+            for (int attempts = getPoolSize() + 1; attempts > 0; attempts--) {
+                conn = acquireConnection(); // get or create pool connection
+                try {
+                    // write invocation data
+                    conn.out.writeObject(method.getName());
+                    conn.out.writeObject(args);
+                    conn.out.flush();
+                    conn.out.reset();
+                    // read result data
+                    error = (Throwable) conn.in.readObject();
+                    result = readReplaceVersion(conn.in.readObject());
+                    break; // transaction completed
+                } catch (SocketException se) { // catch only read/write exceptions here - only stale connections
+                    if (attempts == 1) {
+                        throw se; // failed last attempt - propagate the error
+                    }
+                    // the server socket was previously open, but now failed -
+                    // communication error or server socket was closed (e.g. idle timeout)
+                    // so we retry with another connection
+                    releaseConnection(null); // dispose of it before next attempt
+                }
+            }
 
             if (error == null)
                 return result;
