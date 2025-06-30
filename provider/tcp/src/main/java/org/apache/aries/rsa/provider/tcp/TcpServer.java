@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectOutputStream;
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectInputStream;
@@ -50,10 +51,13 @@ public class TcpServer implements Closeable, Runnable {
     private ThreadPoolExecutor executor;
 
     public TcpServer(String bindAddress, int port, int numThreads) {
+        String addressStr;
         try {
             InetSocketAddress address = bindAddress == null || bindAddress.isEmpty()
                 ? new InetSocketAddress(port)
                 : new InetSocketAddress(bindAddress, port);
+            addressStr = (address.getAddress() == null ? address.getHostName() : address.getAddress().getHostAddress())
+                + ":" + address.getPort();
             this.serverSocket = new ServerSocket();
             this.serverSocket.setReuseAddress(true);
             this.serverSocket.bind(address);
@@ -62,8 +66,10 @@ public class TcpServer implements Closeable, Runnable {
         }
         this.running = true;
         numThreads++; // plus one for server socket accepting thread
+        AtomicInteger counter = new AtomicInteger();
         this.executor = new ThreadPoolExecutor(numThreads, numThreads,
-            60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+            60L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                r -> new Thread(r, getClass().getSimpleName() + " [" + addressStr + "]-" + counter.incrementAndGet()));
         this.executor.execute(this); // server socket thread
     }
 
