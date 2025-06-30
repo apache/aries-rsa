@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -63,6 +64,7 @@ public class TcpProviderTest {
 
     private static final int TIMEOUT = 200;
     private static final int NUM_CALLS = 100;
+    private static final int NUM_THREADS = 10;
 
     private MyService myServiceProxy;
     private MyService myServiceProxy2;
@@ -86,7 +88,7 @@ public class TcpProviderTest {
         int port = getFreePort();
         props.put("aries.rsa.hostname", "localhost");
         props.put("aries.rsa.port", port);
-        props.put("aries.rsa.numThreads", "10");
+        props.put("aries.rsa.numThreads", NUM_THREADS);
         props.put("osgi.basic.timeout", TIMEOUT);
         BundleContext bc = EasyMock.mock(BundleContext.class);
         props.put("aries.rsa.id", "service1");
@@ -114,7 +116,7 @@ public class TcpProviderTest {
     }
 
     @Test
-    public void testCallTimeout() {
+    public void testClientTimeout() {
         try {
             myServiceProxy.callSlow(TIMEOUT + 100);
             Assert.fail("Expecting timeout");
@@ -122,14 +124,15 @@ public class TcpProviderTest {
             assertThat(e.getCause().getClass().getName(), equalTo(SocketTimeoutException.class.getName()));
             assertThat(e.getType(), equalTo(ServiceException.REMOTE));
         }
+        // and we recover to normal handling on the following call
+        assertEquals("next",myServiceProxy.echo("next"));
     }
 
     @Test
-    public void testPerf() throws InterruptedException {
-        runPerfTest(myServiceProxy);
-        String msg = "test";
-        String result = myServiceProxy.echo(msg);
-        Assert.assertEquals(msg, result);
+    public void testPerformance() throws InterruptedException {
+        runPerformanceTest(myServiceProxy);
+        // and continue normally afterward
+        assertEquals("test", myServiceProxy.echo("test"));
     }
 
     @Test(expected=ExpectedTestException.class)
@@ -140,6 +143,16 @@ public class TcpProviderTest {
     @Test
     public void testCall() {
         myServiceProxy.echo("test");
+    }
+
+    @Test
+    public void testMultipleCalls() {
+        String s;
+        for (int i = 0; i < 5; i++) {
+            s = "test" + i;
+            assertEquals(s, s, myServiceProxy.echo(s));
+            assertThrows(ExpectedTestException.class, () -> myServiceProxy.callException());
+        }
     }
 
     @Test
@@ -155,7 +168,7 @@ public class TcpProviderTest {
      * Test for ARIES-1515
      */
     @Test
-    public void testCallWithInterfaceBasedParam() throws IOException, InterruptedException {
+    public void testCallWithInterfaceBasedParam() {
         List<String> msgList = new ArrayList<>();
         myServiceProxy.callWithList(msgList);
     }
@@ -227,13 +240,13 @@ public class TcpProviderTest {
         }
     }
 
-    private void runPerfTest(final MyService myServiceProxy2) throws InterruptedException {
+    private void runPerformanceTest(final MyService myServiceProxy2) throws InterruptedException {
         StringBuilder msg = new StringBuilder();
         for (int c = 0; c < 1000; c++) {
             msg.append("testing123");
         }
         final String msg2 = msg.toString();
-        ExecutorService executor = Executors.newFixedThreadPool(10);
+        ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
         Runnable task = new Runnable() {
 
             @Override
