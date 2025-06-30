@@ -19,7 +19,6 @@
 package org.apache.aries.rsa.provider.tcp;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Arrays;
@@ -136,9 +135,19 @@ public class TcpProvider implements DistributionProvider {
             String endpointId = endpoint.getId();
             URI address = new URI(endpointId);
             int timeout = new EndpointPropertiesParser(endpoint).getTimeoutMillis();
-            InvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
+            TcpInvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
             Object service = Proxy.newProxyInstance(cl, interfaces, handler);
-            return () -> service;
+            return new ImportedService() {
+                @Override
+                public Object getService() {
+                    return service;
+                }
+
+                @Override
+                public void close() throws IOException {
+                    handler.close();
+                }
+            };
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -18,16 +18,18 @@
  */
 package org.apache.aries.rsa.provider.tcp;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
@@ -46,20 +48,127 @@ import org.osgi.util.promise.Promise;
  * which sends the details of the method invocations
  * over a TCP connection, to be executed by the remote service.
  */
-public class TcpInvocationHandler implements InvocationHandler {
+public class TcpInvocationHandler implements InvocationHandler, Closeable {
+
+    private static class Connection {
+        Socket socket;
+        BasicObjectOutputStream out;
+        BasicObjectInputStream in;
+
+        public Connection(Socket socket) throws IOException {
+            this.socket = socket;
+            out = new BasicObjectOutputStream(socket.getOutputStream());
+            in = new BasicObjectInputStream(socket.getInputStream());
+        }
+    }
+
     private String host;
     private int port;
     private String endpointId;
     private ClassLoader cl;
     private int timeoutMillis;
 
-    public TcpInvocationHandler(ClassLoader cl, String host, int port, String endpointId, int timeoutMillis)
-        throws UnknownHostException, IOException {
+    /**
+     * The available (idle) pool of connections.
+     */
+    private final Deque<Connection> pool = new ArrayDeque<>();
+
+    /**
+     * Counts connections currently in use (not in pool).
+     */
+    private int acquired;
+
+    private boolean closed;
+
+    TcpInvocationHandler(ClassLoader cl, String host, int port, String endpointId, int timeoutMillis)
+            throws UnknownHostException, IOException {
         this.cl = cl;
         this.host = host;
         this.port = port;
         this.endpointId = endpointId;
         this.timeoutMillis = timeoutMillis;
+    }
+
+    /**
+     * Acquires a connection - either from the pool if there is
+     * one available, or creates a new one if the pool is empty.
+     * <p>
+     * For each invocation of this method, the {@link #releaseConnection}
+     * method must be called exactly once (even if there was an error!)
+     *
+     * @return a connection
+     * @throws IOException if an error occurs
+     */
+    private Connection acquireConnection() throws IOException {
+        Connection conn;
+        synchronized (pool) {
+            acquired++; // must be first
+            if (closed) {
+                throw new IOException("Connection pool is closed");
+            }
+            conn = pool.pollFirst(); // reuse most recently used connection
+        }
+        // if the pool is empty, create a new connection
+        if (conn == null) {
+            conn = new Connection(openSocket());
+            conn.socket.setSoTimeout(timeoutMillis);
+            conn.socket.setTcpNoDelay(true);
+            conn.in.addClassLoader(cl);
+            conn.out.writeUTF(endpointId); // select endpoint for this connection
+        }
+        return conn;
+    }
+
+    /**
+     * Releases the given connection and returns it to the pool.
+     * <p>
+     * This method must be called exactly once for each invocation
+     * of {@link #acquireConnection()}, regardless of the outcome -
+     * if there was an error, it should be invoked with a null parameter.
+     *
+     * @param conn the released connection, or null if there
+     *             was an error when attempting to acquire one
+     */
+    private void releaseConnection(Connection conn) {
+        synchronized (pool) {
+            acquired--; // must be first
+            if (conn != null) {
+                pool.offerFirst(conn); // add to front of queue so old idle ones can expire
+            }
+            pool.notifyAll();
+        }
+    }
+
+    private void closeConnection(Connection conn) {
+        if (conn != null) {
+            try {
+                conn.socket.close();
+            } catch (IOException ignore) {
+                // we want it closed - nothing else to do
+            }
+        }
+    }
+
+    private void closeConnections() throws IOException {
+        synchronized (pool) {
+            closed = true; // first prevent acquiring new connections
+            while (true) {
+                // close all idle connections
+                for (Iterator<Connection> it = pool.iterator(); it.hasNext(); ) {
+                    closeConnection(it.next());
+                    it.remove();
+                }
+                if (acquired == 0) {
+                    break; // all closed
+                }
+                // wait for additional active connections to be released
+                try {
+                    pool.wait();
+                } catch (InterruptedException ie) {
+                    throw new IOException("interrupted while closing connections", ie);
+                }
+            }
+        }
     }
 
     @Override
@@ -115,33 +224,37 @@ public class TcpInvocationHandler implements InvocationHandler {
     }
 
     private Object handleSyncCall(Method method, Object[] args) throws Throwable {
+        Connection conn = null;
         Throwable error;
         Object result;
-        try (
-                Socket socket = openSocket();
-                ObjectOutputStream out = new BasicObjectOutputStream(socket.getOutputStream())
-            ) {
-            socket.setSoTimeout(timeoutMillis);
-            out.writeUTF(endpointId);
-            out.writeObject(method.getName());
-            out.writeObject(args);
-            out.flush();
 
-            try (BasicObjectInputStream in = new BasicObjectInputStream(socket.getInputStream())) {
-                in.addClassLoader(cl);
-                error = (Throwable) in.readObject();
-                result = readReplaceVersion(in.readObject());
-            }
+        try {
+            conn = acquireConnection();
+
+            // write invocation data
+            conn.out.writeObject(method.getName());
+            conn.out.writeObject(args);
+            conn.out.flush();
+            conn.out.reset();
+            // read result data
+            error = (Throwable)conn.in.readObject();
+            result = readReplaceVersion(conn.in.readObject());
+
             if (error == null)
                 return result;
             else if (error instanceof InvocationTargetException)
                 error = error.getCause(); // exception thrown from remotely invoked method (not our problem)
             else
                 throw error; // exception thrown by provider itself
-        } catch (SocketTimeoutException e) {
-            throw new ServiceException("Timeout calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
         } catch (Throwable e) {
-            throw new ServiceException("Error calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
+            // this can be an unexpected error from remote (not from the invoked method itself
+            // but somewhere in the provider processing), or a communications error (e.g. timeout) -
+            // in either case we don't know what was written or not, so we must abort the connection
+            closeConnection(conn);
+            conn = null; // don't return it to the pool
+            throw new ServiceException("Error invoking " + method.getName() + " on " + endpointId, ServiceException.REMOTE, e);
+        } finally {
+            releaseConnection(conn);
         }
         throw error;
     }
@@ -168,4 +281,8 @@ public class TcpInvocationHandler implements InvocationHandler {
         }
     }
 
+    @Override
+    public void close() throws IOException {
+        closeConnections();
+    }
 }
