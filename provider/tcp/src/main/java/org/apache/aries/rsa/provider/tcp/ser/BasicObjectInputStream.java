@@ -32,7 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BasicObjectInputStream extends ObjectInputStream {
-    Logger log = LoggerFactory.getLogger(this.getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(BasicObjectInputStream.class);
 
     private final Set<ClassLoader> loaders = new LinkedHashSet<>(); // retains insertion order
 
@@ -67,7 +67,7 @@ public class BasicObjectInputStream extends ObjectInputStream {
                     exception.addSuppressed(e);
             }
         }
-        log.debug("Error loading class using classloader of user bundle. Trying our own ClassLoader now", exception);
+        LOG.debug("Error loading class using classloader of user bundle. Trying our own ClassLoader now", exception);
         return super.resolveClass(desc);
     }
 

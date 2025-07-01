@@ -53,7 +53,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class ServerInvokerImpl implements ServerInvoker, Dispatched {
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ServerInvokerImpl.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(ServerInvokerImpl.class);
     private static final HashMap<String, Class> PRIMITIVE_TO_CLASS = new HashMap<>(8, 1.0F);
     static {
         PRIMITIVE_TO_CLASS.put("Z", boolean.class);
@@ -243,7 +243,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
             Runnable task = null;
             if(holder==null) {
                 String message = "The requested service {"+service+"} is not available";
-                LOGGER.warn(message);
+                LOG.warn(message);
                 task = new SendTask(bais, correlation, transport, message);
             }
             final Object svc = holder==null ? null : holder.factory.get();
@@ -255,7 +255,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
                 catch (ReflectiveOperationException reflectionEx) {
                     final String methodName = encoded_method.utf8().toString();
                     String message = "The requested method {"+methodName+"} is not available";
-                    LOGGER.warn(message);
+                    LOG.warn(message);
                     task = new SendTask(bais, correlation, transport, message);
                 }
             }
@@ -269,7 +269,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
             executor.execute(task);
 
         } catch (Exception e) {
-            LOGGER.info("Error while reading request", e);
+            LOG.info("Error while reading request", e);
         }
     }
 
@@ -289,7 +289,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
         }
 
         public void onAcceptError(TransportServer transportServer, Exception error) {
-            LOGGER.info("Error accepting incoming connection", error);
+            LOG.info("Error accepting incoming connection", error);
         }
     }
 
@@ -304,7 +304,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
 
         public void onTransportFailure(Transport transport, IOException error) {
             if (!transport.isDisposed() && !(error instanceof EOFException)) {
-                LOGGER.info("Transport failure", error);
+                LOG.info("Transport failure", error);
             }
         }
 
@@ -344,7 +344,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
                 baos.writeInt(0); // make space for the size field.
                 baos.writeVarLong(correlation);
             } catch (IOException e) { // should not happen
-                LOGGER.error("Failed to write to buffer", e);
+                LOG.error("Failed to write to buffer", e);
                 throw new RuntimeException(e);
             }
 

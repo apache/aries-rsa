@@ -33,7 +33,7 @@ import java.util.function.Function;
  */
 public class PackageUtil {
 
-    public static final Logger LOG = LoggerFactory.getLogger(PackageUtil.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PackageUtil.class);
 
     protected static Function<Class<?>, Bundle> BUNDLE_FINDER = FrameworkUtil::getBundle;
 

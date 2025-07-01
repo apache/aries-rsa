@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("rawtypes")
 public class BaseActivator implements BundleActivator, Runnable {
 
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger LOG = LoggerFactory.getLogger(BaseActivator.class);
     protected BundleContext bundleContext;
 
     protected ExecutorService executor = new ThreadPoolExecutor(0, 1, 0L, TimeUnit.MILLISECONDS,
@@ -224,7 +224,7 @@ public class BaseActivator implements BundleActivator, Runnable {
             try {
                 doStart();
             } catch (Throwable t) {
-                logger.warn("Error (re)starting activator", t);
+                LOG.warn("Error (re)starting activator", t);
                 doStop();
             }
         }

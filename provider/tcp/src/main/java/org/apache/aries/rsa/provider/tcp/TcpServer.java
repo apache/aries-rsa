@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * (according to the target endpoint ID).
  */
 public class TcpServer implements Closeable, Runnable {
-    private Logger log = LoggerFactory.getLogger(TcpServer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpServer.class);
     private ServerSocket serverSocket;
     private Map<String, MethodInvoker> invokers = new ConcurrentHashMap<>();
     private volatile boolean running;
@@ -107,7 +107,7 @@ public class TcpServer implements Closeable, Runnable {
             } catch (SocketException e) { // server socket is closed
                 running = false;
             } catch (Exception e) {
-                log.warn("Error processing connection", e);
+                LOG.warn("Error processing connection", e);
             }
         }
     }
@@ -125,7 +125,7 @@ public class TcpServer implements Closeable, Runnable {
         } catch (SocketException se) {
             return; // e.g. connection closed by client
         } catch (Exception e) {
-            log.warn("Error processing service call", e);
+            LOG.warn("Error processing service call", e);
         }
     }
 

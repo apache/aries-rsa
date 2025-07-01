@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 public abstract class TransportPool implements Service {
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(TransportPool.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(TransportPool.class);
 
     public static final int DEFAULT_POOL_SIZE = 2;
 
@@ -114,7 +114,7 @@ public abstract class TransportPool implements Service {
             try {
                 startNewTransport();
             } catch (Exception e) {
-                LOGGER.info("Unable to start new transport", e);
+                LOG.info("Unable to start new transport", e);
             }
         }
         return null;
@@ -166,7 +166,7 @@ public abstract class TransportPool implements Service {
     }
 
     protected void startNewTransport() throws Exception {
-        LOGGER.debug("Creating new transport for: {}", this.uri);
+        LOG.debug("Creating new transport for: {}", this.uri);
         Transport transport = createTransport(this.uri);
         transport.setDispatchQueue(queue);
         transport.setProtocolCodec(createCodec());
@@ -230,7 +230,7 @@ public abstract class TransportPool implements Service {
 
         public void onTransportFailure(Transport transport, IOException error) {
             if (!transport.isDisposed()) {
-                LOGGER.info("Transport failure", error);
+                LOG.info("Transport failure", error);
                 TransportState state = transports.remove(transport);
                 if (state != null) {
                     for (Object id : state.inflight) {

@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("rawtypes")
 public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(AsyncInvocationStrategy.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(AsyncInvocationStrategy.class);
 
     private class AsyncResponseFuture implements ResponseFuture {
 

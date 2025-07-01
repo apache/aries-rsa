@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("rawtypes")
 public class BlockingInvocationStrategy extends AbstractInvocationStrategy {
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(BlockingInvocationStrategy.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(BlockingInvocationStrategy.class);
 
     private static final Callable<Object> EMPTY_CALLABLE = new Callable<Object>() {
         public Object call() {
@@ -115,13 +115,13 @@ public class BlockingInvocationStrategy extends AbstractInvocationStrategy {
 
         } catch(Exception e) {
 
-            LOGGER.warn("Initial Encoding response for method {} failed. Retrying", method, e);
+            LOG.warn("Initial Encoding response for method {} failed. Retrying", method, e);
             // we failed to encode the response... reposition and write that error.
             try {
                 responseStream.position(pos);
                 serializationStrategy.encodeResponse(loader, method.getReturnType(), null, new RemoteException(e.toString()), responseStream);
             } catch (Exception unexpected) {
-                LOGGER.error("Error while servicing {}", method, unexpected);
+                LOG.error("Error while servicing {}", method, unexpected);
             }
 
         } finally {

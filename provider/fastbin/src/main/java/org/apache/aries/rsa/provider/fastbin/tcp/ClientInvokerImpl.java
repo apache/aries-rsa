@@ -51,7 +51,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
     public static final long DEFAULT_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
 
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ClientInvokerImpl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ClientInvokerImpl.class);
 
     @SuppressWarnings("rawtypes")
     private static final Map<Class, String> CLASS_TO_PRIMITIVE = new HashMap<>(8, 1.0F);
@@ -145,7 +145,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
                 response.set(bais);
             }
         } catch (Exception e) {
-            LOGGER.info("Error while reading response", e);
+            LOG.info("Error while reading response", e);
         }
     }
 
@@ -263,7 +263,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
                     requests.put(correlation, future);
                     pool.offer(command, correlation);
                 } catch (Exception e) {
-                    LOGGER.info("Error while sending request", e);
+                    LOG.info("Error while sending request", e);
                     future.fail(e);
                 }
             }

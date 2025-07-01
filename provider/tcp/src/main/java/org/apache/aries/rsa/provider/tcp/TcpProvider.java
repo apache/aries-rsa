@@ -59,7 +59,7 @@ public class TcpProvider implements DistributionProvider {
     static final String TCP_CONFIG_TYPE = "aries.tcp";
     private static final String[] SUPPORTED_INTENTS = { "osgi.basic", "osgi.async"};
 
-    private Logger logger = LoggerFactory.getLogger(TcpProvider.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TcpProvider.class);
 
     private Map<Integer, TcpServer> servers = new HashMap<>();
 
@@ -88,7 +88,7 @@ public class TcpProvider implements DistributionProvider {
             StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA)));
         intents.removeAll(Arrays.asList(SUPPORTED_INTENTS));
         if (!intents.isEmpty()) {
-            logger.warn("Unsupported intents found: {}. Not exporting service", intents);
+            LOG.warn("Unsupported intents found: {}. Not exporting service", intents);
             return null;
         }
         TcpEndpoint endpoint = new TcpEndpoint(serviceO, effectiveProperties, this::removeServer);
