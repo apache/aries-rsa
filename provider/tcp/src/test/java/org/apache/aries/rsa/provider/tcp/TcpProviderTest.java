@@ -48,6 +48,7 @@ import org.apache.aries.rsa.provider.tcp.myservice.ExpectedTestException;
 import org.apache.aries.rsa.provider.tcp.myservice.MyService;
 import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.util.EndpointHelper;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -63,13 +64,15 @@ import org.osgi.util.promise.Success;
 public class TcpProviderTest {
 
     private static final int TIMEOUT = 200;
-    private static final int NUM_CALLS = 100;
+    private static final int NUM_CALLS = 2000; // increase this manually to find the max throughput
     private static final int NUM_THREADS = 10;
 
     private MyService myServiceProxy;
     private MyService myServiceProxy2;
     private Endpoint ep;
     private Endpoint ep2;
+    private ImportedService importedService;
+    private ImportedService importedService2;
 
     protected static int getFreePort() throws IOException {
         try (ServerSocket socket = new ServerSocket()) {
@@ -96,21 +99,25 @@ public class TcpProviderTest {
         props.put("aries.rsa.id", "service2");
         ep2 = provider.exportService(new MyServiceImpl("service2"), bc, props, exportedInterfaces);
         assertThat(ep.description().getId(), startsWith("tcp://localhost:"));
-        myServiceProxy = (MyService)provider.importEndpoint(
-            MyService.class.getClassLoader(),
-            bc,
-            exportedInterfaces,
-            ep.description());
-        myServiceProxy2 = (MyService)provider.importEndpoint(
-            MyService.class.getClassLoader(),
-            bc,
-            exportedInterfaces,
-            ep2.description());
+        importedService = provider.importEndpoint(
+                MyService.class.getClassLoader(),
+                bc,
+                exportedInterfaces,
+                ep.description());
+        myServiceProxy = (MyService)importedService.getService();
+        importedService2 = provider.importEndpoint(
+                MyService.class.getClassLoader(),
+                bc,
+                exportedInterfaces,
+                ep2.description());
+        myServiceProxy2 = (MyService)importedService2.getService();
     }
 
 
     @After
     public void close() throws IOException {
+        importedService.close();
+        importedService2.close();
         ep.close();
         ep2.close();
     }
@@ -261,8 +268,10 @@ public class TcpProviderTest {
         }
         executor.shutdown();
         executor.awaitTermination(100, TimeUnit.SECONDS);
-        long tps = NUM_CALLS * 1000 / (System.currentTimeMillis() - start);
-        System.out.println(tps + " tps");
+        long cps = NUM_CALLS * 1000 / (System.currentTimeMillis() - start);
+        long cpst = cps / NUM_THREADS;
+        System.out.println(cpst + " calls per second on each thread");
+        System.out.println(cps + " calls per second total on " + NUM_THREADS + " threads");
     }
 
 }

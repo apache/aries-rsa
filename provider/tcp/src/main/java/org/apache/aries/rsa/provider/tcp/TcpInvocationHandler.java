@@ -18,16 +18,19 @@
  */
 package org.apache.aries.rsa.provider.tcp;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
@@ -46,15 +49,32 @@ import org.osgi.util.promise.Promise;
  * which sends the details of the method invocations
  * over a TCP connection, to be executed by the remote service.
  */
-public class TcpInvocationHandler implements InvocationHandler {
+public class TcpInvocationHandler implements InvocationHandler, Closeable {
+
+    private static class Connection {
+        Socket socket;
+        BasicObjectOutputStream out;
+        BasicObjectInputStream in;
+
+        public Connection(Socket socket) throws IOException {
+            this.socket = socket;
+            out = new BasicObjectOutputStream(socket.getOutputStream());
+            in = new BasicObjectInputStream(socket.getInputStream());
+        }
+    }
+
     private String host;
     private int port;
     private String endpointId;
     private ClassLoader cl;
     private int timeoutMillis;
 
+    private final Deque<Connection> pool = new ArrayDeque<>();
+    private int acquired; // counts connections currently in use (not in pool)
+    private boolean closed;
+
     public TcpInvocationHandler(ClassLoader cl, String host, int port, String endpointId, int timeoutMillis)
-        throws UnknownHostException, IOException {
+            throws UnknownHostException, IOException {
         this.cl = cl;
         this.host = host;
         this.port = port;
@@ -62,8 +82,84 @@ public class TcpInvocationHandler implements InvocationHandler {
         this.timeoutMillis = timeoutMillis;
     }
 
+    private Connection acquireConnection() throws IOException {
+        Connection conn;
+        synchronized (pool) {
+            acquired++; // must be first
+            if (closed) {
+                throw new IOException("Connection pool is closed");
+            }
+            conn = pool.pollFirst(); // reuse most recently used connection
+        }
+        // if the pool is empty, create a new connection
+        if (conn == null) {
+            conn = new Connection(openSocket());
+            conn.socket.setSoTimeout(timeoutMillis);
+            conn.socket.setTcpNoDelay(true);
+            conn.in.addClassLoader(cl);
+            conn.out.writeUTF(endpointId); // select endpoint for this connection
+        }
+        return conn;
+    }
+
+    // must be called exactly once for each call to acquireConnection,
+    // regardless of the outcome - if there was an error, pass null
+    private void releaseConnection(Connection conn) {
+        synchronized (pool) {
+            acquired--; // must be first
+            if (conn != null) {
+                pool.offerFirst(conn); // add to front of queue so old idle ones can expire
+            }
+            pool.notifyAll();
+        }
+    }
+
+    private void closeConnection(Connection conn) throws IOException {
+        if (conn != null) {
+            conn.socket.close();
+        }
+    }
+
+    private void closeConnections() throws IOException {
+        synchronized (pool) {
+            closed = true; // first prevent acquiring new connections
+            while (true) {
+                // close all idle connections
+                for (Iterator<Connection> it = pool.iterator(); it.hasNext(); ) {
+                    closeConnection(it.next());
+                    it.remove();
+                }
+                if (acquired == 0) {
+                    break; // all closed
+                }
+                // wait for additional active connections to be released
+                try {
+                    pool.wait();
+                } catch (InterruptedException ie) {
+                    throw new IOException("interrupted while closing connections", ie);
+                }
+            }
+        }
+    }
+
+    private int getPoolSize() {
+        synchronized (pool) {
+            return pool.size() + acquired; // both idle and active
+        }
+    }
+
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        // handle Object methods locally so we can use equals, HashMap, etc. normally
+        if (method.getDeclaringClass() == Object.class) {
+            switch (method.getName()) {
+                case "equals": return proxy == args[0];
+                case "hashCode": return System.identityHashCode(proxy);
+                case "toString": return proxy.getClass().getName() + "@"
+                    + Integer.toHexString(System.identityHashCode(proxy));
+            }
+        }
+        // handle remote invocation
         if (Future.class.isAssignableFrom(method.getReturnType()) ||
             CompletionStage.class.isAssignableFrom(method.getReturnType())) {
             return createFutureResult(method, args);
@@ -105,33 +201,50 @@ public class TcpInvocationHandler implements InvocationHandler {
     }
 
     private Object handleSyncCall(Method method, Object[] args) throws Throwable {
-        Throwable error;
-        Object result;
-        try (
-                Socket socket = openSocket();
-                ObjectOutputStream out = new BasicObjectOutputStream(socket.getOutputStream())
-            ) {
-            socket.setSoTimeout(timeoutMillis);
-            out.writeUTF(endpointId);
-            out.writeObject(method.getName());
-            out.writeObject(args);
-            out.flush();
+        Connection conn = null;
+        Throwable error = null;
+        Object result = null;
 
-            try (BasicObjectInputStream in = new BasicObjectInputStream(socket.getInputStream())) {
-                in.addClassLoader(cl);
-                error = (Throwable) in.readObject();
-                result = readReplaceVersion(in.readObject());
+        try {
+             // try at most all existing connections (which may be stale) plus one new
+            for (int attempts = getPoolSize() + 1; attempts > 0; attempts--) {
+                conn = acquireConnection(); // get or create pool connection
+                try {
+                    // write invocation data
+                    conn.out.writeObject(method.getName());
+                    conn.out.writeObject(args);
+                    conn.out.flush();
+                    conn.out.reset();
+                    // read result data
+                    error = (Throwable) conn.in.readObject();
+                    result = readReplaceVersion(conn.in.readObject());
+                    break; // transaction completed
+                } catch (SocketException se) { // catch only read/write exceptions here - only stale connections
+                    if (attempts == 1) {
+                        throw se; // failed last attempt - propagate the error
+                    }
+                    // the server socket was previously open, but now failed -
+                    // communication error or server socket was closed (e.g. idle timeout)
+                    // so we retry with another connection
+                    releaseConnection(null); // dispose of it before next attempt
+                }
             }
+
             if (error == null)
                 return result;
             else if (error instanceof InvocationTargetException)
                 error = error.getCause(); // exception thrown from remotely invoked method (not our problem)
             else
                 throw error; // exception thrown by provider itself
-        } catch (SocketTimeoutException e) {
-            throw new ServiceException("Timeout calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
         } catch (Throwable e) {
-            throw new ServiceException("Error calling " + host + ":" + port + " method: " + method.getName(), ServiceException.REMOTE, e);
+            // this can be an unexpected error from remote (not from the invoked method itself
+            // but somewhere in the provider processing), or a communications error (e.g. timeout) -
+            // in either case we don't know what was written or not, so we must abort the connection
+            closeConnection(conn);
+            conn = null; // don't return it to the pool
+            throw new ServiceException("Error invoking " + method.getName() + " on " + endpointId, ServiceException.REMOTE, e);
+        } finally {
+            releaseConnection(conn);
         }
         throw error;
     }
@@ -158,4 +271,8 @@ public class TcpInvocationHandler implements InvocationHandler {
         }
     }
 
+    @Override
+    public void close() throws IOException {
+        closeConnections();
+    }
 }

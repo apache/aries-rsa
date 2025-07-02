@@ -19,7 +19,6 @@
 package org.apache.aries.rsa.provider.tcp;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Arrays;
@@ -32,6 +31,7 @@ import java.util.Set;
 import org.apache.aries.rsa.annotations.RSADistributionProvider;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.BundleContext;
@@ -126,17 +126,28 @@ public class TcpProvider implements DistributionProvider {
     }
 
     @Override
-    public Object importEndpoint(ClassLoader cl,
-                                 BundleContext consumerContext,
-                                 Class[] interfaces,
-                                 EndpointDescription endpoint)
+    public ImportedService importEndpoint(ClassLoader cl,
+                                          BundleContext consumerContext,
+                                          Class[] interfaces,
+                                          EndpointDescription endpoint)
         throws IntentUnsatisfiedException {
         try {
             String endpointId = endpoint.getId();
             URI address = new URI(endpointId);
             int timeout = new EndpointPropertiesParser(endpoint).getTimeoutMillis();
-            InvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
-            return Proxy.newProxyInstance(cl, interfaces, handler);
+            TcpInvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
+            Object service = Proxy.newProxyInstance(cl, interfaces, handler);
+            return new ImportedService() {
+                @Override
+                public Object getService() {
+                    return service;
+                }
+
+                @Override
+                public void close() throws IOException {
+                    handler.close();
+                }
+            };
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

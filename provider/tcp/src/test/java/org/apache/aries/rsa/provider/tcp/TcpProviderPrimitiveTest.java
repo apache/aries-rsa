@@ -38,6 +38,7 @@ import org.apache.aries.rsa.provider.tcp.myservice.DTOType;
 import org.apache.aries.rsa.provider.tcp.myservice.PrimitiveService;
 import org.apache.aries.rsa.provider.tcp.myservice.PrimitiveServiceImpl;
 import org.apache.aries.rsa.spi.Endpoint;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.util.EndpointHelper;
 import org.easymock.EasyMock;
 import org.junit.AfterClass;
@@ -52,6 +53,7 @@ public class TcpProviderPrimitiveTest {
 
     private static PrimitiveService myServiceProxy;
     private static Endpoint ep;
+    private static ImportedService importedService;
 
     @BeforeClass
     public static void createServerAndProxy() {
@@ -66,10 +68,11 @@ public class TcpProviderPrimitiveTest {
         ep = provider.exportService(myService, bc, props, exportedInterfaces);
         assertThat(ep.description().getId(), startsWith("tcp://localhost:"));
         System.out.println(ep.description());
-        myServiceProxy = (PrimitiveService)provider.importEndpoint(PrimitiveService.class.getClassLoader(),
-                                                            bc,
-                                                            exportedInterfaces,
-                                                            ep.description());
+        importedService = provider.importEndpoint(PrimitiveService.class.getClassLoader(),
+            bc,
+            exportedInterfaces,
+            ep.description());
+        myServiceProxy = (PrimitiveService)importedService.getService();
     }
 
     @Test
@@ -164,6 +167,7 @@ public class TcpProviderPrimitiveTest {
 
     @AfterClass
     public static void close() throws IOException {
+        importedService.close();
         ep.close();
     }
 

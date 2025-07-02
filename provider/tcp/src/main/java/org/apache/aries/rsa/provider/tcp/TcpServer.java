@@ -19,6 +19,7 @@
 package org.apache.aries.rsa.provider.tcp;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -27,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -113,20 +115,24 @@ public class TcpServer implements Closeable, Runnable {
     }
 
     private void handleConnection(Socket socket) {
-        try (Socket sock = socket;
-             BasicObjectInputStream in = new BasicObjectInputStream(socket.getInputStream());
-             ObjectOutputStream out = new BasicObjectOutputStream(socket.getOutputStream())) {
+        try (Socket sock = socket; // socket will be closed when done
+             ObjectOutputStream out = new BasicObjectOutputStream(socket.getOutputStream());
+             BasicObjectInputStream in = new BasicObjectInputStream(socket.getInputStream())) {
+            socket.setTcpNoDelay(true);
             String endpointId = in.readUTF();
             MethodInvoker invoker = invokers.get(endpointId);
             if (invoker == null)
                 throw new IllegalArgumentException("invalid endpoint: " + endpointId);
             in.addClassLoader(invoker.getService().getClass().getClassLoader());
-            handleCall(invoker, in, out);
-        } catch (SocketException se) {
-            return; // e.g. connection closed by client
-        } catch (Exception e) {
-            LOG.warn("Error processing service call", e);
+            while (running) {
+                handleCall(invoker, in, out);
+            }
+        } catch (SocketException | SocketTimeoutException | EOFException se) {
+            return; // e.g. connection closed by client or read timeout due to inactivity
+        } catch (Throwable t) {
+            LOG.warn("Error processing service call", t);
         }
+        // connection is now closed and thread is done
     }
 
     private void handleCall(MethodInvoker invoker, ObjectInputStream in, ObjectOutputStream out) throws Exception {
@@ -141,6 +147,8 @@ public class TcpServer implements Closeable, Runnable {
         }
         out.writeObject(error);
         out.writeObject(result);
+        out.flush();
+        out.reset();
     }
 
     @SuppressWarnings("unchecked")
