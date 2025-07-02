@@ -73,7 +73,7 @@ public class ClientServiceFactoryTest {
         EasyMock.expect(handler.importEndpoint(anyObject(ClassLoader.class),
                                                anyObject(BundleContext.class),
                                                isA(Class[].class),
-                                               anyObject(EndpointDescription.class))).andReturn(proxy);
+                                               anyObject(EndpointDescription.class))).andReturn(() -> proxy);
         EasyMock.replay(handler);
         return handler;
     }

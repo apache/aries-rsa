@@ -18,12 +18,16 @@
  */
 package org.apache.aries.rsa.core;
 
+import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.aries.rsa.spi.DistributionProvider;
+import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -44,7 +48,7 @@ public class ClientServiceFactory implements ServiceFactory {
     private ImportRegistrationImpl importRegistration;
 
     private boolean closeable;
-    private int serviceCounter;
+    private Map<Object, ImportedService> services = new HashMap<>();
 
     public ClientServiceFactory(EndpointDescription endpoint,
                                 DistributionProvider handler, ImportRegistrationImpl ir) {
@@ -63,15 +67,16 @@ public class ClientServiceFactory implements ServiceFactory {
             for (String ifaceName : interfaceNames) {
                 interfaces.add(consumerLoader.loadClass(ifaceName));
             }
-            Object proxy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                public Object run() {
+            ImportedService importedService = AccessController.doPrivileged(new PrivilegedAction<ImportedService>() {
+                public ImportedService run() {
                     Class<?>[] ifAr = interfaces.toArray(new Class[]{});
                     return handler.importEndpoint(consumerLoader, consumerContext, ifAr, endpoint);
                 }
             });
 
+            Object proxy = importedService.getService();
             synchronized (this) {
-                serviceCounter++;
+                services.put(proxy, importedService);
             }
             return proxy;
         } catch (IntentUnsatisfiedException iue) {
@@ -85,8 +90,15 @@ public class ClientServiceFactory implements ServiceFactory {
 
     public void ungetService(Bundle requestingBundle, ServiceRegistration sreg, Object serviceObject) {
         synchronized (this) {
-            serviceCounter--;
-            LOG.debug("Services still provided by this ServiceFactory: {}", serviceCounter);
+            ImportedService importedService = services.remove(serviceObject);
+            if (importedService != null) {
+                try {
+                    importedService.close();
+                } catch (IOException e) {
+                    LOG.warn("Problem closing imported service proxy {} for {}", serviceObject, requestingBundle, e);
+                }
+            }
+            LOG.debug("Services still provided by this ServiceFactory: {}", services.size());
             closeIfUnused();
         }
     }
@@ -99,7 +111,7 @@ public class ClientServiceFactory implements ServiceFactory {
     }
 
     private synchronized void closeIfUnused() {
-        if (serviceCounter <= 0 && closeable) {
+        if (services.isEmpty() && closeable) {
             importRegistration.closeAll();
         }
     }
