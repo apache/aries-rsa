@@ -64,7 +64,7 @@ import org.osgi.util.promise.Success;
 public class TcpProviderTest {
 
     private static final int TIMEOUT = 200;
-    private static final int NUM_CALLS = 100;
+    private static final int NUM_CALLS = 2000; // increase this manually to find the max throughput
     private static final int NUM_THREADS = 10;
 
     private MyService myServiceProxy;
@@ -268,8 +268,10 @@ public class TcpProviderTest {
         }
         executor.shutdown();
         executor.awaitTermination(100, TimeUnit.SECONDS);
-        long tps = NUM_CALLS * 1000 / (System.currentTimeMillis() - start);
-        System.out.println(tps + " tps");
+        long cps = NUM_CALLS * 1000 / (System.currentTimeMillis() - start);
+        long cpst = cps / NUM_THREADS;
+        System.out.println(cpst + " calls per second on each thread");
+        System.out.println(cps + " calls per second total on " + NUM_THREADS + " threads");
     }
 
 }
