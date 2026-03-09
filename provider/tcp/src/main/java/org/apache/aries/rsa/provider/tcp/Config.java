@@ -21,70 +21,64 @@ package org.apache.aries.rsa.provider.tcp;
 import java.util.Map;
 import java.util.UUID;
 
-import org.osgi.service.remoteserviceadmin.EndpointDescription;
-
 /**
- * A convenience class for extracting endpoint configuration properties
- * and defaults.
+ * A convenience class for extracting endpoint configuration properties,
+ * provider properties and defaults.
  */
-public class EndpointPropertiesParser {
-    static final String PORT_KEY = "aries.rsa.port";
-    static final String HOSTNAME_KEY = "aries.rsa.hostname";
-    static final String BIND_ADDRESS_KEY = "aries.rsa.bindAddress";
-    static final String ID_KEY = "aries.rsa.id";
-    static final String THREADS_KEY = "aries.rsa.numThreads";
-    static final String TIMEOUT_KEY = "osgi.basic.timeout";
+public class Config {
+    static final String PORT = "aries.rsa.port";
+    static final String HOSTNAME = "aries.rsa.hostname";
+    static final String BIND_ADDRESS = "aries.rsa.bindAddress";
+    static final String ID = "aries.rsa.id";
+    static final String THREADS = "aries.rsa.numThreads";
+    static final String TIMEOUT = "osgi.basic.timeout";
 
     static final int DYNAMIC_PORT = 0;
     static final int DEFAULT_TIMEOUT_MILLIS = 300000;
     static final int DEFAULT_NUM_THREADS = 10;
 
-    private Map<String, Object> ep;
+    private Map<String, Object> props;
     private String uuid = UUID.randomUUID().toString(); // fallback id
 
-    public EndpointPropertiesParser(EndpointDescription ep) {
-        this.ep = ep.getProperties();
-    }
-
-    public EndpointPropertiesParser(Map<String, Object> ep) {
-        this.ep = ep;
+    public Config(Map<String, Object> props) {
+        this.props = props;
     }
 
     public int getTimeoutMillis() {
-        return getInt(TIMEOUT_KEY, DEFAULT_TIMEOUT_MILLIS);
+        return getInt(TIMEOUT, DEFAULT_TIMEOUT_MILLIS);
     }
 
     int getInt(String key, int defaultValue) {
-        Object value = ep.get(key);
+        Object value = props.get(key);
         return value != null ? Integer.parseInt(value.toString()) : defaultValue;
     }
 
     String getString(String key, String defaultValue) {
-        Object value = ep.get(key);
+        Object value = props.get(key);
         return value != null ? value.toString() : defaultValue;
     }
 
     public int getPort() {
-        return getInt(PORT_KEY, DYNAMIC_PORT);
+        return getInt(PORT, DYNAMIC_PORT);
     }
 
     public String getHostname() {
-        String hostName = getString(HOSTNAME_KEY, System.getProperty(HOSTNAME_KEY));
+        String hostName = getString(HOSTNAME, System.getProperty(HOSTNAME));
         if (hostName == null) {
-            hostName = LocalHostUtil.getLocalIp();
+            hostName = NetUtil.getLocalIp();
         }
         return hostName;
     }
 
     public String getBindAddress() {
-        return getString(BIND_ADDRESS_KEY, System.getProperty(BIND_ADDRESS_KEY));
+        return getString(BIND_ADDRESS, System.getProperty(BIND_ADDRESS));
     }
 
     public String getId() {
-        return getString(ID_KEY, uuid);
+        return getString(ID, uuid);
     }
 
     public int getNumThreads() {
-        return getInt(THREADS_KEY, DEFAULT_NUM_THREADS);
+        return getInt(THREADS, DEFAULT_NUM_THREADS);
     }
 }

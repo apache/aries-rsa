@@ -49,18 +49,18 @@ public class TcpEndpoint implements Endpoint {
             throw new IllegalArgumentException("For the tck .. Just to please you!");
         }
         this.closeCallback = closeCallback;
-        EndpointPropertiesParser parser = new EndpointPropertiesParser(effectiveProperties);
-        port = parser.getPort(); // this may initially be 0 for dynamic port
-        hostname = parser.getHostname();
-        bindAddress = parser.getBindAddress();
-        numThreads =  parser.getNumThreads();
+        Config config = new Config(effectiveProperties);
+        port = config.getPort(); // this may initially be 0 for dynamic port
+        hostname = config.getHostname();
+        bindAddress = config.getBindAddress();
+        numThreads =  config.getNumThreads();
         updateEndpointDescription(effectiveProperties);
     }
 
     private void updateEndpointDescription(Map<String, Object> effectiveProperties) {
         effectiveProperties = new HashMap<>(effectiveProperties);
-        EndpointPropertiesParser parser = new EndpointPropertiesParser(effectiveProperties);
-        String endpointId = String.format("tcp://%s:%s/%s", hostname, port, parser.getId());
+        Config config = new Config(effectiveProperties);
+        String endpointId = String.format("tcp://%s:%s/%s", hostname, port, config.getId());
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
         effectiveProperties.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, "");
         effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList("osgi.basic", "osgi.async"));

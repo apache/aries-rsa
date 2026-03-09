@@ -27,11 +27,12 @@ import java.util.Enumeration;
 import java.util.List;
 
 /**
- * Utility methods to get the local address even on a linux host.
+ * Utility methods related to networking, such as
+ * getting the local address even on a Linux host.
  */
-public final class LocalHostUtil {
+public final class NetUtil {
 
-    private LocalHostUtil() {
+    private NetUtil() {
         // Util Class
     }
 

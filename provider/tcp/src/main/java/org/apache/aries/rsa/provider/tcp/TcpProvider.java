@@ -134,7 +134,7 @@ public class TcpProvider implements DistributionProvider {
         try {
             String endpointId = endpoint.getId();
             URI address = new URI(endpointId);
-            int timeout = new EndpointPropertiesParser(endpoint).getTimeoutMillis();
+            int timeout = new Config(endpoint.getProperties()).getTimeoutMillis();
             TcpInvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
             Object service = Proxy.newProxyInstance(cl, interfaces, handler);
             return new ImportedService() {

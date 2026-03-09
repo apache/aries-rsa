@@ -28,7 +28,7 @@ import org.junit.Test;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
-public class EndpointParserTest {
+public class ConfigTest {
 
     private Map<String, Object> props;
 
@@ -44,41 +44,41 @@ public class EndpointParserTest {
     public void testDefaults() {
         Assert.assertEquals(300000, getParser().getTimeoutMillis());
         Assert.assertEquals(0, getParser().getPort());
-        Assert.assertEquals(LocalHostUtil.getLocalIp(), getParser().getHostname());
+        Assert.assertEquals(NetUtil.getLocalIp(), getParser().getHostname());
     }
 
     @Test
     public void testTimeoutString() {
-        props.put(EndpointPropertiesParser.TIMEOUT_KEY, "100");
+        props.put(Config.TIMEOUT, "100");
         Assert.assertEquals(100, getParser().getTimeoutMillis());
     }
 
     @Test
     public void testTimeoutInt() {
-        props.put(EndpointPropertiesParser.TIMEOUT_KEY, 100);
+        props.put(Config.TIMEOUT, 100);
         Assert.assertEquals(100, getParser().getTimeoutMillis());
     }
 
     @Test
     public void testPortString() {
-        props.put(EndpointPropertiesParser.PORT_KEY, "11111");
+        props.put(Config.PORT, "11111");
         Assert.assertEquals(11111, getParser().getPort());
     }
 
     @Test
     public void testPortInt() {
-        props.put(EndpointPropertiesParser.PORT_KEY, 11111);
+        props.put(Config.PORT, 11111);
         Assert.assertEquals(11111, getParser().getPort());
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void testTimeoutInvalid() {
-        props.put(EndpointPropertiesParser.TIMEOUT_KEY, new Date());
+        props.put(Config.TIMEOUT, new Date());
         getParser().getTimeoutMillis();
     }
 
-    private EndpointPropertiesParser getParser() {
-        return new EndpointPropertiesParser(new EndpointDescription(props));
+    private Config getParser() {
+        return new Config(new EndpointDescription(props).getProperties());
     }
 
 }
