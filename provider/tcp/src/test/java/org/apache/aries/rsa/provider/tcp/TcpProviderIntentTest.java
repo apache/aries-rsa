@@ -47,6 +47,7 @@ public class TcpProviderIntentTest {
         exportedInterfaces = new Class[] {MyService.class};
         bc = EasyMock.mock(BundleContext.class);
         provider = new TcpProvider();
+        provider.activate(new HashMap<>());
         myService = new MyServiceImpl(null);
     }
 

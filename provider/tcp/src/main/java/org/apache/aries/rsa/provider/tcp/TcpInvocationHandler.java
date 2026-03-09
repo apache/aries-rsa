@@ -44,6 +44,8 @@ import org.osgi.framework.Version;
 import org.osgi.util.promise.Deferred;
 import org.osgi.util.promise.Promise;
 
+import javax.net.SocketFactory;
+
 /**
  * The InvocationHandler backing the client-side service proxy,
  * which sends the details of the method invocations
@@ -66,6 +68,7 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
     private String host;
     private int port;
     private String endpointId;
+    private SocketFactory socketFactory;
     private ClassLoader cl;
     private int timeoutMillis;
 
@@ -81,8 +84,10 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
 
     private boolean closed;
 
-    TcpInvocationHandler(ClassLoader cl, String host, int port, String endpointId, int timeoutMillis)
+    TcpInvocationHandler(SocketFactory socketFactory, ClassLoader cl,
+            String host, int port, String endpointId, int timeoutMillis)
             throws UnknownHostException, IOException {
+        this.socketFactory = socketFactory;
         this.cl = cl;
         this.host = host;
         this.port = port;
@@ -285,7 +290,7 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
             @Override
             public Socket run() {
                 try {
-                    return new Socket(host, port);
+                    return socketFactory.createSocket(host, port);
                 } catch (Exception e) {
                     throw new RuntimeException(e.getMessage(), e);
                 }

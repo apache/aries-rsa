@@ -40,6 +40,8 @@ import org.osgi.util.promise.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ServerSocketFactory;
+
 /**
  * A server listening on a single TCP port, which accepts connections
  * and dispatches method invocation requests to one or more MethodInvokers
@@ -52,7 +54,7 @@ public class TcpServer implements Closeable, Runnable {
     private volatile boolean running;
     private ThreadPoolExecutor executor;
 
-    public TcpServer(String bindAddress, int port, int numThreads) {
+    public TcpServer(ServerSocketFactory serverSocketFactory, String bindAddress, int port, int numThreads) {
         String addressStr;
         try {
             InetSocketAddress address = bindAddress == null || bindAddress.isEmpty()
@@ -60,7 +62,7 @@ public class TcpServer implements Closeable, Runnable {
                 : new InetSocketAddress(bindAddress, port);
             addressStr = (address.getAddress() == null ? address.getHostName() : address.getAddress().getHostAddress())
                 + ":" + address.getPort();
-            this.serverSocket = new ServerSocket();
+            this.serverSocket = serverSocketFactory.createServerSocket();
             this.serverSocket.setReuseAddress(true);
             this.serverSocket.bind(address);
         } catch (IOException e) {

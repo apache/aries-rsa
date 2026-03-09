@@ -26,6 +26,8 @@ import java.util.UUID;
  * provider properties and defaults.
  */
 public class Config {
+
+    // endpoint service properties
     static final String PORT = "aries.rsa.port";
     static final String HOSTNAME = "aries.rsa.hostname";
     static final String BIND_ADDRESS = "aries.rsa.bindAddress";
@@ -33,12 +35,20 @@ public class Config {
     static final String THREADS = "aries.rsa.numThreads";
     static final String TIMEOUT = "osgi.basic.timeout";
 
+    // provider component properties
+    static final String KEYSTORE = "aries.rsa.keyStore";
+    static final String TRUSTSTORE = "aries.rsa.trustStore";
+    static final String KEYSTORE_PASSWORD = "aries.rsa.keyStorePassword";
+    static final String TRUSTSTORE_PASSWORD = "aries.rsa.trustStorePassword";
+    static final String KEY_ALIAS = "aries.rsa.keyAlias";
+    static final String MTLS = "aries.rsa.mtls";
+
     static final int DYNAMIC_PORT = 0;
     static final int DEFAULT_TIMEOUT_MILLIS = 300000;
     static final int DEFAULT_NUM_THREADS = 10;
 
-    private Map<String, Object> props;
-    private String uuid = UUID.randomUUID().toString(); // fallback id
+    private final Map<String, Object> props;
+    private final String fallbackId = UUID.randomUUID().toString();
 
     public Config(Map<String, Object> props) {
         this.props = props;
@@ -75,10 +85,34 @@ public class Config {
     }
 
     public String getId() {
-        return getString(ID, uuid);
+        return getString(ID, fallbackId);
     }
 
     public int getNumThreads() {
         return getInt(THREADS, DEFAULT_NUM_THREADS);
+    }
+
+    public String getKeyStore() {
+        return getString(KEYSTORE, System.getProperty(KEYSTORE));
+    }
+
+    public String getTrustStore() {
+        return getString(TRUSTSTORE, System.getProperty(TRUSTSTORE));
+    }
+
+    public String getKeyStorePassword() {
+        return getString(KEYSTORE_PASSWORD, System.getProperty(KEYSTORE_PASSWORD));
+    }
+
+    public String getTrustStorePassword() {
+        return getString(TRUSTSTORE_PASSWORD, System.getProperty(TRUSTSTORE_PASSWORD));
+    }
+
+    public String getKeyAlias() {
+        return getString(KEY_ALIAS, System.getProperty(KEY_ALIAS));
+    }
+
+    public boolean isMtls() {
+        return Boolean.parseBoolean(getString(MTLS, System.getProperty(MTLS)));
     }
 }

@@ -28,6 +28,8 @@ import org.apache.aries.rsa.spi.Endpoint;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
+import javax.net.ServerSocketFactory;
+
 /**
  * Contains the details of a TcpProvider's Endpoint (exported service).
  */

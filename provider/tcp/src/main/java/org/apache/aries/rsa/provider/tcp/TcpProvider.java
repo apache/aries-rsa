@@ -21,6 +21,11 @@ package org.apache.aries.rsa.provider.tcp;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,11 +40,16 @@ import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ServerSocketFactory;
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
 
 /**
  * The main TCP distribution provider class, which can import remote endpoints
@@ -49,19 +59,24 @@ import org.slf4j.LoggerFactory;
  * method invocations to the service instance.)
  */
 @SuppressWarnings("rawtypes")
-@RSADistributionProvider(configs="aries.tcp")
+@RSADistributionProvider(configs=TcpProvider.TCP_CONFIG_TYPE)
 @Component(property = { //
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.basic",
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.async",
         RemoteConstants.REMOTE_CONFIGS_SUPPORTED + "=" + TcpProvider.TCP_CONFIG_TYPE //
-})
+        },
+        configurationPid = TcpProvider.DISCOVERY_TCP_PID)
 public class TcpProvider implements DistributionProvider {
-    static final String TCP_CONFIG_TYPE = "aries.tcp";
+    public static final String DISCOVERY_TCP_PID = "org.apache.aries.rsa.provider.tcp";
+    public static final String TCP_CONFIG_TYPE = "aries.tcp";
     private static final String[] SUPPORTED_INTENTS = { "osgi.basic", "osgi.async"};
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpProvider.class);
 
     private Map<Integer, TcpServer> servers = new HashMap<>();
+    private SocketFactory socketFactory;
+    private ServerSocketFactory serverSocketFactory;
+    private boolean mtls;
 
     @Override
     public String[] getSupportedTypes() {
@@ -75,6 +90,50 @@ public class TcpProvider implements DistributionProvider {
             if (c != null)
                 union.addAll(c);
         return union;
+    }
+
+    private void initSocketFactories(Config config) {
+        try {
+            mtls = config.isMtls();
+            String keyStore = config.getKeyStore();
+            String trustStore = config.getTrustStore();
+            if (mtls) {
+                // both client and server need the keystore and truststore
+                if (keyStore == null || keyStore.isEmpty() || trustStore == null || trustStore.isEmpty())
+                    throw new RuntimeException("MTLS requires keystore and truststore");
+                SSLContext context = NetUtil.createSSLContext(
+                        keyStore, config.getKeyStorePassword(),
+                        trustStore, config.getTrustStorePassword(),
+                        config.getKeyAlias());
+                serverSocketFactory = NetUtil.createMTLSServerSocketFactory(context);
+                socketFactory = context.getSocketFactory();
+            } else {
+                if (keyStore == null || keyStore.isEmpty()) {
+                    serverSocketFactory = ServerSocketFactory.getDefault(); // plain sockets
+                } else {
+                    // server only needs keystore
+                    SSLContext context = NetUtil.createSSLContext(
+                        keyStore, config.getKeyStorePassword(), null, null, config.getKeyAlias());
+                    serverSocketFactory = context.getServerSocketFactory();
+                }
+                if (trustStore == null || trustStore.isEmpty()) {
+                    socketFactory = SocketFactory.getDefault(); // plain sockets
+                }  else {
+                    // client only needs truststore
+                    SSLContext context = NetUtil.createSSLContext(
+                        null, null, trustStore, config.getTrustStorePassword(), null);
+                    socketFactory = context.getSocketFactory();
+                }
+            }
+        } catch (NoSuchAlgorithmException | KeyManagementException | UnrecoverableKeyException | IOException |
+                 KeyStoreException | CertificateException e) {
+            throw new RuntimeException("Error initializing SSL Context", e);
+        }
+    }
+
+    @Activate
+    public void activate(Map<String, Object> props) {
+        initSocketFactories(new Config(props));
     }
 
     @Override
@@ -101,7 +160,7 @@ public class TcpProvider implements DistributionProvider {
         int port = endpoint.getPort();
         TcpServer server = servers.get(port);
         if (server == null || port == 0) {
-            server = new TcpServer(endpoint.getBindAddress(), port, endpoint.getNumThreads());
+            server = new TcpServer(serverSocketFactory, endpoint.getBindAddress(), port, endpoint.getNumThreads());
             port = server.getPort(); // get the real port
             endpoint.setPort(port);
             servers.put(port, server);
@@ -135,7 +194,8 @@ public class TcpProvider implements DistributionProvider {
             String endpointId = endpoint.getId();
             URI address = new URI(endpointId);
             int timeout = new Config(endpoint.getProperties()).getTimeoutMillis();
-            TcpInvocationHandler handler = new TcpInvocationHandler(cl, address.getHost(), address.getPort(), endpointId, timeout);
+            TcpInvocationHandler handler = new TcpInvocationHandler(
+                socketFactory, cl, address.getHost(), address.getPort(), endpointId, timeout);
             Object service = Proxy.newProxyInstance(cl, interfaces, handler);
             return new ImportedService() {
                 @Override

@@ -18,17 +18,21 @@
  */
 package org.apache.aries.rsa.provider.tcp;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.*;
+import java.security.*;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 
 /**
  * Utility methods related to networking, such as
- * getting the local address even on a Linux host.
+ * getting the local address even on a Linux host
+ * and SSL/TLS setup.
  */
 public final class NetUtil {
 
@@ -89,5 +93,128 @@ public final class NetUtil {
             localIP = "localhost";
         }
         return localIP;
+    }
+
+    /**
+     * Loads a keystore from a file.
+     *
+     * @param path the path to the keystore file
+     * @param password the keystore password
+     * @param alias an optional alias of a key in the keystore -
+     *        if specified, the returned key store will only contain this single key and its certificate chain
+     * @return the loaded keystore
+     * @throws KeyStoreException
+     * @throws IOException
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     * @throws UnrecoverableKeyException
+     */
+    private static KeyStore loadKeyStore(String path, char[] password, String alias)
+            throws KeyStoreException, IOException, NoSuchAlgorithmException,
+                CertificateException, UnrecoverableKeyException {
+        KeyStore ks = KeyStore.getInstance("PKCS12");
+        try (FileInputStream stream = new FileInputStream(path)) {
+            ks.load(stream, password);
+        }
+        // if specific key alias is provided, create a KeyStore with only the requested entry
+        if (alias != null && !alias.isEmpty() && !alias.equals("*")) {
+            KeyStore filtered = KeyStore.getInstance("PKCS12");
+            filtered.load(null, null);
+            filtered.setKeyEntry(alias, ks.getKey(alias, password), password, ks.getCertificateChain(alias));
+            ks = filtered;
+        }
+        return ks;
+    }
+
+    /**
+     * Creates an SSL context initialized with keys from the given keystore and truststore.
+     *
+     * @param keyStorePath the path to the keystore file (or null)
+     * @param keyStorePassword the keystore password
+     * @param trustStorePath the path to the truststore file (or null)
+     * @param trustStorePassword the truststore password
+     * @param alias an optional alias of a key in the keystore -
+     *        if specified, the returned context will only contain this single key
+     * @return the SSL context
+     * @throws NoSuchAlgorithmException
+     * @throws CertificateException
+     * @throws KeyStoreException
+     * @throws IOException
+     * @throws UnrecoverableKeyException
+     * @throws KeyManagementException
+     */
+    public static SSLContext createSSLContext(String keyStorePath, String keyStorePassword,
+            String trustStorePath, String trustStorePassword, String alias)
+            throws NoSuchAlgorithmException, CertificateException, KeyStoreException,
+                IOException, UnrecoverableKeyException, KeyManagementException {
+        KeyManagerFactory kmf = null;
+        if (keyStorePath != null && !keyStorePath.isEmpty()) {
+            kmf = KeyManagerFactory.getInstance("SunX509");
+            char[] pw = keyStorePassword == null ? null : keyStorePassword.toCharArray();
+            kmf.init(loadKeyStore(keyStorePath, pw, alias), pw);
+        }
+        TrustManagerFactory tmf = null;
+        if (trustStorePath != null && !trustStorePath.isEmpty()) {
+            tmf = TrustManagerFactory.getInstance("SunX509");
+            char[] pw = trustStorePassword == null ? null : trustStorePassword.toCharArray();
+            tmf.init(loadKeyStore(trustStorePath, pw, null));
+        }
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(
+            kmf == null ? null : kmf.getKeyManagers(),
+            tmf == null ? null : tmf.getTrustManagers(),
+            null);
+        return sslContext;
+    }
+
+    /**
+     * Creates an SSLServerSocketFactory from the given SSL context.
+     * <p>
+     * This is equivalent to calling {@link SSLContext#getServerSocketFactory()},
+     * but also invokes {@link SSLServerSocket#setNeedClientAuth setNeedClientAuth(true)}
+     * on all created sockets.
+     *
+     * @param sslContext an SSL context
+     * @return the SSLServerSocketFactory
+     */
+    public static SSLServerSocketFactory createMTLSServerSocketFactory(SSLContext sslContext) {
+        SSLServerSocketFactory ssf = sslContext.getServerSocketFactory();
+        return new SSLServerSocketFactory() {
+
+            private ServerSocket mtls(ServerSocket ss) {
+                ((SSLServerSocket)ss).setNeedClientAuth(true);
+                return ss;
+            }
+
+            @Override
+            public String[] getDefaultCipherSuites() {
+                return ssf.getDefaultCipherSuites();
+            }
+
+            @Override
+            public String[] getSupportedCipherSuites() {
+                return ssf.getSupportedCipherSuites();
+            }
+
+            @Override
+            public ServerSocket createServerSocket() throws IOException {
+                return mtls(ssf.createServerSocket());
+            }
+
+            @Override
+            public ServerSocket createServerSocket(int port) throws IOException {
+                return mtls(ssf.createServerSocket(port));
+            }
+
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog) throws IOException {
+                return mtls(ssf.createServerSocket(port, backlog));
+            }
+
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog, InetAddress ifAddress) throws IOException {
+                return mtls(ssf.createServerSocket(port, backlog, ifAddress));
+            }
+        };
     }
 }
