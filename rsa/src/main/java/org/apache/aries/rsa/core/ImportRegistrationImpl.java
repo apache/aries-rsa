@@ -228,7 +228,8 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
     @SuppressWarnings("unchecked")
     @Override
     public boolean update(EndpointDescription endpoint) {
-        importedService.setProperties(new Hashtable<>(endpoint.getProperties()));
+        this.endpoint = endpoint;
+        importedService.setProperties(new Hashtable(endpoint.getProperties()));
         eventProducer.notifyUpdate(this);
         return true;
     }
