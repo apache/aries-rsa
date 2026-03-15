@@ -182,19 +182,20 @@ public class ExportRegistrationImpl implements ExportRegistration {
 
     @Override
     public EndpointDescription update(Map<String, ?> properties) {
-        if (getExportReference() == null) {
+        ExportReference ref = getExportReference();
+        if (ref == null) {
             return null;
         }
-        ServiceReference<?> sref = getExportReference().getExportedService();
+        ServiceReference<?> sref = ref.getExportedService();
 
         HashMap<String, Object> props = new HashMap<>(properties);
-        EndpointDescription oldEpd = getExportReference().getExportedEndpoint();
+        EndpointDescription oldEpd = ref.getExportedEndpoint();
         copyIfNull(props, oldEpd, RemoteConstants.ENDPOINT_ID);
         copyIfNull(props, oldEpd, RemoteConstants.SERVICE_IMPORTED_CONFIGS);
 
         EndpointDescription epd = new EndpointDescription(sref, props);
         exportReference = new ExportReferenceImpl(sref, epd);
-        this.sender.notifyUpdate(this.getExportReference());
+        this.sender.notifyUpdate(ref);
         return epd;
     }
 
