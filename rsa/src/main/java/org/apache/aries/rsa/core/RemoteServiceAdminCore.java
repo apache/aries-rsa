@@ -63,8 +63,8 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     private final Map<Map<String, Object>, Collection<ExportRegistration>> exportedServices = new LinkedHashMap<>();
     private final Map<EndpointDescription, Collection<ImportRegistration>> importedServices = new LinkedHashMap<>();
 
-    // Is stored in exportedServices while the export is in progress as a marker
-    private final List<ExportRegistration> exportInProgress = Collections.emptyList();
+    // marker stored in exportedServices while the export is in progress
+    private final static List<ExportRegistration> EXPORT_IN_PROGRESS = Collections.emptyList();
 
     private final BundleContext bctx;
     private final EventProducer eventProducer;
@@ -101,25 +101,22 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
     // listen for exported services being unregistered, so we can close the export
     protected void createServiceListener() {
-        this.exportedServiceListener = new ServiceListener() {
-            public void serviceChanged(ServiceEvent event) {
-                if (event.getType() == ServiceEvent.UNREGISTERING) {
-                    removeServiceExports(event.getServiceReference());
-                }
+        this.exportedServiceListener = event -> {
+            if (event.getType() == ServiceEvent.UNREGISTERING) {
+                removeServiceExports(event.getServiceReference());
             }
         };
         this.bctx.addServiceListener(exportedServiceListener);
     }
 
     @Override
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings("unchecked")
     public List<ExportRegistration> exportService(ServiceReference serviceReference, Map additionalProperties)
         throws IllegalArgumentException, UnsupportedOperationException {
         Map<String, Object> serviceProperties = getProperties(serviceReference);
         if (additionalProperties != null) {
             overlayProperties(serviceProperties, additionalProperties);
         }
-        Map<String, Object> key = makeKey(serviceProperties);
 
         List<String> interfaceNames = getInterfaceNames(serviceProperties);
 
@@ -127,22 +124,21 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             return Collections.emptyList();
         }
 
-        List<ExportRegistration> exportRegs = getExistingAndLock(key, interfaceNames);
-        if (exportRegs != null) {
-            return exportRegs;
-        }
-
-        try {
-            ExportRegistration exportReg = exportService(interfaceNames, serviceReference, serviceProperties);
-            exportRegs = new ArrayList<>();
-            if (exportReg != null) {
-                exportRegs.add(exportReg);
+        Map<String, Object> key = makeKey(serviceProperties);
+        List<ExportRegistration> regs = getExistingAndLock(key, interfaceNames);
+        if (regs == null) {
+            regs = new ArrayList<>();
+            try {
+                ExportRegistration reg = exportService(interfaceNames, serviceReference, serviceProperties);
+                if (reg != null) {
+                    regs.add(reg);
+                    store(key, regs);
+                }
+            } finally {
+                unlock(key);
             }
-            store(key, exportRegs);
-            return exportRegs;
-        } finally {
-            unlock(key);
         }
+        return regs;
     }
 
     private boolean isExportConfigSupported(Map<String, Object> serviceProperties) {
@@ -166,21 +162,17 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         return false;
     }
 
-    private void store(Map<String, Object> key, List<ExportRegistration> exportRegs) {
-        if (!exportRegs.isEmpty()) {
-            // enlist initial export registrations in global list of exportRegistrations
-            synchronized (exportedServices) {
-                exportedServices.put(key, new ArrayList<>(exportRegs));
-            }
-            eventProducer.publishNotification(exportRegs);
+    private void store(Map<String, Object> key, List<ExportRegistration> regs) {
+        // enlist initial export registrations in global list of exportRegistrations
+        synchronized (exportedServices) {
+            exportedServices.put(key, new ArrayList<>(regs));
         }
+        eventProducer.publishNotification(regs);
     }
 
     private void unlock(Map<String, Object> key) {
         synchronized (exportedServices) {
-            if (exportedServices.get(key) == exportInProgress) {
-                exportedServices.remove(key);
-            }
+            exportedServices.remove(key, EXPORT_IN_PROGRESS);
             exportedServices.notifyAll(); // in any case, always notify waiting threads
         }
     }
@@ -188,13 +180,13 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     private List<ExportRegistration> getExistingAndLock(Map<String, Object> key, List<String> interfaces) {
         synchronized (exportedServices) {
             // check if it is already exported...
-            Collection<ExportRegistration> existingRegs = exportedServices.get(key);
+            Collection<ExportRegistration> regs = exportedServices.get(key);
 
             // if the export is already in progress, wait for it to be complete
-            while (existingRegs == exportInProgress) {
+            while (regs == EXPORT_IN_PROGRESS) {
                 try {
                     exportedServices.wait();
-                    existingRegs = exportedServices.get(key);
+                    regs = exportedServices.get(key);
                 } catch (InterruptedException ie) {
                     LOG.debug("interrupted while waiting for export in progress");
                     return Collections.emptyList();
@@ -202,13 +194,13 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             }
 
             // if the export is complete, return a copy of existing export
-            if (existingRegs != null) {
-                LOG.debug("already exported this service. Returning existing exportRegs {} ", interfaces);
-                return copyExportRegistration(existingRegs);
+            if (regs != null) {
+                LOG.debug("already exported this service. Returning existing registrations {} ", interfaces);
+                return copyExportRegistration(regs);
             }
 
             // mark export as being in progress
-            exportedServices.put(key, exportInProgress);
+            exportedServices.put(key, EXPORT_IN_PROGRESS);
         }
         return null;
     }
@@ -237,11 +229,8 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             final Class<?>[] interfaces = getInterfaces(serviceO, interfaceNames);
             final Map<String, Object> eprops = createEndpointProps(serviceProperties, interfaces);
 
-            Endpoint endpoint = AccessController.doPrivileged(new PrivilegedAction<Endpoint>() {
-                public Endpoint run() {
-                    return provider.exportService(serviceO, serviceContext, eprops, interfaces);
-                }
-            });
+            Endpoint endpoint = AccessController.doPrivileged(
+                (PrivilegedAction<Endpoint>) () -> provider.exportService(serviceO, serviceContext, eprops, interfaces));
             if (endpoint == null) {
                 return null;
             }
@@ -426,7 +415,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 return ir;
             }
 
-            if (determineConfigTypesForImport(endpoint).size() == 0) {
+            if (determineConfigTypesForImport(endpoint).isEmpty()) {
                 LOG.info("No matching handler can be found for remote endpoint {}.", endpoint.getId());
                 return null;
             }
@@ -434,7 +423,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             // TODO: somehow select the interfaces that should be imported ---> job of the TopologyManager?
             List<String> matchingInterfaces = endpoint.getInterfaces();
 
-            if (matchingInterfaces.size() == 0) {
+            if (matchingInterfaces.isEmpty()) {
                 LOG.info("No matching interfaces found for remote endpoint {}.", endpoint.getId());
                 return null;
             }
@@ -442,7 +431,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             LOG.info("Importing service {} with interfaces {} using handler {}.",
                 endpoint.getId(), endpoint.getInterfaces(), provider.getClass());
 
-            ImportRegistrationImpl imReg = exposeServiceFactory(matchingInterfaces.toArray(new String[matchingInterfaces.size()]), endpoint, provider);
+            ImportRegistrationImpl imReg = exposeServiceFactory(matchingInterfaces.toArray(new String[0]), endpoint, provider);
             if (imRegs == null) {
                 imRegs = new ArrayList<>();
                 importedServices.put(endpoint, imRegs);
@@ -463,7 +452,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             }
         }
 
-        if (usableConfigurationTypes.size() == 0) {
+        if (usableConfigurationTypes.isEmpty()) {
             LOG.info("Ignoring endpoint {} as it has no compatible configuration types: {}.",
                 endpoint.getId(), remoteConfigurationTypes);
         }
@@ -483,11 +472,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             ClientServiceFactory csf = new ClientServiceFactory(endpoint, handler, imReg);
             imReg.setClientServiceFactory(csf);
 
-            /**
-             * Export the factory using the api context as it has very few imports.
-             * If the bundle publishing the factory does not import the service interface
-             * package then the factory is visible for all consumers which we want.
-             */
+            // Export the factory using the api context as it has very few imports.
+            // If the bundle publishing the factory does not import the service interface
+            // package then the factory is visible for all consumers which we want.
             ServiceRegistration<?> csfReg = apictx.registerService(interfaceNames, csf, serviceProps);
             imReg.setImportedServiceRegistration(csfReg);
         } catch (Exception ex) {
