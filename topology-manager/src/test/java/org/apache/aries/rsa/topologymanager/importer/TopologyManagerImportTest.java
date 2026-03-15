@@ -18,14 +18,17 @@
  */
 package org.apache.aries.rsa.topologymanager.importer;
 
-import static org.junit.Assert.assertTrue;
+import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.expect;
+import static org.junit.Assert.assertEquals;
 
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.easymock.IMocksControl;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -38,54 +41,120 @@ import org.osgi.service.remoteserviceadmin.RemoteServiceAdminListener;
 
 public class TopologyManagerImportTest {
 
-    @Test
-    public void testImportForNewlyAddedRSA() throws InterruptedException {
-        IMocksControl c = EasyMock.createControl();
-        c.makeThreadSafe(true);
-        final Semaphore sema = new Semaphore(0);
-        BundleContext bc = getBundleContext(c);
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private BundleContext mockBundleContext(IMocksControl c) {
+        ServiceRegistration sreg = c.createMock(ServiceRegistration.class);
+        BundleContext bc = c.createMock(BundleContext.class);
+        expect(bc.registerService(eq(RemoteServiceAdminListener.class),
+                anyObject(RemoteServiceAdminListener.class),
+                anyObject())).andReturn(sreg).anyTimes();
+        return bc;
+    }
 
+    private ImportRegistration mockImportRegistration(IMocksControl c, EndpointDescription endpoint) {
+        final ImportRegistration ireg = c.createMock(ImportRegistration.class);
+        expect(ireg.getException()).andReturn(null).anyTimes();
+        expect(ireg.update(anyObject())).andReturn(true).anyTimes();
+        ImportReference iref = c.createMock(ImportReference.class);
+        expect(ireg.getImportReference()).andReturn(iref).anyTimes();
+        expect(iref.getImportedEndpoint()).andReturn(endpoint).anyTimes();
+        return ireg;
+    }
+
+    private EndpointDescription createEndpoint() {
         EndpointDescription endpoint = c.createMock(EndpointDescription.class);
-        RemoteServiceAdmin rsa = c.createMock(RemoteServiceAdmin.class);
-        final ImportRegistration ir = getRegistration(c, endpoint);
-        EasyMock.expect(rsa.importService(EasyMock.eq(endpoint))).andAnswer(new IAnswer<ImportRegistration>() {
-            public ImportRegistration answer() throws Throwable {
-                sema.release();
-                return ir;
-            }
-        }).once();
+        final ImportRegistration ir = mockImportRegistration(c, endpoint);
+        ir.close(); // must be closed
+        expectLastCall().andAnswer(() -> {
+            endpoints.get(endpoint).decrementAndGet();
+            return null;
+        });
+        expect(rsa.importService(eq(endpoint))).andAnswer(() -> {
+            endpoints.get(endpoint).incrementAndGet();
+            return ir;
+        });
+        endpoints.put(endpoint, new AtomicInteger());
+        return endpoint;
+    }
 
-        ir.close();
-        EasyMock.expectLastCall();
+    IMocksControl c;
+    BundleContext bc;
+    RemoteServiceAdmin rsa;
+    TopologyManagerImport tm;
+    Map<EndpointDescription, AtomicInteger> endpoints = new ConcurrentHashMap<>();
+
+    @Before
+    public void setUp() {
+        c = createControl();
+        c.makeThreadSafe(true);
+        bc = mockBundleContext(c);
+        rsa = c.createMock(RemoteServiceAdmin.class);
+        tm = new TopologyManagerImport(bc);
+    }
+
+    public void start() {
         c.replay();
-
-        TopologyManagerImport tm = new TopologyManagerImport(bc);
         tm.start();
-        EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
-        tm.endpointChanged(event, "myFilter");
-        tm.add(rsa);
-        assertTrue("rsa.ImportService should have been called",
-            sema.tryAcquire(100, TimeUnit.SECONDS));
+    }
+
+    @After
+    public void tearDown() {
         tm.stop();
         c.verify();
     }
 
-    private ImportRegistration getRegistration(IMocksControl c, EndpointDescription endpoint) {
-        final ImportRegistration ireg = c.createMock(ImportRegistration.class);
-        EasyMock.expect(ireg.getException()).andReturn(null).anyTimes();
-        ImportReference iref = c.createMock(ImportReference.class);
-        EasyMock.expect(ireg.getImportReference()).andReturn(iref).anyTimes();
-        EasyMock.expect(iref.getImportedEndpoint()).andReturn(endpoint).anyTimes();
-        return ireg;
+    private void assertImports(EndpointDescription endpoint, int registrations) throws InterruptedException {
+        long end = System.currentTimeMillis() + 1000;
+        while (System.currentTimeMillis() < end) {
+            if (endpoints.get(endpoint).get() == registrations)
+                return;
+            Thread.sleep(10);
+        }
+        assertEquals("wrong number of open import registrations", registrations, endpoints.get(endpoint).get());
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    private BundleContext getBundleContext(IMocksControl c) {
-        ServiceRegistration sreg = c.createMock(ServiceRegistration.class);
-        BundleContext bc = c.createMock(BundleContext.class);
-        EasyMock.expect(bc.registerService(EasyMock.eq(RemoteServiceAdminListener.class),
-                                           EasyMock.anyObject(RemoteServiceAdminListener.class),
-                                           EasyMock.anyObject())).andReturn(sreg).anyTimes();
-        return bc;
+    @Test
+    public void testAddEndpointBeforeRsa() throws InterruptedException {
+        EndpointDescription endpoint = createEndpoint();
+        start();
+
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.ADDED, endpoint), "myFilter");
+        tm.add(rsa);
+        assertImports(endpoint, 1);
+    }
+
+    @Test
+    public void testAddEndpointAfterRsa() throws InterruptedException {
+        EndpointDescription endpoint = createEndpoint();
+        start();
+
+        tm.add(rsa);
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.ADDED, endpoint), "myFilter");
+        assertImports(endpoint, 1);
+    }
+
+    @Test
+    public void testAddEndpointTwice() throws InterruptedException {
+        EndpointDescription endpoint = createEndpoint();
+        start();
+
+        tm.add(rsa);
+        EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
+        tm.endpointChanged(event, "myFilter");
+        assertImports(endpoint, 1);
+        tm.endpointChanged(event, "myFilter");
+        assertImports(endpoint, 1); // still one one import
+    }
+
+    @Test
+    public void testRemoveEndpoint() throws InterruptedException {
+        EndpointDescription endpoint = createEndpoint();
+        start();
+
+        tm.add(rsa);
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.ADDED, endpoint), "myFilter");
+        assertImports(endpoint, 1);
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.REMOVED, endpoint), "myFilter");
+        assertImports(endpoint, 0);
     }
 }
