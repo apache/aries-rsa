@@ -20,6 +20,7 @@ package org.apache.aries.rsa.topologymanager.exporter;
 
 import java.io.Closeable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
@@ -39,104 +40,75 @@ public class ServiceExportsRepository implements Closeable {
 
     private final RemoteServiceAdmin rsa;
     private final EndpointListenerNotifier notifier;
-    private final Map<ServiceReference<?>, Collection<ExportRegistrationHolder>> exportsMap = new LinkedHashMap<>();
-
-    /**
-     * The holder allows us to work around that registration.getReference() is null when the registration is closed.
-     */
-    private class ExportRegistrationHolder {
-        private final ExportRegistration registration;
-        private final ExportReference reference;
-        private EndpointDescription endpoint;
-
-        ExportRegistrationHolder(ExportRegistration registration, EndpointDescription endpoint) {
-            this.registration = registration;
-            this.reference = registration.getExportReference();
-            this.endpoint = endpoint;
-            notifier.sendEvent(new EndpointEvent(EndpointEvent.ADDED, endpoint));
-        }
-
-        ExportRegistration getRegistration() {
-            return registration;
-        }
-
-        void close() {
-            if (reference != null) {
-                notifier.sendEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
-                registration.close();
-            }
-        }
-
-        public void update(ServiceReference<?> sref) {
-            if (reference != null) {
-                endpoint = registration.update(getServiceProps(sref));
-                notifier.sendEvent(new EndpointEvent(EndpointEvent.MODIFIED, endpoint));
-            }
-        }
-
-        private Map<String, ?> getServiceProps(ServiceReference<?> sref) {
-            HashMap<String, Object> props = new HashMap<>();
-            for (String key : sref.getPropertyKeys()) {
-                props.put(key, sref.getProperty(key));
-            }
-            return props;
-        }
-    }
+    // holds the set of exports for each service, and also caches the endpoint associated with each export,
+    // so we'll be able to access it even after it becomes unreachable via the export when it is closed
+    private final Map<ServiceReference<?>, Map<ExportRegistration, EndpointDescription>> exports = new LinkedHashMap<>();
 
     public ServiceExportsRepository(RemoteServiceAdmin rsa, EndpointListenerNotifier notifier) {
         this.rsa = rsa;
         this.notifier = notifier;
     }
 
+    private static Map<String, Object> getServiceProps(ServiceReference<?> sref) {
+        HashMap<String, Object> props = new HashMap<>();
+        for (String key : sref.getPropertyKeys()) {
+            props.put(key, sref.getProperty(key));
+        }
+        return props;
+    }
+
     @Override
     public synchronized void close() {
         LOG.debug("Closing registry for RemoteServiceAdmin {}", rsa.getClass().getName());
-        for (ServiceReference<?> sref : new ArrayList<>(exportsMap.keySet())) { // iterate over copy to avoid CME
-            removeService(sref);
-        }
+        new ArrayList<>(exports.keySet()).forEach(this::removeService); // iterate over copy to avoid CME
     }
 
     public synchronized void addService(ServiceReference<?> sref, Collection<ExportRegistration> registrations) {
-        Collection<ExportRegistrationHolder> exports = new ArrayList<>(registrations.size());
+        Map<ExportRegistration, EndpointDescription> regs = new LinkedHashMap<>();
         for (ExportRegistration reg : registrations) {
-            ExportReference reference = reg.getExportReference();
-            if (reference != null) {
-                exports.add(new ExportRegistrationHolder(reg, reference.getExportedEndpoint()));
+            ExportReference ref = reg.getExportReference();
+            EndpointDescription endpoint = ref == null ? null : ref.getExportedEndpoint();
+            if (endpoint != null) {
+                regs.put(reg, endpoint);
+                notifier.sendEvent(new EndpointEvent(EndpointEvent.ADDED, endpoint));
             }
         }
-        if (!exports.isEmpty()) {
-            exportsMap.put(sref, exports);
+        if (!regs.isEmpty()) {
+            exports.put(sref, regs);
         }
     }
 
     public synchronized void modifyService(ServiceReference<?> sref) {
-        Collection<ExportRegistrationHolder> exports = exportsMap.get(sref);
-        if (exports != null) {
-            for (ExportRegistrationHolder reg : exports) {
-                reg.update(sref);
+        Map<ExportRegistration, EndpointDescription> regs = exports.get(sref);
+        if (regs != null) {
+            Map<String, ?> props = getServiceProps(sref);
+            for (Map.Entry<ExportRegistration, EndpointDescription> entry: regs.entrySet()) {
+                EndpointDescription updated = entry.getKey().update(props);
+                if (updated != null) {
+                    entry.setValue(updated);
+                    notifier.sendEvent(new EndpointEvent(EndpointEvent.MODIFIED, updated));
+                }
             }
         }
     }
 
     public synchronized void removeService(ServiceReference<?> sref) {
-        Collection<ExportRegistrationHolder> exports = exportsMap.remove(sref);
-        if (exports != null) {
-            for (ExportRegistrationHolder reg : exports) {
+        Map<ExportRegistration, EndpointDescription> regs = exports.remove(sref);
+        if (regs != null) {
+            regs.forEach((reg, endpoint) -> {
+                notifier.sendEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
                 reg.close();
-            }
+            });
         }
     }
 
     public synchronized List<EndpointDescription> getAllEndpoints() {
-        List<EndpointDescription> endpoints = new ArrayList<>();
-        for (Collection<ExportRegistrationHolder> exports : exportsMap.values()) {
-            for (ExportRegistrationHolder reg : exports) {
-                ExportReference reference = reg.getRegistration().getExportReference();
-                if (reference != null) {
-                    endpoints.add(reference.getExportedEndpoint());
-                }
-            }
-        }
-        return endpoints;
+        return exports.values().stream()
+            .flatMap(regs -> regs.keySet().stream())
+            .map(ExportRegistration::getExportReference)
+            .filter(Objects::nonNull)
+            .map(ExportReference::getExportedEndpoint)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
     }
 }
