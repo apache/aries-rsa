@@ -91,19 +91,21 @@ public class ServiceExportsRepository implements Closeable {
     @Override
     public synchronized void close() {
         LOG.debug("Closing registry for RemoteServiceAdmin {}", rsa.getClass().getName());
-        for (ServiceReference<?> sref : exportsMap.keySet()) {
+        for (ServiceReference<?> sref : new ArrayList<>(exportsMap.keySet())) { // iterate over copy to avoid CME
             removeService(sref);
         }
     }
 
     public synchronized void addService(ServiceReference<?> sref, Collection<ExportRegistration> registrations) {
         Collection<ExportRegistrationHolder> exports = new ArrayList<>(registrations.size());
-        exportsMap.put(sref, exports);
         for (ExportRegistration reg : registrations) {
             ExportReference reference = reg.getExportReference();
             if (reference != null) {
                 exports.add(new ExportRegistrationHolder(reg, reference.getExportedEndpoint()));
             }
+        }
+        if (!exports.isEmpty()) {
+            exportsMap.put(sref, exports);
         }
     }
 
@@ -117,12 +119,11 @@ public class ServiceExportsRepository implements Closeable {
     }
 
     public synchronized void removeService(ServiceReference<?> sref) {
-        Collection<ExportRegistrationHolder> exports = exportsMap.get(sref);
+        Collection<ExportRegistrationHolder> exports = exportsMap.remove(sref);
         if (exports != null) {
             for (ExportRegistrationHolder reg : exports) {
                 reg.close();
             }
-            exports.clear();
         }
     }
 
