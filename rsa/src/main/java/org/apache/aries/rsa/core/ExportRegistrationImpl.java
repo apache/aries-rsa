@@ -49,7 +49,7 @@ public class ExportRegistrationImpl implements ExportRegistration {
     private int instanceCount;
     private volatile boolean closed;
 
-    private EventProducer sender;
+    private final EventProducer sender;
 
     private ExportRegistrationImpl(ExportRegistrationImpl parent,
             CloseHandler rsaCore,
@@ -186,22 +186,16 @@ public class ExportRegistrationImpl implements ExportRegistration {
         if (ref == null) {
             return null;
         }
+
+        Map<String, Object> oldProps = ref.getExportedEndpoint().getProperties();
+        Map<String, Object> props = new HashMap<>(properties);
+        props.putIfAbsent(RemoteConstants.ENDPOINT_ID, oldProps.get(RemoteConstants.ENDPOINT_ID));
+        props.putIfAbsent(RemoteConstants.SERVICE_IMPORTED_CONFIGS, oldProps.get(RemoteConstants.SERVICE_IMPORTED_CONFIGS));
+
         ServiceReference<?> sref = ref.getExportedService();
-
-        HashMap<String, Object> props = new HashMap<>(properties);
-        EndpointDescription oldEpd = ref.getExportedEndpoint();
-        copyIfNull(props, oldEpd, RemoteConstants.ENDPOINT_ID);
-        copyIfNull(props, oldEpd, RemoteConstants.SERVICE_IMPORTED_CONFIGS);
-
         EndpointDescription epd = new EndpointDescription(sref, props);
         exportReference = new ExportReferenceImpl(sref, epd);
         this.sender.notifyUpdate(ref);
         return epd;
-    }
-
-    private void copyIfNull(HashMap<String, Object> props, EndpointDescription oldEpd, String key) {
-        if (props.get(key) == null) {
-            props.put(key, oldEpd.getProperties().get(key));
-        }
     }
 }
