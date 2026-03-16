@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 class ConfigDiscovery implements ManagedServiceFactory {
     private final Map<EndpointDescription, String> endpointDescriptions = new ConcurrentHashMap<>();
     private final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
-    private final Map<String, Collection<EndpointEventListener>> filterToListeners = new HashMap<>();
 
     @Override
     public String getName() {
@@ -59,10 +58,6 @@ class ConfigDiscovery implements ManagedServiceFactory {
 
         synchronized (listenerToFilters) {
             listenerToFilters.put(endpointListener, filters);
-            for (String filter : filters) {
-                Collection<EndpointEventListener> listeners = filterToListeners.computeIfAbsent(filter, k -> new ArrayList<>());
-                listeners.add(endpointListener);
-            }
         }
 
         triggerCallbacks(filters, endpointListener);
@@ -70,35 +65,8 @@ class ConfigDiscovery implements ManagedServiceFactory {
 
     void removeListener(EndpointEventListener endpointListener) {
         synchronized (listenerToFilters) {
-            Collection<String> filters = listenerToFilters.remove(endpointListener);
-            if (filters == null) {
-                return;
-            }
-
-            for (String filter : filters) {
-                Collection<EndpointEventListener> listeners = filterToListeners.get(filter);
-                if (listeners != null) {
-                    listeners.remove(endpointListener);
-                    if (listeners.isEmpty()) {
-                        filterToListeners.remove(filter);
-                    }
-                }
-            }
+            listenerToFilters.remove(endpointListener);
         }
-    }
-
-    private Map<String, Collection<EndpointEventListener>> getMatchingListeners(EndpointDescription endpoint) {
-        // return a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
-        Map<String, Collection<EndpointEventListener>> matched = new HashMap<>();
-        synchronized (listenerToFilters) {
-            for (Map.Entry<String, Collection<EndpointEventListener>> entry : filterToListeners.entrySet()) {
-                String filter = entry.getKey();
-                if (matchFilter(filter, endpoint)) {
-                    matched.put(filter, new ArrayList<>(entry.getValue()));
-                }
-            }
-        }
-        return matched;
     }
 
     @SuppressWarnings("rawtypes")
@@ -123,11 +91,21 @@ class ConfigDiscovery implements ManagedServiceFactory {
 
     private void triggerCallbacks(EndpointEvent event) {
         EndpointDescription endpoint = event.getEndpoint();
-        for (Map.Entry<String, Collection<EndpointEventListener>> entry : getMatchingListeners(endpoint).entrySet()) {
-            String filter = entry.getKey();
-            for (EndpointEventListener listener : entry.getValue()) {
-                triggerCallbacks(listener, filter, event);
+        // make a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
+        List<Map.Entry<EndpointEventListener, String>> matched = new ArrayList<>();
+        synchronized (listenerToFilters) {
+            for (Map.Entry<EndpointEventListener, Collection<String>> entry : listenerToFilters.entrySet()) {
+                EndpointEventListener listener = entry.getKey();
+                for (String filter : entry.getValue()) {
+                    if (matchFilter(filter, endpoint)) {
+                        matched.add(Map.entry(listener, filter));
+                    }
+                }
             }
+        }
+        // then trigger events without a lock
+        for (Map.Entry<EndpointEventListener, String> entry : matched) {
+            entry.getKey().endpointChanged(event, entry.getValue().toString());
         }
     }
 
