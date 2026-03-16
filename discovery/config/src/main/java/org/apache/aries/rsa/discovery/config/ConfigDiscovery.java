@@ -82,13 +82,24 @@ class ConfigDiscovery implements ManagedServiceFactory {
 
     private void addDeclaredRemoteService(String pid, Dictionary<String, ?> config) {
         EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(config));
-        List<Map.Entry<Filter, EndpointEventListener>> matched;
-        boolean isNew;
+        EndpointDescription old;
+        Set<Map.Entry<Filter, EndpointEventListener>> oldMatches, newMatches;
         synchronized (this) {
-            isNew = endpoints.put(pid, endpoint) == null;
-            matched = findMatches(endpoint);
+            old = endpoints.put(pid, endpoint);
+            oldMatches = old == null ? null : new HashSet<>(findMatches(old));
+            newMatches = new HashSet<>(findMatches(endpoint));
         }
-        triggerEvent(new EndpointEvent(isNew ? EndpointEvent.ADDED : EndpointEvent.MODIFIED, endpoint), matched);
+        List<Map.Entry<Filter, EndpointEventListener>> added = new ArrayList<>(newMatches);
+        if (old != null) {
+            added.removeAll(oldMatches);
+            List<Map.Entry<Filter, EndpointEventListener>> endmatch = new ArrayList<>(oldMatches);
+            endmatch.removeAll(newMatches);
+            List<Map.Entry<Filter, EndpointEventListener>> modified = new ArrayList<>(oldMatches);
+            modified.removeAll(endmatch);
+            triggerEvent(new EndpointEvent(EndpointEvent.MODIFIED, endpoint), modified);
+            triggerEvent(new EndpointEvent(EndpointEvent.MODIFIED_ENDMATCH, old), endmatch);
+        }
+        triggerEvent(new EndpointEvent(EndpointEvent.ADDED, endpoint), added);
     }
 
     private void removeServiceDeclaredInConfig(String pid) {
