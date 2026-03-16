@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 class ConfigDiscovery implements ManagedServiceFactory {
-    private final Map<EndpointDescription, String> endpointDescriptions = new ConcurrentHashMap<>();
+    private final Map<String, EndpointDescription> endpoints = new ConcurrentHashMap<>();
     private final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
 
     @Override
@@ -72,20 +72,14 @@ class ConfigDiscovery implements ManagedServiceFactory {
     @SuppressWarnings("rawtypes")
     private void addDeclaredRemoteService(String pid, Dictionary config) {
         EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(config));
-        endpointDescriptions.put(endpoint, pid);
-        EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
-        triggerCallbacks(event);
+        endpoints.put(pid, endpoint);
+        triggerCallbacks(new EndpointEvent(EndpointEvent.ADDED, endpoint));
     }
 
     private void removeServiceDeclaredInConfig(String pid) {
-        for (Iterator<Map.Entry<EndpointDescription, String>> i = endpointDescriptions.entrySet().iterator();
-             i.hasNext(); ) {
-            Map.Entry<EndpointDescription, String> entry = i.next();
-            if (pid.equals(entry.getValue())) {
-                EndpointEvent event = new EndpointEvent(EndpointEvent.REMOVED, entry.getKey());
-                triggerCallbacks(event);
-                i.remove();
-            }
+        EndpointDescription endpoint = endpoints.remove(pid);
+        if (endpoint != null) {
+            triggerCallbacks(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
         }
     }
 
@@ -120,7 +114,7 @@ class ConfigDiscovery implements ManagedServiceFactory {
 
     private void triggerCallbacks(Collection<String> filters, EndpointEventListener endpointListener) {
         for (String filter : filters) {
-            for (EndpointDescription endpoint : endpointDescriptions.keySet()) {
+            for (EndpointDescription endpoint : endpoints.values()) {
                 EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
                 triggerCallbacks(endpointListener, filter, event);
             }
