@@ -89,11 +89,37 @@ public class TopologyManagerExportTest {
         expectServiceExported(sref2, epd2);
 
         c.replay();
-        exportManager.add(rsa);
+        exportManager.add(rsa); // rsa before services
         exportManager.serviceChanged(new ServiceEvent(ServiceEvent.REGISTERED, sref));
         exportManager.serviceChanged(new ServiceEvent(ServiceEvent.REGISTERED, sref2));
         exportManager.serviceChanged(new ServiceEvent(ServiceEvent.MODIFIED, sref));
         //exportManager.serviceChanged(new ServiceEvent(ServiceEvent.UNREGISTERING, sref));
+        exportManager.remove(rsa);
+        c.verify();
+
+        List<EndpointEvent> expectedEvents = Arrays.asList(
+                new EndpointEvent(EndpointEvent.ADDED, epd),
+                new EndpointEvent(EndpointEvent.ADDED, epd2),
+                new EndpointEvent(EndpointEvent.MODIFIED, epd),
+                new EndpointEvent(EndpointEvent.REMOVED, epd),
+                new EndpointEvent(EndpointEvent.REMOVED, epd2));
+        MatcherAssert.assertThat(events.getValues(), sameBeanAs(expectedEvents));
+    }
+
+    @Test
+    public void testServiceExportUnexportWithRSAAddedAfterService() throws Exception {
+        EndpointDescription epd = createEndpoint();
+        ServiceReference sref = createUserService("*");
+        expectServiceExported(sref, epd);
+        EndpointDescription epd2 = createEndpoint();
+        ServiceReference sref2 = createUserService("*");
+        expectServiceExported(sref2, epd2);
+
+        c.replay();
+        exportManager.serviceChanged(new ServiceEvent(ServiceEvent.REGISTERED, sref));
+        exportManager.serviceChanged(new ServiceEvent(ServiceEvent.REGISTERED, sref2));
+        exportManager.add(rsa); // rsa after services
+        exportManager.serviceChanged(new ServiceEvent(ServiceEvent.MODIFIED, sref));
         exportManager.remove(rsa);
         c.verify();
 
