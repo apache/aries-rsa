@@ -23,7 +23,6 @@ import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
-import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedServiceFactory;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
@@ -31,6 +30,11 @@ import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 
 import java.util.*;
 
+/**
+ * Monitors adding/updating/removing of configuration instances under the factory pid,
+ * as well as adding/removing of EndpointEventListeners, and triggers EndpointEvents
+ * accordingly as endpoints are created/updated/removed (via the configuration changes).
+ */
 class ConfigDiscovery implements ManagedServiceFactory {
     private final Map<String, EndpointDescription> endpoints = new HashMap<>();
     private final Map<EndpointEventListener, Collection<Filter>> listenerToFilters = new HashMap<>();
@@ -41,47 +45,8 @@ class ConfigDiscovery implements ManagedServiceFactory {
     }
 
     @Override
-    public void updated(String pid, Dictionary<String, ?> properties) throws ConfigurationException {
-        addDeclaredRemoteService(pid, properties);
-    }
-
-    @Override
-    public void deleted(String pid) {
-        removeServiceDeclaredInConfig(pid);
-    }
-
-    private static List<Filter> createFilters(ServiceReference<EndpointEventListener> ref) {
-        List<String> values = StringPlus.normalize(ref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
-        List<Filter> filters = new ArrayList<>(values.size());
-        for (String value : values) {
-            try {
-                filters.add(FrameworkUtil.createFilter(value));
-            } catch (InvalidSyntaxException ignore) { // bad filter never matches
-            }
-        }
-        return filters;
-    }
-
-    void addListener(ServiceReference<EndpointEventListener> ref, EndpointEventListener listener) {
-        List<Filter> filters = createFilters(ref);
-        if (!filters.isEmpty()) {
-            List<Map.Entry<Filter, EndpointDescription>> matched;
-            synchronized (this) {
-                listenerToFilters.put(listener, filters);
-                matched = findMatches(filters);
-            }
-            triggerEvent(listener, matched);
-        }
-    }
-
-    void removeListener(EndpointEventListener listener) {
-        synchronized (this) {
-            listenerToFilters.remove(listener);
-        }
-    }
-
-    private void addDeclaredRemoteService(String pid, Dictionary<String, ?> config) {
-        EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(config));
+    public void updated(String pid, Dictionary<String, ?> properties) {
+        EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(properties));
         EndpointDescription old;
         Set<Map.Entry<Filter, EndpointEventListener>> oldMatches, newMatches;
         synchronized (this) {
@@ -96,13 +61,14 @@ class ConfigDiscovery implements ManagedServiceFactory {
             endmatch.removeAll(newMatches);
             List<Map.Entry<Filter, EndpointEventListener>> modified = new ArrayList<>(oldMatches);
             modified.removeAll(endmatch);
-            triggerEvent(new EndpointEvent(EndpointEvent.MODIFIED, endpoint), modified);
-            triggerEvent(new EndpointEvent(EndpointEvent.MODIFIED_ENDMATCH, old), endmatch);
+            triggerEvents(new EndpointEvent(EndpointEvent.MODIFIED, endpoint), modified);
+            triggerEvents(new EndpointEvent(EndpointEvent.MODIFIED_ENDMATCH, old), endmatch);
         }
-        triggerEvent(new EndpointEvent(EndpointEvent.ADDED, endpoint), added);
+        triggerEvents(new EndpointEvent(EndpointEvent.ADDED, endpoint), added);
     }
 
-    private void removeServiceDeclaredInConfig(String pid) {
+    @Override
+    public void deleted(String pid) {
         EndpointDescription endpoint;
         List<Map.Entry<Filter, EndpointEventListener>> matched;
         synchronized (this) {
@@ -112,7 +78,37 @@ class ConfigDiscovery implements ManagedServiceFactory {
             }
             matched = findMatches(endpoint);
         }
-        triggerEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint), matched);
+        triggerEvents(new EndpointEvent(EndpointEvent.REMOVED, endpoint), matched);
+    }
+
+    private static Collection<Filter> createFilters(ServiceReference<EndpointEventListener> ref) {
+        List<String> values = StringPlus.normalize(ref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
+        List<Filter> filters = new ArrayList<>(values.size());
+        for (String value : values) {
+            try {
+                filters.add(FrameworkUtil.createFilter(value));
+            } catch (InvalidSyntaxException ignore) { // bad filter never matches
+            }
+        }
+        return filters;
+    }
+
+    void addListener(ServiceReference<EndpointEventListener> ref, EndpointEventListener listener) {
+        Collection<Filter> filters = createFilters(ref);
+        if (!filters.isEmpty()) {
+            List<Map.Entry<Filter, EndpointDescription>> matched;
+            synchronized (this) {
+                listenerToFilters.put(listener, filters);
+                matched = findMatches(filters);
+            }
+            triggerEvents(listener, matched);
+        }
+    }
+
+    void removeListener(EndpointEventListener listener) {
+        synchronized (this) {
+            listenerToFilters.remove(listener);
+        }
     }
 
     private List<Map.Entry<Filter, EndpointEventListener>> findMatches(EndpointDescription endpoint) {
@@ -144,14 +140,14 @@ class ConfigDiscovery implements ManagedServiceFactory {
         return matched;
     }
 
-    private void triggerEvent(EndpointEvent event, List<Map.Entry<Filter, EndpointEventListener>> matched) {
+    private void triggerEvents(EndpointEvent event, List<Map.Entry<Filter, EndpointEventListener>> matched) {
         // trigger events without holding a lock
         for (Map.Entry<Filter, EndpointEventListener> entry : matched) {
             entry.getValue().endpointChanged(event, entry.getKey().toString());
         }
     }
 
-    private void triggerEvent(EndpointEventListener listener, List<Map.Entry<Filter, EndpointDescription>> matched) {
+    private void triggerEvents(EndpointEventListener listener, List<Map.Entry<Filter, EndpointDescription>> matched) {
         // trigger events without holding a lock
         for (Map.Entry<Filter, EndpointDescription> entry : matched) {
             EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, entry.getValue());
