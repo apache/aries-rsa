@@ -46,13 +46,13 @@ public final class EndpointEventListenerTracker extends ServiceTracker<EndpointE
     @Override
     public EndpointEventListener addingService(ServiceReference sref) {
         EndpointEventListener listener = super.addingService(sref);
-        tme.addEndpointEventListener(listener, EndpointListenerNotifier.filtersFromEEL(sref));
+        tme.addEndpointEventListener(listener, EndpointListenerNotifier.createScopeFilters(sref));
         return listener;
     }
 
     @Override
     public void modifiedService(ServiceReference sref, EndpointEventListener listener) {
-        tme.addEndpointEventListener(listener, EndpointListenerNotifier.filtersFromEEL(sref));
+        tme.addEndpointEventListener(listener, EndpointListenerNotifier.createScopeFilters(sref));
         super.modifiedService(sref, listener);
     }
 

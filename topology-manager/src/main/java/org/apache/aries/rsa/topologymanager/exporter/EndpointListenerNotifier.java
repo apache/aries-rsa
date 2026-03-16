@@ -39,23 +39,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tracks EndpointListeners and allows to notify them of endpoints.
+ * Tracks EndpointEventListeners and allows to notify them of endpoints.
  */
-@SuppressWarnings("deprecation")
 public class EndpointListenerNotifier {
     private static final Logger LOG = LoggerFactory.getLogger(EndpointListenerNotifier.class);
-    private Map<EndpointEventListener, Set<Filter>> listeners;
+    private final Map<EndpointEventListener, Set<Filter>> listeners;
 
     public EndpointListenerNotifier() {
         this.listeners = new ConcurrentHashMap<>();
     }
 
-    public static Set<Filter> filtersFromEEL(ServiceReference<EndpointEventListener> sref) {
+    public static Set<Filter> createScopeFilters(ServiceReference<EndpointEventListener> sref) {
         List<String> scopes = StringPlus.normalize(sref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
-        return getFilterSet(scopes);
+        return createScopeFilters(scopes);
     }
 
-    private static Set<Filter> getFilterSet(List<String> scopes) {
+    private static Set<Filter> createScopeFilters(List<String> scopes) {
         Set<Filter> filters = new HashSet<>();
         for (String scope : scopes) {
             try {
@@ -67,33 +66,30 @@ public class EndpointListenerNotifier {
         return filters;
     }
 
-    public void add(EndpointEventListener ep, Set<Filter> filters, Collection<EndpointDescription> endpoints) {
-        LOG.debug("EndpointListener added");
-        listeners.put(ep, filters);
+    public void add(EndpointEventListener listener, Set<Filter> filters, Collection<EndpointDescription> endpoints) {
+        LOG.debug("EndpointEventListener added");
+        listeners.put(listener, filters);
         for (EndpointDescription endpoint : endpoints) {
             EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
-            notifyListener(event, ep, filters);
+            notifyListener(event, listener, filters);
         }
     }
 
-    public void remove(EndpointEventListener ep) {
-        LOG.debug("EndpointListener removed");
-        listeners.remove(ep);
+    public void remove(EndpointEventListener listener) {
+        LOG.debug("EndpointEventListener removed");
+        listeners.remove(listener);
     }
 
     public void sendEvent(EndpointEvent event) {
-        for (EndpointEventListener listener : listeners.keySet()) {
-            Set<Filter> filters = listeners.get(listener);
-            notifyListener(event, listener, filters);
-        }
+        listeners.forEach((listener, filters) -> notifyListener(event, listener, filters));
     }
 
     /**
      * Notifies an endpoint listener about endpoints being added or removed.
      *
-     * @param type specifies whether endpoints were added (true) or removed (false)
-     * @param endpointListenerRef the ServiceReference of an EndpointListener to notify
-     * @param endpoints the endpoints the listener should be notified about
+     * @param event the event to send
+     * @param listener the listener to send the event to
+     * @param filters the listener filters
      */
     private void notifyListener(EndpointEvent event, EndpointEventListener listener, Set<Filter> filters) {
         Set<Filter> matchingFilters = getMatchingFilters(filters, event.getEndpoint());
@@ -103,19 +99,19 @@ public class EndpointListenerNotifier {
     }
 
     private static Set<Filter> getMatchingFilters(Set<Filter> filters, EndpointDescription endpoint) {
-        Set<Filter> matchingFilters = new HashSet<>();
+        Set<Filter> matches = new HashSet<>();
         if (endpoint == null) {
-            return matchingFilters;
+            return matches;
         }
         Dictionary<String, Object> dict = new Hashtable<>(endpoint.getProperties());
         for (Filter filter : filters) {
             if (filter.match(dict)) {
                 LOG.debug("Filter {} matches endpoint {}", filter, dict);
-                matchingFilters.add(filter);
+                matches.add(filter);
             } else {
                 LOG.trace("Filter {} does not match endpoint {}", filter, dict);
             }
         }
-        return matchingFilters;
+        return matches;
     }
 }

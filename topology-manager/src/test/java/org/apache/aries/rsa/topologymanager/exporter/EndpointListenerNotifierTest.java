@@ -106,7 +106,7 @@ public class EndpointListenerNotifierTest {
     @Test
     public void testNormalizeScopeForSingleString() {
         ServiceReference sr = createListenerServiceWithFilter("(myProp=A)");
-        Set<Filter> res = EndpointListenerNotifier.filtersFromEEL(sr);
+        Set<Filter> res = EndpointListenerNotifier.createScopeFilters(sr);
         assertEquals(1, res.size());
         Filter filter = res.iterator().next();
         filterMatches(filter);
@@ -116,7 +116,7 @@ public class EndpointListenerNotifierTest {
     public void testNormalizeScopeForStringArray() {
         String[] filters = {"(myProp=A)", "(otherProp=B)"};
         ServiceReference sr = createListenerServiceWithFilter(filters);
-        Set<Filter> res = EndpointListenerNotifier.filtersFromEEL(sr);
+        Set<Filter> res = EndpointListenerNotifier.createScopeFilters(sr);
         assertEquals(filters.length, res.size());
         Iterator<Filter> it = res.iterator();
         Filter filter1 = it.next();
@@ -130,7 +130,7 @@ public class EndpointListenerNotifierTest {
     public void testNormalizeScopeForCollection() {
         Collection<String> collection = Arrays.asList("(myProp=A)", "(otherProp=B)");
         ServiceReference sr = createListenerServiceWithFilter(collection);
-        Set<Filter> res = EndpointListenerNotifier.filtersFromEEL(sr);
+        Set<Filter> res = EndpointListenerNotifier.createScopeFilters(sr);
         Iterator<Filter> it = res.iterator();
         Filter filter1 = it.next();
         Filter filter2 = it.next();
