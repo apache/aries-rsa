@@ -30,10 +30,9 @@ import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 class ConfigDiscovery implements ManagedServiceFactory {
-    private final Map<String, EndpointDescription> endpoints = new ConcurrentHashMap<>();
+    private final Map<String, EndpointDescription> endpoints = new HashMap<>();
     private final Map<EndpointEventListener, Collection<Filter>> listenerToFilters = new HashMap<>();
 
     @Override
@@ -63,72 +62,89 @@ class ConfigDiscovery implements ManagedServiceFactory {
         return filters;
     }
 
-    private static boolean matches(Filter filter, EndpointDescription endpoint) {
-        return filter.match(new Hashtable<>(endpoint.getProperties())); // don't use matches() which is case-sensitive
-    }
-
     void addListener(ServiceReference<EndpointEventListener> ref, EndpointEventListener listener) {
         List<Filter> filters = createFilters(ref);
         if (!filters.isEmpty()) {
-            synchronized (listenerToFilters) {
+            List<Map.Entry<Filter, EndpointDescription>> matched;
+            synchronized (this) {
                 listenerToFilters.put(listener, filters);
+                matched = findMatches(filters);
             }
-            triggerCallbacks(filters, listener);
+            triggerEvent(listener, matched);
         }
     }
 
     void removeListener(EndpointEventListener listener) {
-        synchronized (listenerToFilters) {
+        synchronized (this) {
             listenerToFilters.remove(listener);
         }
     }
 
-    @SuppressWarnings("rawtypes")
-    private void addDeclaredRemoteService(String pid, Dictionary config) {
+    private void addDeclaredRemoteService(String pid, Dictionary<String, ?> config) {
         EndpointDescription endpoint = new EndpointDescription(PropertyValidator.validate(config));
-        boolean isNew = endpoints.put(pid, endpoint) == null;
-        triggerCallbacks(new EndpointEvent(isNew ? EndpointEvent.ADDED : EndpointEvent.MODIFIED, endpoint));
+        List<Map.Entry<Filter, EndpointEventListener>> matched;
+        boolean isNew;
+        synchronized (this) {
+            isNew = endpoints.put(pid, endpoint) == null;
+            matched = findMatches(endpoint);
+        }
+        triggerEvent(new EndpointEvent(isNew ? EndpointEvent.ADDED : EndpointEvent.MODIFIED, endpoint), matched);
     }
 
     private void removeServiceDeclaredInConfig(String pid) {
-        EndpointDescription endpoint = endpoints.remove(pid);
-        if (endpoint != null) {
-            triggerCallbacks(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
+        EndpointDescription endpoint;
+        List<Map.Entry<Filter, EndpointEventListener>> matched;
+        synchronized (this) {
+            endpoint = endpoints.remove(pid);
+            if (endpoint == null) {
+                return;
+            }
+            matched = findMatches(endpoint);
         }
+        triggerEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint), matched);
     }
 
-    private void triggerCallbacks(EndpointEvent event) {
-        EndpointDescription endpoint = event.getEndpoint();
-        // make a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
-        List<Map.Entry<EndpointEventListener, Filter>> matched = new ArrayList<>();
-        synchronized (listenerToFilters) {
-            for (Map.Entry<EndpointEventListener, Collection<Filter>> entry : listenerToFilters.entrySet()) {
-                EndpointEventListener listener = entry.getKey();
-                for (Filter filter : entry.getValue()) {
-                    if (matches(filter, endpoint)) {
-                        matched.add(Map.entry(listener, filter));
-                    }
+    private List<Map.Entry<Filter, EndpointEventListener>> findMatches(EndpointDescription endpoint) {
+        // called with lock, makes a copy of matched filters/listeners so we can later trigger events without locks
+        List<Map.Entry<Filter, EndpointEventListener>> matched = new ArrayList<>();
+        Dictionary<String, Object> props = new Hashtable<>(endpoint.getProperties());
+        for (Map.Entry<EndpointEventListener, Collection<Filter>> entry : listenerToFilters.entrySet()) {
+            EndpointEventListener listener = entry.getKey();
+            for (Filter filter : entry.getValue()) {
+                if (filter.match(props)) { // don't use matches() which is case-sensitive
+                    matched.add(Map.entry(filter, listener));
                 }
             }
         }
-        // then trigger events without a lock
-        for (Map.Entry<EndpointEventListener, Filter> entry : matched) {
-            entry.getKey().endpointChanged(event, entry.getValue().toString());
-        }
+        return matched;
     }
 
-    private void triggerCallbacks(EndpointEventListener endpointListener, Filter filter, EndpointEvent event) {
-        if (matches(filter, event.getEndpoint())) {
-            endpointListener.endpointChanged(event, filter.toString());
-        }
-    }
-
-    private void triggerCallbacks(Collection<Filter> filters, EndpointEventListener endpointListener) {
-        for (Filter filter : filters) {
-            for (EndpointDescription endpoint : endpoints.values()) {
-                EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
-                triggerCallbacks(endpointListener, filter, event);
+    private List<Map.Entry<Filter, EndpointDescription>> findMatches(Collection<Filter> filters) {
+        // called with lock, makes a copy of matched filters/endpoints so we can later trigger events without locks
+        List<Map.Entry<Filter, EndpointDescription>> matched = new ArrayList<>();
+        for (EndpointDescription endpoint : endpoints.values()) {
+            Dictionary<String, Object> props = new Hashtable<>(endpoint.getProperties());
+            for (Filter filter : filters) {
+                if (filter.match(props)) { // don't use matches() which is case-sensitive
+                    matched.add(Map.entry(filter, endpoint));
+                }
             }
+        }
+        return matched;
+    }
+
+    private void triggerEvent(EndpointEvent event, List<Map.Entry<Filter, EndpointEventListener>> matched) {
+        // trigger events without holding a lock
+        for (Map.Entry<Filter, EndpointEventListener> entry : matched) {
+            entry.getValue().endpointChanged(event, entry.getKey().toString());
+        }
+    }
+
+    private void triggerEvent(EndpointEventListener listener, List<Map.Entry<Filter, EndpointDescription>> matched) {
+        // trigger events without holding a lock
+        for (Map.Entry<Filter, EndpointDescription> entry : matched) {
+            EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, entry.getValue());
+            listener.endpointChanged(event, entry.getKey().toString());
         }
     }
 }
