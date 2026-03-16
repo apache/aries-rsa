@@ -186,7 +186,7 @@ public class TopologyManagerExport implements ServiceListener {
         return exported != null && !exported.isEmpty() || addExported != null && !addExported.isEmpty();
     }
 
-    public void addEPListener(EndpointEventListener listener, Set<Filter> filters) {
+    public void addEndpointEventListener(EndpointEventListener listener, Set<Filter> filters) {
         Collection<EndpointDescription> endpoints = new ArrayList<>();
         for (ServiceExportsRepository repo : endpointRepo.values()) {
             endpoints.addAll(repo.getAllEndpoints());
@@ -194,7 +194,7 @@ public class TopologyManagerExport implements ServiceListener {
         notifier.add(listener, filters, endpoints);
     }
 
-    public void removeEPListener(EndpointEventListener listener) {
+    public void removeEndpointEventListener(EndpointEventListener listener) {
         notifier.remove(listener);
     }
 }

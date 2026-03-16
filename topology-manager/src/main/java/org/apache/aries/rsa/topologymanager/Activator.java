@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.aries.rsa.spi.ExportPolicy;
 import org.apache.aries.rsa.topologymanager.exporter.DefaultExportPolicy;
+import org.apache.aries.rsa.topologymanager.exporter.EndpointEventListenerTracker;
 import org.apache.aries.rsa.topologymanager.exporter.EndpointListenerNotifier;
 import org.apache.aries.rsa.topologymanager.exporter.TopologyManagerExport;
 import org.apache.aries.rsa.topologymanager.importer.NamedThreadFactory;
@@ -79,7 +80,7 @@ public class Activator implements BundleActivator {
 
     private ServiceTracker<ExportPolicy, ExportPolicy> policyTracker;
     private EndpointListenerManager endpointListenerManager;
-    private EndpointEventListenerTracker epeListenerTracker;
+    private EndpointEventListenerTracker endpointEventListenerTracker;
 
     public void start(final BundleContext bc) throws Exception {
         Dictionary<String, String> props = new Hashtable<>();
@@ -122,14 +123,14 @@ public class Activator implements BundleActivator {
         notifier = new EndpointListenerNotifier();
         exportExecutor = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new NamedThreadFactory(TopologyManagerExport.class));
         exportManager = new TopologyManagerExport(notifier, exportExecutor, policy);
-        epeListenerTracker = new EndpointEventListenerTracker(bc, exportManager);
+        endpointEventListenerTracker = new EndpointEventListenerTracker(bc, exportManager);
         importManager = new TopologyManagerImport(bc);
         endpointListenerManager = new EndpointListenerManager(bc, importManager);
         endpointListenerManager.start();
         rsaTracker = new RSATracker(bc, RemoteServiceAdmin.class, null);
         bc.addServiceListener(exportManager);
         rsaTracker.open();
-        epeListenerTracker.open();
+        endpointEventListenerTracker.open();
         exportExistingServices(bc);
         importManager.start();
     }

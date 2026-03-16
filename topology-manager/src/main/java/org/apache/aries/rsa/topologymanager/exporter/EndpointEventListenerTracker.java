@@ -16,10 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.aries.rsa.topologymanager;
+package org.apache.aries.rsa.topologymanager.exporter;
 
-import org.apache.aries.rsa.topologymanager.exporter.EndpointListenerNotifier;
-import org.apache.aries.rsa.topologymanager.exporter.TopologyManagerExport;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
@@ -28,41 +26,40 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.osgi.util.tracker.ServiceTracker;
 
-@SuppressWarnings({ "deprecation", "rawtypes", "unchecked" })
-final class EndpointEventListenerTracker extends ServiceTracker<EndpointEventListener, EndpointEventListener> {
-    private TopologyManagerExport tmExport;
+public final class EndpointEventListenerTracker extends ServiceTracker<EndpointEventListener, EndpointEventListener> {
+    private final TopologyManagerExport tme;
 
-    EndpointEventListenerTracker(BundleContext context, TopologyManagerExport tmExport) {
+    public EndpointEventListenerTracker(BundleContext context, TopologyManagerExport tme) {
         super(context, getFilter(), null);
-        this.tmExport = tmExport;
+        this.tme = tme;
     }
 
     private static Filter getFilter() {
-        String filterSt = String.format("(objectClass=%s)", EndpointEventListener.class.getName());
+        String filter = String.format("(objectClass=%s)", EndpointEventListener.class.getName());
         try {
-            return FrameworkUtil.createFilter(filterSt);
+            return FrameworkUtil.createFilter(filter);
         } catch (InvalidSyntaxException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 
     @Override
-    public EndpointEventListener addingService(ServiceReference reference) {
-        EndpointEventListener listener = super.addingService(reference);
-        this.tmExport.addEPListener(listener, EndpointListenerNotifier.filtersFromEEL(reference));
+    public EndpointEventListener addingService(ServiceReference sref) {
+        EndpointEventListener listener = super.addingService(sref);
+        tme.addEndpointEventListener(listener, EndpointListenerNotifier.filtersFromEEL(sref));
         return listener;
     }
 
     @Override
-    public void modifiedService(ServiceReference reference, EndpointEventListener listener) {
-        this.tmExport.addEPListener(listener, EndpointListenerNotifier.filtersFromEEL(reference));
-        super.modifiedService(reference, listener);
+    public void modifiedService(ServiceReference sref, EndpointEventListener listener) {
+        tme.addEndpointEventListener(listener, EndpointListenerNotifier.filtersFromEEL(sref));
+        super.modifiedService(sref, listener);
     }
 
     @Override
-    public void removedService(ServiceReference reference, EndpointEventListener listener) {
-        this.tmExport.removeEPListener(listener);
-        super.removedService(reference, listener);
+    public void removedService(ServiceReference sref, EndpointEventListener listener) {
+        tme.removeEndpointEventListener(listener);
+        super.removedService(sref, listener);
     }
 
 }
