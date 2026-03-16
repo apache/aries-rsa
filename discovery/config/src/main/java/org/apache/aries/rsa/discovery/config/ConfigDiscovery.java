@@ -21,6 +21,7 @@ package org.apache.aries.rsa.discovery.config;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedServiceFactory;
@@ -33,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 class ConfigDiscovery implements ManagedServiceFactory {
     private final Map<String, EndpointDescription> endpoints = new ConcurrentHashMap<>();
-    private final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
+    private final Map<EndpointEventListener, Collection<Filter>> listenerToFilters = new HashMap<>();
 
     @Override
     public String getName() {
@@ -50,22 +51,35 @@ class ConfigDiscovery implements ManagedServiceFactory {
         removeServiceDeclaredInConfig(pid);
     }
 
-    void addListener(ServiceReference<EndpointEventListener> endpointListenerRef, EndpointEventListener endpointListener) {
-        List<String> filters = StringPlus.normalize(endpointListenerRef.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
-        if (filters.isEmpty()) {
-            return;
+    private static List<Filter> createFilters(ServiceReference<EndpointEventListener> ref) {
+        List<String> values = StringPlus.normalize(ref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
+        List<Filter> filters = new ArrayList<>(values.size());
+        for (String value : values) {
+            try {
+                filters.add(FrameworkUtil.createFilter(value));
+            } catch (InvalidSyntaxException ignore) { // bad filter never matches
+            }
         }
-
-        synchronized (listenerToFilters) {
-            listenerToFilters.put(endpointListener, filters);
-        }
-
-        triggerCallbacks(filters, endpointListener);
+        return filters;
     }
 
-    void removeListener(EndpointEventListener endpointListener) {
+    private static boolean matches(Filter filter, EndpointDescription endpoint) {
+        return filter.match(new Hashtable<>(endpoint.getProperties())); // don't use matches() which is case-sensitive
+    }
+
+    void addListener(ServiceReference<EndpointEventListener> ref, EndpointEventListener listener) {
+        List<Filter> filters = createFilters(ref);
+        if (!filters.isEmpty()) {
+            synchronized (listenerToFilters) {
+                listenerToFilters.put(listener, filters);
+            }
+            triggerCallbacks(filters, listener);
+        }
+    }
+
+    void removeListener(EndpointEventListener listener) {
         synchronized (listenerToFilters) {
-            listenerToFilters.remove(endpointListener);
+            listenerToFilters.remove(listener);
         }
     }
 
@@ -86,52 +100,35 @@ class ConfigDiscovery implements ManagedServiceFactory {
     private void triggerCallbacks(EndpointEvent event) {
         EndpointDescription endpoint = event.getEndpoint();
         // make a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
-        List<Map.Entry<EndpointEventListener, String>> matched = new ArrayList<>();
+        List<Map.Entry<EndpointEventListener, Filter>> matched = new ArrayList<>();
         synchronized (listenerToFilters) {
-            for (Map.Entry<EndpointEventListener, Collection<String>> entry : listenerToFilters.entrySet()) {
+            for (Map.Entry<EndpointEventListener, Collection<Filter>> entry : listenerToFilters.entrySet()) {
                 EndpointEventListener listener = entry.getKey();
-                for (String filter : entry.getValue()) {
-                    if (matchFilter(filter, endpoint)) {
+                for (Filter filter : entry.getValue()) {
+                    if (matches(filter, endpoint)) {
                         matched.add(Map.entry(listener, filter));
                     }
                 }
             }
         }
         // then trigger events without a lock
-        for (Map.Entry<EndpointEventListener, String> entry : matched) {
+        for (Map.Entry<EndpointEventListener, Filter> entry : matched) {
             entry.getKey().endpointChanged(event, entry.getValue().toString());
         }
     }
 
-    private void triggerCallbacks(EndpointEventListener endpointListener, String filter,
-                                  EndpointEvent event) {
-        if (!matchFilter(filter, event.getEndpoint())) {
-            return;
+    private void triggerCallbacks(EndpointEventListener endpointListener, Filter filter, EndpointEvent event) {
+        if (matches(filter, event.getEndpoint())) {
+            endpointListener.endpointChanged(event, filter.toString());
         }
-
-        endpointListener.endpointChanged(event, filter);
     }
 
-    private void triggerCallbacks(Collection<String> filters, EndpointEventListener endpointListener) {
-        for (String filter : filters) {
+    private void triggerCallbacks(Collection<Filter> filters, EndpointEventListener endpointListener) {
+        for (Filter filter : filters) {
             for (EndpointDescription endpoint : endpoints.values()) {
                 EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
                 triggerCallbacks(endpointListener, filter, event);
             }
-        }
-    }
-
-    private static boolean matchFilter(String filter, EndpointDescription endpoint) {
-        if (filter == null) {
-            return false;
-        }
-
-        try {
-            Filter f = FrameworkUtil.createFilter(filter);
-            Dictionary<String, Object> dict = new Hashtable<>(endpoint.getProperties());
-            return f.match(dict);
-        } catch (Exception e) {
-            return false;
         }
     }
 }
