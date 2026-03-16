@@ -146,6 +146,7 @@ public class Activator implements BundleActivator {
         importManager.stop();
         endpointListenerManager.stop();
         rsaTracker.close();
+        endpointEventListenerTracker.close();
         exportManager = null;
     }
 
