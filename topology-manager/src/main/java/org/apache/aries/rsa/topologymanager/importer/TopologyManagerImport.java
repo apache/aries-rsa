@@ -173,7 +173,8 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
                     importedServices.put(filter, reg);
                     return;
                 } else {
-                    LOG.info("Error importing service {}", endpoint, reg.getException());
+                    LOG.warn("Error importing service {}", endpoint, reg.getException());
+                    reg.close();
                 }
             }
         }
