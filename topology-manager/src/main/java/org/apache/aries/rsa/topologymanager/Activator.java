@@ -20,9 +20,8 @@ package org.apache.aries.rsa.topologymanager;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.aries.rsa.spi.ExportPolicy;
 import org.apache.aries.rsa.topologymanager.exporter.DefaultExportPolicy;
@@ -76,7 +75,7 @@ public class Activator implements BundleActivator {
     private TopologyManagerImport importManager;
     EndpointListenerNotifier notifier;
     private ServiceTracker<RemoteServiceAdmin, RemoteServiceAdmin> rsaTracker;
-    private ThreadPoolExecutor exportExecutor;
+    private ExecutorService exportExecutor;
 
     private ServiceTracker<ExportPolicy, ExportPolicy> policyTracker;
     private EndpointListenerManager endpointListenerManager;
@@ -121,7 +120,7 @@ public class Activator implements BundleActivator {
     public void doStart(final BundleContext bc, ExportPolicy policy) {
         LOG.debug("TopologyManager: start()");
         notifier = new EndpointListenerNotifier();
-        exportExecutor = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new NamedThreadFactory(TopologyManagerExport.class));
+        exportExecutor = Executors.newCachedThreadPool(new NamedThreadFactory(TopologyManagerExport.class));
         exportManager = new TopologyManagerExport(notifier, exportExecutor, policy);
         endpointEventListenerTracker = new EndpointEventListenerTracker(bc, exportManager);
         importManager = new TopologyManagerImport(bc);

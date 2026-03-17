@@ -22,9 +22,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.osgi.framework.BundleContext;
@@ -68,7 +67,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     public TopologyManagerImport(BundleContext bc) {
         rsaSet = new CopyOnWriteArraySet<>();
         bctx = bc;
-        execService = new ThreadPoolExecutor(5, 10, 50, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new NamedThreadFactory(getClass()));
+        execService = Executors.newCachedThreadPool(new NamedThreadFactory(getClass()));
     }
 
     public void start() {
