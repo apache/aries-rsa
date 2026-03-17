@@ -34,18 +34,25 @@ import java.util.stream.Collectors;
  */
 public class MultiMap<K, V> {
 
-    private Map<K, Set<V>> map;
+    private final Map<K, Set<V>> map;
 
     public MultiMap() {
         map = new ConcurrentHashMap<>();
     }
 
     public void put(K key, V value) {
+        replace(key, null, value);
+    }
+
+    public void replace(K key, V oldValue, V newValue) {
         map.compute(key, (k, v) -> {
             if (v == null) {
                 v = new CopyOnWriteArraySet<>();
             }
-            v.add(value);
+            if (oldValue != null) {
+                v.remove(oldValue);
+            }
+            v.add(newValue);
             return v;
         });
     }

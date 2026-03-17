@@ -200,8 +200,8 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
                 importPossibilities.remove(filter, endpoint);
                 break;
             case EndpointEvent.MODIFIED:
-                importPossibilities.remove(filter, endpoint);
-                importPossibilities.put(filter, endpoint);
+                // new endpoint has same endpoint.id and equals old endpoint, but has updated properties
+                importPossibilities.replace(filter, endpoint, endpoint);
                 break;
         }
         synchronizeImportsAsync(filter);
