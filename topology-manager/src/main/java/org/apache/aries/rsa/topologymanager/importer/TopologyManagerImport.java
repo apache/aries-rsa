@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
@@ -51,6 +52,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     private final ExecutorService execService;
     private final BundleContext bctx;
     private final Set<RemoteServiceAdmin> rsaSet;
+    private ServiceRegistration<RemoteServiceAdminListener> rsaListenerRegistration;
     private volatile boolean stopped;
 
     /**
@@ -71,11 +73,14 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     public void start() {
         stopped = false;
-        bctx.registerService(RemoteServiceAdminListener.class, this, null);
+        rsaListenerRegistration = bctx.registerService(RemoteServiceAdminListener.class, this, null);
     }
 
     public void stop() {
         stopped = true;
+        if (rsaListenerRegistration != null) {
+            rsaListenerRegistration.unregister();
+        }
         execService.shutdown();
         try {
             execService.awaitTermination(10, TimeUnit.SECONDS);

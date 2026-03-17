@@ -44,10 +44,11 @@ public class TopologyManagerImportTest {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private BundleContext mockBundleContext(IMocksControl c) {
         ServiceRegistration sreg = c.createMock(ServiceRegistration.class);
+        sreg.unregister();
         BundleContext bc = c.createMock(BundleContext.class);
         expect(bc.registerService(eq(RemoteServiceAdminListener.class),
                 anyObject(RemoteServiceAdminListener.class),
-                anyObject())).andReturn(sreg).anyTimes();
+                anyObject())).andReturn(sreg).once();
         return bc;
     }
 
