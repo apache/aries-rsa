@@ -18,7 +18,7 @@
  */
 package org.apache.aries.rsa.discovery.zookeeper;
 
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
@@ -40,14 +40,13 @@ import org.slf4j.LoggerFactory;
  * Establishes a listener with the {@link ZookeeperEndpointRepository} to be called back on all changes in the repository.
  * Events from repository are then forwarded to all interested {@link EndpointEventListener}s.
  */
-@SuppressWarnings("deprecation")
 @Component(immediate = true)
 public class InterestManager {
     private static final Logger LOG = LoggerFactory.getLogger(InterestManager.class);
 
-    private Set<Interest> interests = ConcurrentHashMap.newKeySet();
+    private final Map<ServiceReference<EndpointEventListener>, Interest> interests = new ConcurrentHashMap<>();
 
-    private ZookeeperEndpointListener listener;
+    private ZookeeperEndpointListener zkListener;
 
     public InterestManager() {
     }
@@ -55,59 +54,52 @@ public class InterestManager {
     // Using ARepository name to make sure it is injected first
     @Reference
     public void bindARepository(ZookeeperEndpointRepository repository) {
-        this.listener = repository.createListener(this::onEndpointEvent);
+        zkListener = repository.createListener(this::onEndpointEvent);
     }
 
     @Deactivate
     public void deactivate() {
-        this.listener.close();
+        zkListener.close();
         interests.clear();
     }
 
     private void onEndpointEvent(EndpointEvent event) {
-        interests.forEach(interest -> interest.notifyListener(event));
+        interests.values().forEach(interest -> interest.notifyListener(event));
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener epListener) {
-        addInterest(sref, epListener);
+    public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
+        addInterest(sref, listener);
     }
 
-    public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener epListener) {
-        addInterest(sref, epListener);
+    public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
+        addInterest(sref, listener);
     }
 
     public void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        interests.remove(new Interest(sref));
+        interests.remove(sref);
     }
 
-    private void addInterest(ServiceReference<?> sref, EndpointEventListener epListener) {
+    private void addInterest(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
         if (isOurOwnEndpointEventListener(sref)) {
             LOG.debug("Skipping our own EndpointEventListener");
             return;
         }
-        Interest interest = new Interest(sref, epListener);
-        update(interest);
-        if (listener != null) {
-            listener.getEndpoints().stream()
+        Interest interest = new Interest(sref, listener);
+        boolean exists = interests.put(sref, interest) != null;
+        LOG.debug("{} Interest: {}", exists ? "Updating" : "Adding", interest);
+        if (zkListener != null) {
+            zkListener.getEndpoints().stream()
                 .map(endpoint -> new EndpointEvent(EndpointEvent.ADDED, endpoint))
                 .forEach(interest::notifyListener);
         }
     }
 
-    private void update(Interest interest) {
-        boolean present = interests.remove(interest);
-        LOG.debug("{} Interest: {}", present ? "Adding" : "Updating", interest);
-        interests.add(interest);
+    private static boolean isOurOwnEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
+        return Boolean.parseBoolean(String.valueOf(sref.getProperty(ClientManager.DISCOVERY_ZOOKEEPER_ID)));
     }
 
-    private static boolean isOurOwnEndpointEventListener(ServiceReference<?> endpointEventListener) {
-        return Boolean.parseBoolean(String.valueOf(
-            endpointEventListener.getProperty(ClientManager.DISCOVERY_ZOOKEEPER_ID)));
+    int size() {
+        return interests.size();
     }
-
-    Set<Interest> getInterests() {
-        return interests;
-    }
-
 }

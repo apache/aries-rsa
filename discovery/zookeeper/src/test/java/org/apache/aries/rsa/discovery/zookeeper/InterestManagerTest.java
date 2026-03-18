@@ -81,7 +81,7 @@ public class InterestManagerTest {
     }
 
     private void assertNumInterests(int expectedNum) {
-        assertEquals(expectedNum, im.getInterests().size());
+        assertEquals(expectedNum, im.size());
     }
 
     @SuppressWarnings("unchecked")
