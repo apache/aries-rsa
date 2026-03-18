@@ -39,6 +39,7 @@
 
     <modules>
         <module>felix</module>
+        <module>tck</module>
     </modules>
 
     <dependencyManagement>

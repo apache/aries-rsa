@@ -17,7 +17,7 @@
     <parent>
         <groupId>org.apache.aries.rsa</groupId>
         <artifactId>org.apache.aries.rsa.itests</artifactId>
-        <version>1.10-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -28,57 +28,131 @@
     <name>Aries Remote Service Admin itests tck</name>
 
     <properties>
-        <paxlogging.version>1.11.17</paxlogging.version>
+        <tck.version>8.1.0</tck.version>
+        <jaxb.version>4.0.8</jaxb.version>
     </properties>
 
     <dependencies>
 
-        <!-- Test cases from the tck. These need to be deployed by hand as
-            redistribution is not allowed -->
+        <!-- RSA -->
         <dependency>
-            <groupId>org.osgi.test.cases</groupId>
-            <artifactId>org.osgi.test.cases.remoteserviceadmin</artifactId>
-            <version>5.0.0</version>
+            <groupId>org.apache.aries.rsa</groupId>
+            <artifactId>org.apache.aries.rsa.core</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.aries.rsa</groupId>
-            <artifactId>repository</artifactId>
+            <artifactId>org.apache.aries.rsa.spi</artifactId>
             <version>${project.version}</version>
-            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa</groupId>
+            <artifactId>org.apache.aries.rsa.topology-manager</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa.discovery</groupId>
+            <artifactId>org.apache.aries.rsa.discovery.local</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa.discovery</groupId>
+            <artifactId>org.apache.aries.rsa.discovery.tcp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa.provider</groupId>
+            <artifactId>org.apache.aries.rsa.provider.tcp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JAXB dependencies (used by e.g. discovery.local) -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>${jaxb.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>${jaxb.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.activation</groupId>
+            <artifactId>jakarta.activation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.istack</groupId>
+            <artifactId>istack-commons-runtime</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.hk2</groupId>
+            <artifactId>osgi-resource-locator</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <!-- TCK Test cases. -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.test.cases.remoteserviceadmin</artifactId>
+            <version>${tck.version}</version>
         </dependency>
 
         <!-- Test framework -->
         <dependency>
-            <groupId>biz.aQute.bnd</groupId>
-            <artifactId>bnd</artifactId>
-            <version>2.4.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.servicemix.bundles</groupId>
             <artifactId>org.apache.servicemix.bundles.junit</artifactId>
-            <version>3.8.2_2</version>
+            <version>4.13.2_1</version>
         </dependency>
         <dependency>
-            <groupId>org.eclipse</groupId>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.27.7</version>
+        </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.18.8</version>
+        </dependency>
+
+        <!-- OSGi framework -->
+        <dependency>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi</artifactId>
-            <version>3.8.0.v20120529-1548</version>
-            <scope>provided</scope>
+            <version>3.24.100</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.util.function</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.util.promise</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component</artifactId>
+            <version>1.5.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.ops4j.pax.logging</groupId>
             <artifactId>pax-logging-api</artifactId>
             <version>${paxlogging.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.ops4j.pax.logging</groupId>
-            <artifactId>pax-logging-service</artifactId>
+            <artifactId>pax-logging-log4j2</artifactId>
             <version>${paxlogging.version}</version>
-            <scope>test</scope>
         </dependency>
 
-        <!-- Needed compendium services -->
+        <!-- OSGi compendium services -->
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.configadmin</artifactId>
@@ -88,7 +162,11 @@
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.eventadmin</artifactId>
             <version>1.6.4</version>
-            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr</artifactId>
+            <version>2.2.18</version>
         </dependency>
 
     </dependencies>
@@ -98,7 +176,7 @@
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-indexer-maven-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>${bnd.version}</version>
                 <configuration>
                     <localURLs>REQUIRED</localURLs>
                 </configuration>
@@ -107,6 +185,27 @@
                         <id>index</id>
                         <goals>
                             <goal>index</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-testing-maven-plugin</artifactId>
+                <version>${bnd.version}</version>
+                <configuration>
+                    <bndruns>
+                        <bndrun>tck.bndrun</bndrun>
+                    </bndruns>
+                    <failOnChanges>false</failOnChanges>
+                    <!-- enables passing -Dtck.test=<TestClass> on maven command line to run specific tests -->
+                    <test>${tck.test}</test>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>testing</id>
+                        <goals>
+                            <goal>testing</goal>
                         </goals>
                     </execution>
                 </executions>

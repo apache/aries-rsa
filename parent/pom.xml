@@ -33,7 +33,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <bnd.version>6.4.0</bnd.version>
+        <bnd.version>7.2.3</bnd.version>
         <zookeeper.version>3.9.3_1</zookeeper.version>
         <netty.version>4.1.121.Final</netty.version>
         <slf4j.version>2.0.17</slf4j.version>
@@ -41,6 +41,7 @@
         <hawtdispatch.version>1.22</hawtdispatch.version>
         <hawtbuf.version>1.11</hawtbuf.version>
         <exam.version>4.13.5</exam.version>
+        <paxlogging.version>2.3.3</paxlogging.version>
     </properties>
 
     <dependencies>
@@ -471,6 +472,16 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <!-- bnd 7.x no longer supports Java 11, so we pin it to an older version that does -->
+            <id>legacy-jdk-bnd</id>
+            <activation>
+                <jdk>11</jdk>
+            </activation>
+            <properties>
+                <bnd.version>6.4.0</bnd.version>
+            </properties>
         </profile>
     </profiles>
 
