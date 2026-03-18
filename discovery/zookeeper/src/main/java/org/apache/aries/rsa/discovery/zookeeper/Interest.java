@@ -21,8 +21,6 @@ package org.apache.aries.rsa.discovery.zookeeper;
 import static org.osgi.service.remoteserviceadmin.EndpointEventListener.ENDPOINT_LISTENER_SCOPE;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.ServiceReference;
@@ -32,67 +30,28 @@ import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("deprecation")
 public class Interest {
     private static final Logger LOG = LoggerFactory.getLogger(Interest.class);
 
-    private final ServiceReference<?> sref;
     private final List<String> scopes;
-    private final EndpointEventListener epListener;
+    private final EndpointEventListener listener;
 
-    public Interest(ServiceReference<?> sref) {
-        this(sref, null);
-    }
-
-    public Interest(ServiceReference<?> sref, EndpointEventListener epListener) {
-        this.sref = sref;
+    public Interest(ServiceReference<?> sref, EndpointEventListener listener) {
         this.scopes = StringPlus.normalize(sref.getProperty(ENDPOINT_LISTENER_SCOPE));
-        this.epListener = epListener;
-    }
-
-    public List<String> getScopes() {
-        return scopes;
+        this.listener = listener;
     }
 
     public void notifyListener(EndpointEvent event) {
         EndpointDescription endpoint = event.getEndpoint();
-        Optional<String> currentScope = getFirstMatch(endpoint);
-        if (currentScope.isPresent()) {
-            LOG.debug("Matched {} against {}", endpoint, currentScope);
-            String scope = currentScope.get();
-            LOG.info("Calling endpointchanged on class {} for filter {}, type {}, endpoint {} ",
-                epListener, scope, event.getType(), endpoint);
-            epListener.endpointChanged(event, scope);
-        }
-    }
-
-    private Optional<String> getFirstMatch(EndpointDescription endpoint) {
-        return scopes.stream().filter(endpoint::matches).findFirst();
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((sref == null) ? 0 : sref.hashCode());
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Interest other = (Interest) obj;
-        return Objects.equals(sref, other.sref);
+        scopes.stream().filter(endpoint::matches).findFirst().ifPresent(scope -> { // notify with first scope
+            LOG.info("Calling endpointChanged on {} for filter {}, type {}, endpoint {}",
+                listener, scope, event.getType(), endpoint);
+            listener.endpointChanged(event, scope);
+        });
     }
 
     @Override
     public String toString() {
-        return "Interest [scopes=" + scopes + ", epListener=" + epListener.getClass() + "]";
+        return "Interest [scopes=" + scopes + ", listener=" + listener.getClass() + "]";
     }
-
 }
