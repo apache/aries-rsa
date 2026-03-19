@@ -51,6 +51,11 @@
         <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.config/${project.version}</bundle>
     </feature>
 
+    <feature name="aries-rsa-discovery-tcp" version="${project.version}">
+        <feature>aries-rsa-core</feature>
+        <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.tcp/${project.version}</bundle>
+    </feature>
+
     <feature name="aries-rsa-discovery-zookeeper" version="${project.version}">
         <feature>aries-rsa-core</feature>
         <bundle>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.zookeeper/${zookeeper.version}</bundle>

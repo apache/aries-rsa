@@ -179,6 +179,11 @@ public class RsaTestBase {
                          mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.zookeeper"));
     }
 
+    protected static Option rsaDiscoveryTcp() {
+        return composite(
+            mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.tcp"));
+    }
+
     protected static Option rsaProviderTcp() {
         return mvn("org.apache.aries.rsa.provider", "org.apache.aries.rsa.provider.tcp");
     }
@@ -187,6 +192,13 @@ public class RsaTestBase {
         return composite(mvn("org.fusesource.hawtbuf", "hawtbuf"),
                          mvn("org.fusesource.hawtdispatch", "hawtdispatch"),
                          mvn("org.apache.aries.rsa.provider", "org.apache.aries.rsa.provider.fastbin"));
+    }
+
+    protected static Option configTcpDiscovery(int instance, int peerInstance) {
+        return newConfiguration("org.apache.aries.rsa.discovery.tcp") //
+                .put("address", "127.0.0.1:" + (7667 + instance)) //
+                .put("peers", "127.0.0.1:" + (7667 + peerInstance)) //
+                .asOption();
     }
 
     protected static Option configZKDiscovery() {

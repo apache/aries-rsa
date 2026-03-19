@@ -32,10 +32,11 @@
     <name>Aries Remote Service Admin Discovery</name>
 
     <modules>
-      <module>local</module>
-      <module>zookeeper</module>
-      <module>config</module>
       <module>command</module>
+      <module>config</module>
+      <module>local</module>
       <module>mdns</module>
+      <module>tcp</module>
+      <module>zookeeper</module>
     </modules>
 </project>
