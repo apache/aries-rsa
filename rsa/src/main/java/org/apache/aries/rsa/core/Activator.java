@@ -33,14 +33,25 @@ import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 public class Activator implements BundleActivator {
 
     private DistributionProviderTracker tracker;
+    private EventListenerBridge bridge;
 
     public void start(BundleContext bundlecontext) throws Exception {
         tracker = new DistributionProviderTracker(bundlecontext);
         tracker.open();
+        // enable optional event listener bridge for backwards compatibility
+        if (Boolean.getBoolean("org.apache.aries.rsa.bridge")) {
+            bridge = new EventListenerBridge(bundlecontext);
+            bridge.start();
+        }
     }
 
     public void stop(BundleContext context) throws Exception {
-        tracker.close();
+        if (tracker != null) {
+            tracker.close();
+        }
+        if (bridge != null) {
+            bridge.stop();
+        }
     }
 
 }
