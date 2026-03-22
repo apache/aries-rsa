@@ -34,7 +34,7 @@ import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 
 @RunWith(TwoContainerPaxExam.class)
-public class TestRoundTrip extends RsaTestBase {
+public class TestTcpDiscoveryRoundTrip extends RsaTestBase {
 
     @Inject
     EchoService echoService;
@@ -43,11 +43,10 @@ public class TestRoundTrip extends RsaTestBase {
     public static Option[] remoteConfig() throws IOException {
         return new Option[] {
             rsaCore(),
-            rsaDiscoveryZookeeper(),
+            rsaDiscoveryTcp(),
             rsaProviderTcp(),
             echoTcpService(),
-            configZKServer(),
-            configZKDiscovery(),
+            configTcpDiscovery(0, 1),
         };
     }
 
@@ -55,10 +54,10 @@ public class TestRoundTrip extends RsaTestBase {
     public static Option[] configure() throws Exception {
         return new Option[] {
                 rsaCore(),
-                rsaDiscoveryZookeeper(),
+                rsaDiscoveryTcp(),
                 rsaProviderTcp(),
                 echoTcpConsumer(),
-                configZKDiscovery()
+                configTcpDiscovery(1, 0)
         };
     }
 
