@@ -582,7 +582,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         synchronized (importedServices) {
             LOG.debug("Removing importRegistration {}", iri);
 
-            ImportReference importRef = iri.getImportReference();
+            ImportReference importRef = iri.getException() != null ? null : iri.getImportReference();
             if (importRef == null) {
                 return;
             }

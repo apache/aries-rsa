@@ -39,9 +39,8 @@ public class ImportRegistrationImplTest {
         i.init(e);
 
         assertEquals(e, i.getException());
-        assertNull(i.getImportedEndpointDescription());
+        assertNull(i.getImportedEndpoint());
         assertNull(i.getImportedService());
-        assertEquals(i, i.getParent());
     }
 
     @Test
@@ -55,8 +54,7 @@ public class ImportRegistrationImplTest {
         ImportRegistrationImpl i = new ImportRegistrationImpl(endpoint, closeHandler, null);
 
         assertNull(i.getException());
-        assertEquals(i, i.getParent());
-        assertEquals(endpoint, i.getImportedEndpointDescription());
+        assertEquals(endpoint, i.getImportedEndpoint());
     }
 
     @SuppressWarnings("rawtypes")
@@ -86,13 +84,9 @@ public class ImportRegistrationImplTest {
             // must be thrown here
         }
 
-        assertEquals(i1, i1.getParent());
-        assertEquals(i1, i2.getParent());
-        assertEquals(i1, i3.getParent());
-
-        assertEquals(endpoint, i1.getImportedEndpointDescription());
-        assertEquals(endpoint, i2.getImportedEndpointDescription());
-        assertEquals(endpoint, i3.getImportedEndpointDescription());
+        assertEquals(endpoint, i1.getImportedEndpoint());
+        assertEquals(endpoint, i2.getImportedEndpoint());
+        assertEquals(endpoint, i3.getImportedEndpoint());
 
         c.verify();
         c.reset();
@@ -105,7 +99,7 @@ public class ImportRegistrationImplTest {
         i3.close();
         i3.close(); // shouldn't change anything
 
-        assertNull(i3.getImportedEndpointDescription());
+        assertNull(i3.getImportedEndpoint());
 
         c.verify();
         c.reset();
@@ -146,10 +140,6 @@ public class ImportRegistrationImplTest {
         ImportRegistrationImpl i2 = new ImportRegistrationImpl(i1);
 
         ImportRegistrationImpl i3 = new ImportRegistrationImpl(i2);
-
-        assertEquals(i1, i1.getParent());
-        assertEquals(i1, i2.getParent());
-        assertEquals(i1, i3.getParent());
 
         c.verify();
         c.reset();
