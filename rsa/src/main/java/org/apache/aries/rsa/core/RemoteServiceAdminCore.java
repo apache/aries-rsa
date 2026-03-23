@@ -365,7 +365,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             for (Collection<ExportRegistration> exportRegistrations : exportedServices.values()) {
                 for (ExportRegistration er : exportRegistrations) {
                     if (er.getException() == null && er.getExportReference() != null) {
-                        ers.add(new ExportReferenceImpl(er.getExportReference()));
+                        ers.add(er.getExportReference());
                     }
                 }
             }

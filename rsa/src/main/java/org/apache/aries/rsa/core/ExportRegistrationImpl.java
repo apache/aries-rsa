@@ -38,8 +38,14 @@ import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Implements an ExportRegistration. Since there is a 1:1 relationship between
+ * an ExportRegistration and its ExportReference (they are basically two views
+ * of the same underlying data - one is the modifiable part and one the read-only
+ * part), this class implements both interfaces together.
+ */
 @SuppressWarnings("rawtypes")
-public class ExportRegistrationImpl implements ExportRegistration {
+public class ExportRegistrationImpl implements ExportRegistration, ExportReference {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExportRegistrationImpl.class);
 
@@ -52,6 +58,8 @@ public class ExportRegistrationImpl implements ExportRegistration {
 
         private Set<CloseHandler> closeHandlers = Collections.newSetFromMap(new ConcurrentHashMap<>());
         private EventProducer eventProducer;
+        private ServiceReference serviceReference;
+        private volatile EndpointDescription endpoint;
         private Closeable server;
         private Throwable exception;
 
@@ -90,7 +98,6 @@ public class ExportRegistrationImpl implements ExportRegistration {
     private final Shared shared;
 
     // per-instance state that is not shared
-    private volatile ExportReferenceImpl exportReference;
     private AtomicBoolean closing = new AtomicBoolean();
     private volatile boolean closed;
 
@@ -104,7 +111,6 @@ public class ExportRegistrationImpl implements ExportRegistration {
      * @param er the export registration that this instance is linked to
      */
     public ExportRegistrationImpl(ExportRegistrationImpl er) {
-        exportReference = new ExportReferenceImpl(er.exportReference);
         shared = er.shared;
         shared.addInstance();
     }
@@ -123,9 +129,10 @@ public class ExportRegistrationImpl implements ExportRegistration {
     // create a new (parent) instance which was exported successfully with the given server
     public ExportRegistrationImpl(ServiceReference sref, Endpoint endpoint,
             CloseHandler closeHandler, EventProducer eventProducer) {
-        exportReference = new ExportReferenceImpl(sref, endpoint.description());
         shared = new Shared();
         shared.eventProducer = eventProducer;
+        shared.serviceReference = sref;
+        shared.endpoint = endpoint.description();
         shared.server = endpoint;
         addCloseHandler(closeHandler);
         shared.addInstance();
@@ -160,6 +167,16 @@ public class ExportRegistrationImpl implements ExportRegistration {
     }
 
     @Override
+    public EndpointDescription getExportedEndpoint() {
+        return isInvalid() ? null : shared.endpoint;
+    }
+
+    @Override
+    public ServiceReference<?> getExportedService() {
+        return isInvalid() ? null : shared.serviceReference;
+    }
+
+    @Override
     public ExportReference getExportReference() {
         if (closed) {
             return null;
@@ -167,7 +184,7 @@ public class ExportRegistrationImpl implements ExportRegistration {
         if (shared.exception != null) {
             throw new IllegalStateException("export registration is invalid");
         }
-        return exportReference;
+        return this; // this instance implements both interfaces
     }
 
     @Override
@@ -191,9 +208,6 @@ public class ExportRegistrationImpl implements ExportRegistration {
             return;
         }
         shared.closeHandlers.forEach(h -> h.onClose(this));
-        if (exportReference != null) {
-            exportReference.close();
-        }
         shared.removeInstance();
         closed = true;
     }
@@ -203,15 +217,13 @@ public class ExportRegistrationImpl implements ExportRegistration {
         if (closed) {
             return "ExportRegistration closed";
         }
-        EndpointDescription endpoint = exportReference.getExportedEndpoint();
-        ServiceReference serviceReference = exportReference.getExportedService();
-        String s = "EndpointDescription for ServiceReference " + serviceReference;
 
+        String s = "EndpointDescription for ServiceReference " + shared.serviceReference;
         s += "\n*** EndpointDescription: ****\n";
-        if (endpoint == null) {
+        if (shared.endpoint == null) {
             s += "---> NULL <---- \n";
         } else {
-            Set<Map.Entry<String, Object>> props = endpoint.getProperties().entrySet();
+            Set<Map.Entry<String, Object>> props = shared.endpoint.getProperties().entrySet();
             for (Map.Entry<String, Object> entry : props) {
                 Object value = entry.getValue();
                 s += entry.getKey() + " => "
@@ -227,15 +239,13 @@ public class ExportRegistrationImpl implements ExportRegistration {
             throw new IllegalStateException("export registration is invalid or closed");
         }
 
-        Map<String, Object> oldProps = exportReference.getExportedEndpoint().getProperties();
+        Map<String, Object> oldProps = shared.endpoint.getProperties();
         Map<String, Object> props = new HashMap<>(properties);
         props.putIfAbsent(RemoteConstants.ENDPOINT_ID, oldProps.get(RemoteConstants.ENDPOINT_ID));
         props.putIfAbsent(RemoteConstants.SERVICE_IMPORTED_CONFIGS, oldProps.get(RemoteConstants.SERVICE_IMPORTED_CONFIGS));
 
-        ServiceReference<?> sref = exportReference.getExportedService();
-        EndpointDescription endpoint = new EndpointDescription(sref, props);
-        exportReference = new ExportReferenceImpl(sref, endpoint);
-        shared.eventProducer.notifyUpdate(exportReference);
-        return endpoint;
+        shared.endpoint = new EndpointDescription(shared.serviceReference, props);
+        shared.eventProducer.notifyUpdate(this);
+        return shared.endpoint;
     }
 }
