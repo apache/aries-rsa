@@ -35,7 +35,8 @@ public class ImportRegistrationImplTest {
         Exception e = c.createMock(Exception.class);
         c.replay();
 
-        ImportRegistrationImpl i = new ImportRegistrationImpl(e);
+        ImportRegistrationImpl i = new ImportRegistrationImpl(null, null, null);
+        i.init(e);
 
         assertEquals(e, i.getException());
         assertNull(i.getImportedEndpointDescription());
@@ -72,19 +73,18 @@ public class ImportRegistrationImplTest {
         c.replay();
 
         ImportRegistrationImpl i1 = new ImportRegistrationImpl(endpoint, closeHandler, null);
+        i1.init(null, sr);
 
         ImportRegistrationImpl i2 = new ImportRegistrationImpl(i1);
 
         ImportRegistrationImpl i3 = new ImportRegistrationImpl(i2);
 
         try {
-            i2.setImportedServiceRegistration(sr);
+            i2.init(null, sr);
             fail("An exception should be thrown here !");
         } catch (IllegalStateException e) {
             // must be thrown here
         }
-
-        i1.setImportedServiceRegistration(sr);
 
         assertEquals(i1, i1.getParent());
         assertEquals(i1, i2.getParent());

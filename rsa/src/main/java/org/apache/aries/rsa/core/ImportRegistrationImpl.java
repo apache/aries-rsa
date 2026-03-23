@@ -51,23 +51,28 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
 
     private EventProducer eventProducer;
 
-    public ImportRegistrationImpl(Throwable ex) {
-        exception = ex;
-        initParent();
-    }
-
+    /**
+     * Constructs a new import registration.
+     *
+     * @param endpoint the imported endpoint info
+     * @param closeHandler a callback function that will be invoked when the registration is closed
+     * @param eventProducer an event producer that will be invoked when the endpoint is updated
+     */
     public ImportRegistrationImpl(EndpointDescription endpoint, CloseHandler closeHandler, EventProducer eventProducer) {
         this.endpoint = endpoint;
         this.closeHandler = closeHandler;
         this.eventProducer = eventProducer;
-        initParent();
+        parent = this;
+        children = new ArrayList<>(1);
     }
 
     /**
-     * Creates a clone of the given parent instance.
+     * Constructs an import registration that is linked
+     * (shares state) with the given import registration.
+     *
+     * @param ir the import registration that this instance is linked to
      */
     public ImportRegistrationImpl(ImportRegistration ir) {
-        // we always want a link to the parent...
         parent = ((ImportRegistrationImpl)ir).getParent();
         exception = parent.getException();
         endpoint = parent.getImportedEndpointDescription();
@@ -77,9 +82,34 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
         parent.instanceAdded(this);
     }
 
-    private void initParent() {
-        parent = this;
-        children = new ArrayList<>(1);
+    /**
+     * Initializes this import registration in an error state.
+     *
+     * @param exception the exception that occurred during initialization
+     */
+    public void init(Throwable exception) {
+        if (parent.exception != null || parent.clientServiceFactory != null || parent.importedService != null) {
+            throw new IllegalStateException("already initialized");
+        }
+        this.exception = exception;
+    }
+
+    /**
+     * Initializes this import registration in a successful state.
+     *
+     * @param csf  the {@link ClientServiceFactory} which is the implementation
+     *             of the locally registered service which provides proxies to the
+     *             remote imported service.
+     * @param sreg the {@link ServiceRegistration} representing the locally
+     *             registered {@link ClientServiceFactory} service which provides
+     *             proxies to the remote imported service.
+     */
+    public void init(ClientServiceFactory csf, ServiceRegistration sreg) {
+        if (parent.exception != null || parent.clientServiceFactory != null || parent.importedService != null) {
+            throw new IllegalStateException("already initialized");
+        }
+        this.clientServiceFactory = csf;
+        this.importedService = sreg;
     }
 
     private void ensureParent() {
@@ -189,36 +219,8 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
         return exception;
     }
 
-    public void setException(Throwable ex) {
-        exception = ex;
-    }
-
     private synchronized boolean isInvalid() {
         return exception != null || closed.get();
-    }
-
-    /**
-     * Sets the {@link ServiceRegistration} representing the locally
-     * registered {@link ClientServiceFactory} service which provides
-     * proxies to the remote imported service. It is set only on the parent.
-     *
-     * @param sreg the ServiceRegistration
-     */
-    public void setImportedServiceRegistration(ServiceRegistration sreg) {
-        ensureParent();
-        importedService = sreg;
-    }
-
-    /**
-     * Sets the {@link ClientServiceFactory} which is the implementation
-     * of the locally registered service which provides proxies to the
-     * remote imported service. It is set only on the parent.
-     *
-     * @param csf the ClientServiceFactory
-     */
-    public void setClientServiceFactory(ClientServiceFactory csf) {
-        ensureParent();
-        clientServiceFactory = csf;
     }
 
     public ImportRegistrationImpl getParent() {

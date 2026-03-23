@@ -460,28 +460,26 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     protected ImportRegistrationImpl exposeServiceFactory(String[] interfaceNames,
-                                            EndpointDescription epd,
+                                            EndpointDescription endpoint,
                                             DistributionProvider handler) {
-        ImportRegistrationImpl imReg = new ImportRegistrationImpl(epd, closeHandler, eventProducer);
+        ImportRegistrationImpl imReg = new ImportRegistrationImpl(endpoint, closeHandler, eventProducer);
         try {
-            EndpointDescription endpoint = imReg.getImportedEndpointDescription();
             Dictionary<String, Object> serviceProps = new Hashtable<>(endpoint.getProperties());
             serviceProps.put(RemoteConstants.SERVICE_IMPORTED, true);
             serviceProps.remove(RemoteConstants.SERVICE_EXPORTED_INTERFACES);
 
             ClientServiceFactory csf = new ClientServiceFactory(endpoint, handler, imReg);
-            imReg.setClientServiceFactory(csf);
 
             // Export the factory using the api context as it has very few imports.
             // If the bundle publishing the factory does not import the service interface
             // package then the factory is visible for all consumers which we want.
             ServiceRegistration<?> csfReg = apictx.registerService(interfaceNames, csf, serviceProps);
-            imReg.setImportedServiceRegistration(csfReg);
+            imReg.init(csf, csfReg);
         } catch (Exception ex) {
             // Only logging at debug level as this might be written to the log at the TopologyManager
             LOG.debug("Can not proxy service with interfaces {}: {}",
                 Arrays.toString(interfaceNames), ex.getMessage(), ex);
-            imReg.setException(ex);
+            imReg.init(ex);
         }
         return imReg;
     }
