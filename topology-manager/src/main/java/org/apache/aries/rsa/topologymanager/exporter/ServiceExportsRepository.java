@@ -66,7 +66,7 @@ public class ServiceExportsRepository implements Closeable {
     public synchronized void addService(ServiceReference<?> sref, Collection<ExportRegistration> registrations) {
         Map<ExportRegistration, EndpointDescription> regs = new LinkedHashMap<>();
         for (ExportRegistration reg : registrations) {
-            ExportReference ref = reg.getExportReference();
+            ExportReference ref = reg.getException() != null ? null : reg.getExportReference();
             EndpointDescription endpoint = ref == null ? null : ref.getExportedEndpoint();
             if (endpoint != null) {
                 regs.put(reg, endpoint);
@@ -83,10 +83,14 @@ public class ServiceExportsRepository implements Closeable {
         if (regs != null) {
             Map<String, ?> props = getServiceProps(sref);
             for (Map.Entry<ExportRegistration, EndpointDescription> entry: regs.entrySet()) {
-                EndpointDescription updated = entry.getKey().update(props);
-                if (updated != null) {
-                    entry.setValue(updated);
-                    notifier.sendEvent(new EndpointEvent(EndpointEvent.MODIFIED, updated));
+                try {
+                    EndpointDescription updated = entry.getKey().update(props);
+                    if (updated != null) {
+                        entry.setValue(updated);
+                        notifier.sendEvent(new EndpointEvent(EndpointEvent.MODIFIED, updated));
+                    }
+                } catch (IllegalStateException ise) {
+                    LOG.error("export registration is invalid or closed", ise);
                 }
             }
         }

@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.aries.rsa.core.event.EventProducer;
 import org.apache.aries.rsa.spi.Endpoint;
@@ -40,121 +41,149 @@ public class ExportRegistrationImpl implements ExportRegistration {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExportRegistrationImpl.class);
 
-    private final CloseHandler closeHandler;
-    private ExportReferenceImpl exportReference;
-    private final Closeable server;
-    private final Throwable exception;
+    /**
+     * According to the specs, multiple ExportRegistration can be linked together,
+     * i.e. they have a shared state - this is implemented via this inner class,
+     * where every group of linked export registrations reference a single Shared instance.
+     */
+    private static class Shared {
 
-    private final ExportRegistrationImpl parent;
-    private int instanceCount;
+        private CloseHandler closeHandler;
+        private EventProducer eventProducer;
+        private Closeable server;
+        private Throwable exception;
+
+        private int instanceCount;
+
+        void addInstance() {
+            synchronized (this) {
+                instanceCount++;
+            }
+        }
+
+        void removeInstance() {
+            synchronized (this) {
+                if (--instanceCount != 0) {
+                    return;
+                }
+                LOG.debug("closing ExportRegistration after removing last linked instance");
+                if (server != null) {
+                    try {
+                        server.close();
+                    } catch (IOException ioe) {
+                        LOG.warn("Error closing ExportRegistration", ioe);
+                    }
+                }
+            }
+        }
+    }
+
+    // state shared between all linked export registrations in this instance's group
+    private final Shared shared;
+
+    // per-instance state that is not shared
+    private volatile ExportReferenceImpl exportReference;
+    private AtomicBoolean closing = new AtomicBoolean();
     private volatile boolean closed;
 
-    private final EventProducer sender;
 
-    private ExportRegistrationImpl(ExportRegistrationImpl parent,
-            CloseHandler rsaCore,
-            EventProducer sender,
-            ExportReferenceImpl exportReference,
-            Closeable server,
-            Throwable exception) {
-        this.sender = sender;
-        this.parent = parent != null ? parent.parent : this; // a parent points to itself
-        this.parent.addInstance();
-        this.closeHandler = rsaCore;
-        this.exportReference = exportReference;
-        this.server = server;
-        this.exception = exception;
-    }
-
-    // create a clone of the provided ExportRegistrationImpl that is linked to it
-    public ExportRegistrationImpl(ExportRegistrationImpl parent) {
-        this(parent, parent.closeHandler, parent.sender, new ExportReferenceImpl(parent.exportReference),
-            parent.server, parent.exception);
-    }
-
-    // create a new (parent) instance which was exported successfully with the given server
-    public ExportRegistrationImpl(ServiceReference sref, Endpoint endpoint, CloseHandler closeHandler, EventProducer sender) {
-        this(null, closeHandler, sender, new ExportReferenceImpl(sref, endpoint.description()), endpoint, null);
-    }
-
-    // create a new (parent) instance which failed to be exported with the given exception
-    public ExportRegistrationImpl(Throwable exception, CloseHandler closeHandler, EventProducer sender) {
-        this(null, closeHandler, sender, null, null, exception);
-    }
-
-    private void ensureParent() {
-        if (parent != this) {
-            throw new IllegalStateException("this method may only be called on the parent");
-        }
+    /**
+     * Constructs an export registration that is linked
+     * (shares state) with the given export registration.
+     * <p>
+     * The {@link #close} method must eventually be invoked on this instance.
+     *
+     * @param er the export registration that this instance is linked to
+     */
+    public ExportRegistrationImpl(ExportRegistrationImpl er) {
+        exportReference = new ExportReferenceImpl(er.exportReference);
+        shared = er.shared;
+        shared.addInstance();
     }
 
     /**
-     * Returns the ExportReference even if this
-     * instance is closed or has an exception.
+     * Constructs a new export registration that is not linked to any other instance
+     * in a successful state.
+     * <p>
+     * The {@link #close} method must eventually be invoked on this instance.
      *
-     * @return the export reference
+     * @param sref the exported service reference
+     * @param endpoint the exported endpoint info
+     * @param closeHandler a callback function that will be invoked when the registration is closed
+     * @param eventProducer an event producer that will be invoked when the endpoint is updated
      */
-    public ExportReference getExportReferenceAlways() {
-        return exportReference;
+    // create a new (parent) instance which was exported successfully with the given server
+    public ExportRegistrationImpl(ServiceReference sref, Endpoint endpoint,
+            CloseHandler closeHandler, EventProducer eventProducer) {
+        exportReference = new ExportReferenceImpl(sref, endpoint.description());
+        shared = new Shared();
+        shared.closeHandler = closeHandler;
+        shared.eventProducer = eventProducer;
+        shared.server = endpoint;
+        shared.addInstance();
     }
 
+    /**
+     * Constructs a new export registration that is not linked to any other instance
+     * in a failed state.
+     * <p>
+     * The {@link #close} method must eventually be invoked on this instance.
+     *
+     * @param exception the exception that occurred during initialization
+     * @param closeHandler a callback function that will be invoked when the registration is closed
+     * @param eventProducer an event producer that will be invoked when the endpoint is updated
+     */
+    public ExportRegistrationImpl(Throwable exception, CloseHandler closeHandler, EventProducer eventProducer) {
+        shared = new Shared();
+        shared.closeHandler = closeHandler;
+        shared.eventProducer = eventProducer;
+        shared.exception = exception;
+        shared.addInstance();
+    }
+
+    /**
+     * Returns whether this registration is invalid
+     * (has an initialization exception) or closed.
+     *
+     * @return whether this registration is invalid or closed
+     */
+    private boolean isInvalid() {
+        return shared.exception != null || closed;
+    }
+
+    @Override
     public ExportReference getExportReference() {
         if (closed) {
             return null;
-        } else {
-            if (exportReference == null) {
-                throw new IllegalStateException(getException());
-            } else {
-                return exportReference;
-            }
         }
+        if (shared.exception != null) {
+            throw new IllegalStateException("export registration is invalid");
+        }
+        return exportReference;
     }
 
+    @Override
     public Throwable getException() {
-        return closed ? null : exception;
+        return closed ? null : shared.exception;
     }
 
+    @Override
     public final void close() {
-        closeHandler.onClose(this);
-        synchronized (this) {
-            if (closed) {
-                return;
-            }
-            closed = true;
+        // we do this in two steps: first the 'closing' state to make sure we
+        // proceed at most once (only if valid and not already closing/closed),
+        // with all the references still valid while calling the close handler,
+        // and only after it's done we reach the 'closed' state where all
+        // getters return null (as required by the spec)
+        LOG.debug("closing export registration");
+        if (closed || closing.getAndSet(true)) {
+            return;
         }
-
+        shared.closeHandler.onClose(this);
         if (exportReference != null) {
             exportReference.close();
         }
-        parent.removeInstance();
-    }
-
-    private void addInstance() {
-        ensureParent();
-        synchronized (this) {
-            instanceCount++;
-        }
-    }
-
-    private void removeInstance() {
-        ensureParent();
-        synchronized (this) {
-            instanceCount--;
-            if (instanceCount <= 0) {
-                LOG.debug("really closing ExportRegistration now!");
-                closeServer();
-            }
-        }
-    }
-
-    private void closeServer() {
-        if (server != null) {
-            try {
-                server.close();
-            } catch (IOException e) {
-                LOG.warn("Error closing ExportRegistration", e);
-            }
-        }
+        shared.removeInstance();
+        closed = true;
     }
 
     @Override
@@ -162,40 +191,39 @@ public class ExportRegistrationImpl implements ExportRegistration {
         if (closed) {
             return "ExportRegistration closed";
         }
-        EndpointDescription endpoint = getExportReference().getExportedEndpoint();
-        ServiceReference serviceReference = getExportReference().getExportedService();
-        String r = "EndpointDescription for ServiceReference " + serviceReference;
+        EndpointDescription endpoint = exportReference.getExportedEndpoint();
+        ServiceReference serviceReference = exportReference.getExportedService();
+        String s = "EndpointDescription for ServiceReference " + serviceReference;
 
-        r += "\n*** EndpointDescription: ****\n";
+        s += "\n*** EndpointDescription: ****\n";
         if (endpoint == null) {
-            r += "---> NULL <---- \n";
+            s += "---> NULL <---- \n";
         } else {
             Set<Map.Entry<String, Object>> props = endpoint.getProperties().entrySet();
             for (Map.Entry<String, Object> entry : props) {
                 Object value = entry.getValue();
-                r += entry.getKey() + " => "
+                s += entry.getKey() + " => "
                     + (value instanceof Object[] ? Arrays.toString((Object[]) value) : value) + "\n";
             }
         }
-        return r;
+        return s;
     }
 
     @Override
     public EndpointDescription update(Map<String, ?> properties) {
-        ExportReference ref = getExportReference();
-        if (ref == null) {
-            return null;
+        if (isInvalid()) {
+            throw new IllegalStateException("export registration is invalid or closed");
         }
 
-        Map<String, Object> oldProps = ref.getExportedEndpoint().getProperties();
+        Map<String, Object> oldProps = exportReference.getExportedEndpoint().getProperties();
         Map<String, Object> props = new HashMap<>(properties);
         props.putIfAbsent(RemoteConstants.ENDPOINT_ID, oldProps.get(RemoteConstants.ENDPOINT_ID));
         props.putIfAbsent(RemoteConstants.SERVICE_IMPORTED_CONFIGS, oldProps.get(RemoteConstants.SERVICE_IMPORTED_CONFIGS));
 
-        ServiceReference<?> sref = ref.getExportedService();
-        EndpointDescription epd = new EndpointDescription(sref, props);
-        exportReference = new ExportReferenceImpl(sref, epd);
-        this.sender.notifyUpdate(ref);
-        return epd;
+        ServiceReference<?> sref = exportReference.getExportedService();
+        EndpointDescription endpoint = new EndpointDescription(sref, props);
+        exportReference = new ExportReferenceImpl(sref, endpoint);
+        shared.eventProducer.notifyUpdate(exportReference);
+        return endpoint;
     }
 }
