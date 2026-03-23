@@ -32,54 +32,128 @@ import org.osgi.service.remoteserviceadmin.ImportRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Implements an ImportRegistration. Since there is a 1:1 relationship between
+ * an ImportRegistration and its ImportReference (they are basically two views
+ * of the same underlying data - one is the modifiable part and one the read-only
+ * part), this class implements both interfaces together.
+ */
 @SuppressWarnings("rawtypes")
 public class ImportRegistrationImpl implements ImportRegistration, ImportReference {
 
     private static final Logger LOG = LoggerFactory.getLogger(ImportRegistrationImpl.class);
 
-    private volatile Throwable exception;
-    private volatile ServiceRegistration importedService; // used only in parent
-    private EndpointDescription endpoint;
-    private volatile ClientServiceFactory clientServiceFactory;
-    private CloseHandler closeHandler;
-    private AtomicBoolean closed = new AtomicBoolean();
+    /**
+     * According to the specs, multiple ImportRegistrations can be linked together,
+     * i.e. they have a shared state - this is implemented via this inner class,
+     * where every group of linked import registrations reference a single Shared instance.
+     */
+    private static class Shared {
+
+        private volatile EndpointDescription endpoint;
+        private CloseHandler closeHandler;
+        private EventProducer eventProducer;
+        private volatile Throwable exception;
+        private volatile ClientServiceFactory clientServiceFactory;
+        private volatile ServiceRegistration importedService;
+        // all linked import registrations that share this state
+        private final List<ImportRegistrationImpl> instances = new ArrayList<>(1);
+
+        /**
+         * Add a linked ImportRegistration instance to the shared data.
+         *
+         * @param ir the instance to add
+         */
+        private synchronized void addInstance(ImportRegistrationImpl ir) {
+            instances.add(ir);
+        }
+
+        /**
+         * Remove a linked ImportRegistration from the shared data.
+         *
+         * @param ir the instance to remove
+         */
+        private void removeInstance(ImportRegistrationImpl ir) {
+            // close the underlying service only once on the last remove (not before or after)
+            synchronized (this) {
+                boolean removed = instances.remove(ir);
+                if (!removed || !instances.isEmpty()) {
+                    return;
+                }
+            }
+
+            LOG.debug("closing ImportRegistration after removing last linked instance");
+            if (importedService != null) {
+                try {
+                    importedService.unregister();
+                } catch (IllegalStateException ise) {
+                    LOG.debug("imported service is already unregistered");
+                }
+                importedService = null;
+            }
+            if (clientServiceFactory != null) {
+                clientServiceFactory.setCloseable(true);
+            }
+        }
+
+        void closeAll() {
+            // make a copy to avoid ConcurrentModificationException
+            // when instances are removed during iteration
+            List<ImportRegistrationImpl> copy;
+            synchronized (this) {
+                copy = new ArrayList<>(instances);
+            }
+            LOG.info("closing all linked ImportRegistrations");
+            for (ImportRegistrationImpl ir : copy) {
+                ir.close();
+            }
+        }
+    }
+
+    // state shared between all linked import registrations in this instance's group
+    private Shared shared;
+
+    // per-instance state that is not shared
     private AtomicBoolean closing = new AtomicBoolean();
-    private boolean detached; // used only in parent
-
-    private ImportRegistrationImpl parent;
-    private List<ImportRegistrationImpl> children; // used only in parent
-
-    private EventProducer eventProducer;
+    private volatile boolean closed;
 
     /**
-     * Constructs a new import registration.
+     * Constructs a new import registration that is not linked to any other instance.
+     * <p>
+     * The {@link #close} method must eventually be invoked on this instance.
      *
      * @param endpoint the imported endpoint info
      * @param closeHandler a callback function that will be invoked when the registration is closed
      * @param eventProducer an event producer that will be invoked when the endpoint is updated
      */
     public ImportRegistrationImpl(EndpointDescription endpoint, CloseHandler closeHandler, EventProducer eventProducer) {
-        this.endpoint = endpoint;
-        this.closeHandler = closeHandler;
-        this.eventProducer = eventProducer;
-        parent = this;
-        children = new ArrayList<>(1);
+        shared = new Shared();
+        shared.endpoint = endpoint;
+        shared.closeHandler = closeHandler;
+        shared.eventProducer = eventProducer;
+        shared.addInstance(this);
     }
 
     /**
      * Constructs an import registration that is linked
      * (shares state) with the given import registration.
+     * <p>
+     * The {@link #close} method must eventually be invoked on this instance.
      *
      * @param ir the import registration that this instance is linked to
      */
     public ImportRegistrationImpl(ImportRegistration ir) {
-        parent = ((ImportRegistrationImpl)ir).getParent();
-        exception = parent.getException();
-        endpoint = parent.getImportedEndpointDescription();
-        clientServiceFactory = parent.clientServiceFactory;
-        closeHandler = parent.closeHandler;
+        shared = ((ImportRegistrationImpl)ir).shared;
+        shared.addInstance(this);
+    }
 
-        parent.instanceAdded(this);
+    private void init(ClientServiceFactory csf, ServiceRegistration sreg, Throwable exception) {
+        if (isInvalid() || shared.clientServiceFactory != null || shared.importedService != null) {
+            throw new IllegalStateException("already initialized");
+        }
+        shared.clientServiceFactory = csf;
+        shared.importedService = sreg;
+        shared.exception = exception;
     }
 
     /**
@@ -88,10 +162,7 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
      * @param exception the exception that occurred during initialization
      */
     public void init(Throwable exception) {
-        if (parent.exception != null || parent.clientServiceFactory != null || parent.importedService != null) {
-            throw new IllegalStateException("already initialized");
-        }
-        this.exception = exception;
+       init(null, null, exception);
     }
 
     /**
@@ -105,134 +176,84 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
      *             proxies to the remote imported service.
      */
     public void init(ClientServiceFactory csf, ServiceRegistration sreg) {
-        if (parent.exception != null || parent.clientServiceFactory != null || parent.importedService != null) {
-            throw new IllegalStateException("already initialized");
-        }
-        this.clientServiceFactory = csf;
-        this.importedService = sreg;
-    }
-
-    private void ensureParent() {
-        if (parent != this) {
-            throw new IllegalStateException("this method may only be called on the parent");
-        }
+        init(csf, sreg, null);
     }
 
     /**
-     * Called on parent when a child is added.
+     * Returns whether this registration is invalid
+     * (has an initialization exception) or closed.
      *
-     * @param iri the child
+     * @return whether this registration is invalid or closed
      */
-    private synchronized void instanceAdded(ImportRegistrationImpl iri) {
-        ensureParent();
-        children.add(iri);
+    private boolean isInvalid() {
+        return shared.exception != null || closed;
     }
 
     /**
-     * Called on parent when a child is closed.
-     *
-     * @param iri the child
+     * Closes this instance.
+     * <p>
+     * If this is the last instance in its group of linked instances,
+     * the underlying import registration is also closed, otherwise
+     * the import itself remains open for use by the other instances.
      */
-    private void instanceClosed(ImportRegistration iri) {
-        ensureParent();
-        synchronized (this) {
-            children.remove(iri);
-            if (!children.isEmpty() || detached || !closing.get()) {
-                return;
-            }
-            detached = true;
-        }
-
-        LOG.debug("really closing ImportRegistration now");
-
-        if (importedService != null) {
-            try {
-                importedService.unregister();
-            } catch (IllegalStateException ise) {
-                LOG.debug("imported service is already unregistered");
-            }
-            importedService = null;
-        }
-        if (clientServiceFactory != null) {
-            clientServiceFactory.setCloseable(true);
-        }
-    }
-
+    @Override
     public void close() {
-        LOG.debug("close() called");
-        synchronized (this) {
-            boolean curClosing = closing.getAndSet(true);
-            if (curClosing || isInvalid()) {
-                return;
-            }
+        // we do this in two steps: first the 'closing' state to make sure we
+        // proceed at most once (only if valid and not already closing/closed),
+        // with all the references still valid while calling the close handler,
+        // and only after it's done we reach the 'closed' state where all
+        // getters return null (as required by the spec)
+        LOG.debug("closing import registration");
+        if (closed || closing.getAndSet(true)) {
+            return;
         }
-        closeHandler.onClose(this);
-        parent.instanceClosed(this);
-        closed.set(true);
+        shared.closeHandler.onClose(this);
+        shared.removeInstance(this);
+        closed = true;
     }
 
     /**
-     * Closes all ImportRegistrations which share the same parent as this one.
+     * Closes this instance, all linked instances, and the underlying service.
      */
     public void closeAll() {
-        if (this == parent) {
-            LOG.info("closing down all child ImportRegistrations");
-
-            // we must iterate over a copy of children since close() removes the child
-            // from the list (which would cause a ConcurrentModificationException)
-            for (ImportRegistrationImpl ir : copyChildren()) {
-                ir.close();
-            }
-            this.close();
-        } else {
-            parent.closeAll();
-        }
-    }
-
-    private List<ImportRegistrationImpl> copyChildren() {
-        synchronized (this) {
-            return new ArrayList<>(children);
-        }
-    }
-
-    public EndpointDescription getImportedEndpointDescription() {
-        return isInvalid() ? null : endpoint;
+        shared.closeAll(); // invokes close() on all shared instances (including this one)
     }
 
     @Override
-    public EndpointDescription getImportedEndpoint() {
-        return getImportedEndpointDescription();
+    @SuppressWarnings("unchecked")
+    public boolean update(EndpointDescription endpoint) {
+        if (isInvalid()) {
+            throw new IllegalStateException("import registration is invalid or closed");
+        }
+        if (!endpoint.getId().equals(shared.endpoint.getId())) {
+            throw new IllegalArgumentException("wrong endpoint id " + endpoint.getId());
+        }
+        shared.endpoint = endpoint;
+        shared.importedService.setProperties(new Hashtable<>(endpoint.getProperties()));
+        shared.eventProducer.notifyUpdate(this);
+        return true;
     }
 
     @Override
     public ServiceReference<?> getImportedService() {
-        return isInvalid() || parent.importedService == null ? null : parent.importedService.getReference();
+        return isInvalid() ? null : shared.importedService.getReference();
+    }
+
+    @Override
+    public EndpointDescription getImportedEndpoint() {
+        return isInvalid() ? null : shared.endpoint;
     }
 
     @Override
     public ImportReference getImportReference() {
-        return this;
+        if (shared.exception != null) {
+            throw new IllegalStateException("import registration is invalid");
+        }
+        return isInvalid() ? null : this; // this instance implements both interfaces
     }
 
     @Override
     public Throwable getException() {
-        return exception;
-    }
-
-    private synchronized boolean isInvalid() {
-        return exception != null || closed.get();
-    }
-
-    public ImportRegistrationImpl getParent() {
-        return parent;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public boolean update(EndpointDescription endpoint) {
-        this.endpoint = endpoint;
-        importedService.setProperties(new Hashtable(endpoint.getProperties()));
-        eventProducer.notifyUpdate(this);
-        return true;
+        return closed ? null : shared.exception;
     }
 }
