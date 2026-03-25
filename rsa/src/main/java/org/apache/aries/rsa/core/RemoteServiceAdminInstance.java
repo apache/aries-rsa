@@ -21,11 +21,10 @@ package org.apache.aries.rsa.core;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
@@ -37,54 +36,67 @@ import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.ImportRegistration;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 
-public class RemoteServiceAdminInstance implements RemoteServiceAdmin {
+/**
+ * An RSA instance that is created and returned by the {@link RemoteServiceAdminFactory},
+ * one per calling bundle. All instances delegate the heavy lifting to a shared
+ * RSA core implementation, but each instance keeps track of the registrations that
+ * were performed through it so that it can later close them when the corresponding bundle
+ * (TopologyManager) is closed.
+ */
+public class RemoteServiceAdminInstance implements RemoteServiceAdmin, CloseHandler {
 
-    // Context of the bundle requesting the RemoteServiceAdmin
-    private final BundleContext bctx;
+    // Context of the bundle that is using this the RemoteServiceAdmin (i.e. the TopologyManager)
+    private final BundleContext context;
     private final RemoteServiceAdminCore rsaCore;
+    private final List<ExportRegistration> exportRegistrations = new CopyOnWriteArrayList<>();
+    private final List<ImportRegistration> importRegistrations = new CopyOnWriteArrayList<>();
 
-    private boolean closed;
-
-    public RemoteServiceAdminInstance(BundleContext bc, RemoteServiceAdminCore core) {
-        bctx = bc;
-        rsaCore = core;
+    public RemoteServiceAdminInstance(BundleContext context, RemoteServiceAdminCore rsaCore) {
+        this.context = context;
+        this.rsaCore = rsaCore;
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
     public List<ExportRegistration> exportService(final ServiceReference ref, final Map properties) {
-        return closed ? Collections.emptyList() : rsaCore.exportService(ref, properties);
+        List<ExportRegistration> regs = rsaCore.exportService(ref, properties);
+        // we need to keep track of our open registrations, and be notified when they are closed
+        regs.forEach(reg -> ((ExportRegistrationImpl)reg).addCloseHandler(this));
+        exportRegistrations.addAll(regs);
+        return regs;
     }
 
     @Override
     public Collection<ExportReference> getExportedServices() {
         checkPermission(new EndpointPermission("*", EndpointPermission.READ));
-        return closed ? null : rsaCore.getExportedServices();
+        return rsaCore.getExportedServices();
     }
 
     @Override
     public Collection<ImportReference> getImportedEndpoints() {
         checkPermission(new EndpointPermission("*", EndpointPermission.READ));
-        return closed ? null : rsaCore.getImportedEndpoints();
+        return rsaCore.getImportedEndpoints();
     }
 
     @Override
     public ImportRegistration importService(final EndpointDescription endpoint) {
-        String frameworkUUID = bctx.getProperty(Constants.FRAMEWORK_UUID);
+        String frameworkUUID = context.getProperty(Constants.FRAMEWORK_UUID);
         checkPermission(new EndpointPermission(endpoint, frameworkUUID, EndpointPermission.IMPORT));
-        return AccessController.doPrivileged(new PrivilegedAction<ImportRegistration>() {
-            public ImportRegistration run() {
-                return closed ? null : rsaCore.importService(endpoint);
-            }
-        });
+        ImportRegistration reg = AccessController.doPrivileged((PrivilegedAction<ImportRegistration>)
+            () -> rsaCore.importService(endpoint));
+        if (reg != null) {
+            // we need to keep track of our open registrations, and be notified when they are closed
+            ((ImportRegistrationImpl)reg).addCloseHandler(this);
+            importRegistrations.add(reg);
+        }
+        return reg;
     }
 
-    public void close(Bundle bundle, boolean closeAll) {
-        closed = true;
-        rsaCore.removeExportRegistrations(bundle);
-        if (closeAll) {
-            rsaCore.close();
-        }
+    /**
+     * Close all registrations that were made through this RSA instance.
+     */
+    public void close() {
+        importRegistrations.forEach(ImportRegistration::close);
+        exportRegistrations.forEach(ExportRegistration::close);
     }
 
     private void checkPermission(EndpointPermission permission) {
@@ -92,5 +104,15 @@ public class RemoteServiceAdminInstance implements RemoteServiceAdmin {
         if (sm != null) {
             sm.checkPermission(permission);
         }
+    }
+
+    @Override
+    public void onClose(ExportRegistration reg) {
+        exportRegistrations.remove(reg); // registration was closed, no need to track it anymore
+    }
+
+    @Override
+    public void onClose(ImportRegistration reg) {
+        importRegistrations.remove(reg); // registration was closed, no need to track it anymore
     }
 }

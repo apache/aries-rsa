@@ -45,6 +45,7 @@ public class DistributionProviderTrackerTest {
     public void testAddingRemoved() throws InvalidSyntaxException {
         IMocksControl c = EasyMock.createControl();
         DistributionProvider provider = c.createMock(DistributionProvider.class);
+        expect(provider.getSupportedTypes()).andReturn(new String[] { "config-type" }).anyTimes();
 
         ServiceReference<DistributionProvider> providerRef = c.createMock(ServiceReference.class);
         expect(providerRef.getProperty(RemoteConstants.REMOTE_INTENTS_SUPPORTED)).andReturn("");
@@ -59,8 +60,6 @@ public class DistributionProviderTrackerTest {
         expect(context.registerService(EasyMock.isA(String.class), EasyMock.isA(ServiceFactory.class),
                                                 EasyMock.isA(Dictionary.class)))
             .andReturn(rsaReg).atLeastOnce();
-        context.addServiceListener(anyObject(ServiceListener.class));
-        expectLastCall().anyTimes();
 
         final BundleContext apiContext = c.createMock(BundleContext.class);
         c.replay();
@@ -69,7 +68,7 @@ public class DistributionProviderTrackerTest {
                 return apiContext;
             }
         };
-        tracker.addingService(providerRef);
+        ServiceRegistration<RemoteServiceAdminFactory> factoryRegistration = tracker.addingService(providerRef);
         c.verify();
 
         c.reset();
@@ -77,7 +76,7 @@ public class DistributionProviderTrackerTest {
         EasyMock.expectLastCall();
         EasyMock.expect(context.ungetService(providerRef)).andReturn(true);
         c.replay();
-        tracker.removedService(providerRef, rsaReg);
+        tracker.removedService(providerRef, factoryRegistration);
         c.verify();
     }
 
@@ -85,6 +84,7 @@ public class DistributionProviderTrackerTest {
     public void testAddingWithNullValues() throws InvalidSyntaxException {
         IMocksControl c = EasyMock.createControl();
         DistributionProvider provider = c.createMock(DistributionProvider.class);
+        expect(provider.getSupportedTypes()).andReturn(new String[] { "config-type" }).anyTimes();
 
         ServiceReference<DistributionProvider> providerRef = c.createMock(ServiceReference.class);
         expect(providerRef.getProperty(RemoteConstants.REMOTE_INTENTS_SUPPORTED)).andReturn(null);

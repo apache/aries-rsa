@@ -18,9 +18,8 @@
  */
 package org.apache.aries.rsa.core;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.aries.rsa.core.event.EventProducer;
@@ -50,14 +49,20 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
      */
     private static class Shared {
 
-        private volatile EndpointDescription endpoint;
-        private CloseHandler closeHandler;
+        private Set<CloseHandler> closeHandlers = Collections.newSetFromMap(new ConcurrentHashMap<>());
         private EventProducer eventProducer;
+        private volatile EndpointDescription endpoint;
         private volatile Throwable exception;
         private volatile ClientServiceFactory clientServiceFactory;
         private volatile ServiceRegistration importedService;
         // all linked import registrations that share this state
         private final List<ImportRegistrationImpl> instances = new ArrayList<>(1);
+
+        void addCloseHandler(CloseHandler closeHandler) {
+            if (closeHandler != null) {
+                closeHandlers.add(closeHandler);
+            }
+        }
 
         /**
          * Add a linked ImportRegistration instance to the shared data.
@@ -129,8 +134,8 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
     public ImportRegistrationImpl(EndpointDescription endpoint, CloseHandler closeHandler, EventProducer eventProducer) {
         shared = new Shared();
         shared.endpoint = endpoint;
-        shared.closeHandler = closeHandler;
         shared.eventProducer = eventProducer;
+        addCloseHandler(closeHandler);
         shared.addInstance(this);
     }
 
@@ -189,6 +194,10 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
         return shared.exception != null || closed;
     }
 
+    public void addCloseHandler(CloseHandler closeHandler) {
+        shared.addCloseHandler(closeHandler);
+    }
+
     /**
      * Closes this instance.
      * <p>
@@ -207,7 +216,7 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
         if (closed || closing.getAndSet(true)) {
             return;
         }
-        shared.closeHandler.onClose(this);
+        shared.closeHandlers.forEach(h -> h.onClose(this));
         shared.removeInstance(this);
         closed = true;
     }

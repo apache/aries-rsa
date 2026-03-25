@@ -41,8 +41,6 @@ import org.apache.aries.rsa.util.EndpointHelper;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
@@ -68,7 +66,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
     private final BundleContext bctx;
     private final EventProducer eventProducer;
-    private ServiceListener exportedServiceListener;
     private DistributionProvider provider;
     private BundleContext apictx;
     private CloseHandler closeHandler;
@@ -82,13 +79,21 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         this.eventProducer = eventProducer;
         this.provider = provider;
         this.closeHandler = new CloseHandler() {
-            public void onClose(ExportRegistration exportReg) {
-                removeExportRegistration(exportReg);
-                ExportReference exportReference = exportReg.getExportReference();
-                if (exportReference != null) {
-                    ServiceReference<?> serviceReference = exportReference.getExportedService();
-                    if (serviceReference != null)
-                        getBundleContext(serviceReference).ungetService(serviceReference);
+            public void onClose(ExportRegistration reg) {
+                removeExportRegistration(reg);
+                if (reg.getException() != null) {
+                    return; // there is no reference to close, and an exception if we try getting it
+                }
+                ExportReference ref = reg.getExportReference();
+                ServiceReference<?> sref = ref == null ? null : ref.getExportedService();
+                Bundle bundle = sref == null ? null : sref.getBundle();
+                BundleContext context = bundle == null ? null : bundle.getBundleContext();
+                // the bundle/context may already be closed, e.g. when called from
+                // the service factory ungetService when the bundle is stopped -
+                // the context is already invalid at that point, and services are
+                // automatically unregistered by the framework
+                if (context != null) {
+                    context.ungetService(sref);
                 }
             }
 
@@ -96,17 +101,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 removeImportRegistration(importReg);
             }
         };
-        createServiceListener();
-    }
-
-    // listen for exported services being unregistered, so we can close the export
-    protected void createServiceListener() {
-        this.exportedServiceListener = event -> {
-            if (event.getType() == ServiceEvent.UNREGISTERING) {
-                removeServiceExports(event.getServiceReference());
-            }
-        };
-        this.bctx.addServiceListener(exportedServiceListener);
     }
 
     @Override
@@ -125,7 +119,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         }
 
         Map<String, Object> key = makeKey(serviceProperties);
-        List<ExportRegistration> regs = getExistingAndLock(key, interfaceNames);
+        List<ExportRegistration> regs = getExistingOrLock(key, interfaceNames);
         if (regs == null) {
             regs = new ArrayList<>();
             try {
@@ -177,7 +171,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         }
     }
 
-    private List<ExportRegistration> getExistingAndLock(Map<String, Object> key, List<String> interfaces) {
+    private List<ExportRegistration> getExistingOrLock(Map<String, Object> key, List<String> interfaces) {
         synchronized (exportedServices) {
             // check if it is already exported...
             Collection<ExportRegistration> regs = exportedServices.get(key);
@@ -340,22 +334,17 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
         // create a new list with copies of the exportRegistrations
         List<ExportRegistration> copy = new ArrayList<>(regs.size());
-        for (ExportRegistration exportRegistration : regs) {
-            if (exportRegistration instanceof ExportRegistrationImpl) {
-                ExportRegistrationImpl exportRegistrationImpl = (ExportRegistrationImpl) exportRegistration;
-                if (exportRegistration.getException() == null) {
-                    // Can only retrieve reference if we have no exception
-                    EndpointDescription epd = exportRegistration.getExportReference().getExportedEndpoint();
-                    // create one copy for each distinct endpoint description
-                    if (!copiedEndpoints.contains(epd)) {
-                        copiedEndpoints.add(epd);
-                        copy.add(new ExportRegistrationImpl(exportRegistrationImpl));
-                        // also increase service reference count
-                        ServiceReference<?> serviceReference = exportRegistration.getExportReference().getExportedService();
-                        BundleContext serviceContext = getBundleContext(serviceReference);
-                        serviceContext.getService(serviceReference); // unget it when export is closed
-                    }
-                }
+        for (ExportRegistration reg : regs) {
+            ExportRegistrationImpl exportRegistrationImpl = (ExportRegistrationImpl) reg;
+            ExportReference ref = reg.getException() != null ? null : reg.getExportReference();
+            EndpointDescription endpoint = ref == null ? null : ref.getExportedEndpoint();
+            // create one copy for each distinct endpoint description
+            if (endpoint != null && copiedEndpoints.add(endpoint)) {
+                copy.add(new ExportRegistrationImpl(exportRegistrationImpl));
+                // also increase service reference count
+                ServiceReference<?> sref = ref.getExportedService();
+                BundleContext serviceContext = getBundleContext(sref);
+                serviceContext.getService(sref); // unget it when export is closed
             }
         }
 
@@ -485,33 +474,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     /**
-     * Removes and closes all exports for the given service.
-     * This is called when the service is unregistered.
-     *
-     * @param sref the service whose exports should be removed and closed
-     */
-    protected void removeServiceExports(ServiceReference<?> sref) {
-        List<ExportRegistration> regs = new ArrayList<>(1);
-        synchronized (exportedServices) {
-            for (Collection<ExportRegistration> value : exportedServices.values()) {
-                for (ExportRegistration er : value) {
-                    if (er.getException() != null ||
-                            er.getExportReference() == null ||
-                            er.getExportReference().getExportedService().equals(sref)) {
-                        regs.add(er);
-                    }
-                }
-            }
-            // do this outside of iteration to avoid concurrent modification
-            for (ExportRegistration er : regs) {
-                LOG.debug("closing export for service {}", sref);
-                er.close();
-            }
-        }
-
-    }
-
-    /**
      * Removes the provided Export Registration from the internal management structures.
      * This is called from the ExportRegistration itself when it is closed (so should
      * not attempt to close it again here).
@@ -539,45 +501,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         }
     }
 
-    // remove all export registrations associated with the given bundle
-    protected void removeExportRegistrations(Bundle exportingBundle) {
-        List<ExportRegistration> bundleExports = getExportsForBundle(exportingBundle);
-        for (ExportRegistration export : bundleExports) {
-            export.close();
-        }
-    }
-
-    // remove all import registrations
-    protected void closeImportRegistrations() {
-        Collection<ImportRegistration> copy = new ArrayList<>();
-        synchronized (importedServices) {
-            for (Collection<ImportRegistration> irs : importedServices.values()) {
-                copy.addAll(irs);
-            }
-        }
-        for (ImportRegistration ir : copy) {
-            ir.close();
-        }
-    }
-
-    private List<ExportRegistration> getExportsForBundle(Bundle exportingBundle) {
-        synchronized (exportedServices) {
-            List<ExportRegistration> bundleRegs = new ArrayList<>();
-            for (Collection<ExportRegistration> regs : exportedServices.values()) {
-                if (!regs.isEmpty()) {
-                    ExportRegistration exportRegistration = regs.iterator().next();
-                    if (exportRegistration.getException() == null && exportRegistration.getExportReference() != null) {
-                        Bundle regBundle = exportRegistration.getExportReference().getExportedService().getBundle();
-                        if (exportingBundle.equals(regBundle)) {
-                            bundleRegs.addAll(regs);
-                        }
-                    }
-                }
-            }
-            return bundleRegs;
-        }
-    }
-
     protected void removeImportRegistration(ImportRegistration iri) {
         synchronized (importedServices) {
             LOG.debug("Removing importRegistration {}", iri);
@@ -596,14 +519,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             if (imRegs == null || imRegs.isEmpty()) {
                 importedServices.remove(endpoint);
             }
-        }
-    }
-
-    public void close() {
-        LOG.info("Closing {}", this.getClass().getSimpleName());
-        closeImportRegistrations();
-        if (exportedServiceListener != null) {
-            bctx.removeServiceListener(exportedServiceListener);
         }
     }
 
