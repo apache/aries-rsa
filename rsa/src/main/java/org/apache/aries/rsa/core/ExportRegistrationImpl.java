@@ -21,9 +21,11 @@ package org.apache.aries.rsa.core;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.aries.rsa.core.event.EventProducer;
@@ -48,12 +50,18 @@ public class ExportRegistrationImpl implements ExportRegistration {
      */
     private static class Shared {
 
-        private CloseHandler closeHandler;
+        private Set<CloseHandler> closeHandlers = Collections.newSetFromMap(new ConcurrentHashMap<>());
         private EventProducer eventProducer;
         private Closeable server;
         private Throwable exception;
 
         private int instanceCount;
+
+        void addCloseHandler(CloseHandler closeHandler) {
+            if (closeHandler != null) {
+                closeHandlers.add(closeHandler);
+            }
+        }
 
         void addInstance() {
             synchronized (this) {
@@ -117,9 +125,9 @@ public class ExportRegistrationImpl implements ExportRegistration {
             CloseHandler closeHandler, EventProducer eventProducer) {
         exportReference = new ExportReferenceImpl(sref, endpoint.description());
         shared = new Shared();
-        shared.closeHandler = closeHandler;
         shared.eventProducer = eventProducer;
         shared.server = endpoint;
+        addCloseHandler(closeHandler);
         shared.addInstance();
     }
 
@@ -135,9 +143,9 @@ public class ExportRegistrationImpl implements ExportRegistration {
      */
     public ExportRegistrationImpl(Throwable exception, CloseHandler closeHandler, EventProducer eventProducer) {
         shared = new Shared();
-        shared.closeHandler = closeHandler;
         shared.eventProducer = eventProducer;
         shared.exception = exception;
+        addCloseHandler(closeHandler);
         shared.addInstance();
     }
 
@@ -167,6 +175,10 @@ public class ExportRegistrationImpl implements ExportRegistration {
         return closed ? null : shared.exception;
     }
 
+    public void addCloseHandler(CloseHandler closeHandler) {
+        shared.addCloseHandler(closeHandler);
+    }
+
     @Override
     public final void close() {
         // we do this in two steps: first the 'closing' state to make sure we
@@ -178,7 +190,7 @@ public class ExportRegistrationImpl implements ExportRegistration {
         if (closed || closing.getAndSet(true)) {
             return;
         }
-        shared.closeHandler.onClose(this);
+        shared.closeHandlers.forEach(h -> h.onClose(this));
         if (exportReference != null) {
             exportReference.close();
         }
