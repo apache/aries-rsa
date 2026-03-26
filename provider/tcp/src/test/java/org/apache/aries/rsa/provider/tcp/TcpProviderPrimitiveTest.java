@@ -19,6 +19,7 @@
 package org.apache.aries.rsa.provider.tcp;
 
 import static java.util.Arrays.asList;
+import static org.apache.aries.rsa.provider.tcp.Config.PREFIX;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -62,8 +63,8 @@ public class TcpProviderPrimitiveTest {
         provider.activate(new HashMap<>());
         Map<String, Object> props = new HashMap<>();
         EndpointHelper.addObjectClass(props, exportedInterfaces);
-        props.put("aries.rsa.hostname", "localhost");
-        props.put("aries.rsa.numThreads", "10");
+        props.put(PREFIX + "hostname", "localhost");
+        props.put(PREFIX + "numThreads", "10");
         PrimitiveServiceImpl myService = new PrimitiveServiceImpl();
         BundleContext bc = EasyMock.mock(BundleContext.class);
         ep = provider.exportService(myService, bc, props, exportedInterfaces);

@@ -27,21 +27,25 @@ import java.util.UUID;
  */
 public class Config {
 
+    static final String PREFIX = TcpProvider.TCP_CONFIG_TYPE + ".";
+
     // endpoint service properties
-    static final String PORT = "aries.rsa.port";
-    static final String HOSTNAME = "aries.rsa.hostname";
-    static final String BIND_ADDRESS = "aries.rsa.bindAddress";
-    static final String ID = "aries.rsa.id";
-    static final String THREADS = "aries.rsa.numThreads";
-    static final String TIMEOUT = "osgi.basic.timeout";
+    static final String
+        PORT = PREFIX + "port",
+        HOSTNAME = PREFIX + "hostname",
+        BIND_ADDRESS = PREFIX + "bindAddress",
+        ID = PREFIX + "id",
+        THREADS = PREFIX + "numThreads",
+        TIMEOUT = "osgi.basic.timeout";
 
     // provider component properties
-    static final String KEYSTORE = "aries.rsa.keyStore";
-    static final String TRUSTSTORE = "aries.rsa.trustStore";
-    static final String KEYSTORE_PASSWORD = "aries.rsa.keyStorePassword";
-    static final String TRUSTSTORE_PASSWORD = "aries.rsa.trustStorePassword";
-    static final String KEY_ALIAS = "aries.rsa.keyAlias";
-    static final String MTLS = "aries.rsa.mtls";
+    static final String
+        KEYSTORE = PREFIX + "keyStore",
+        TRUSTSTORE = PREFIX + "trustStore",
+        KEYSTORE_PASSWORD = PREFIX + "keyStorePassword",
+        TRUSTSTORE_PASSWORD = PREFIX + "trustStorePassword",
+        KEY_ALIAS = PREFIX + "keyAlias",
+        MTLS = PREFIX + "mtls";
 
     static final int DYNAMIC_PORT = 0;
     static final int DEFAULT_TIMEOUT_MILLIS = 300000;
@@ -65,7 +69,13 @@ public class Config {
 
     String getString(String key, String defaultValue) {
         Object value = props.get(key);
-        return value != null ? value.toString() : defaultValue;
+        if (value == null) {
+            return defaultValue;
+        }
+        if (!(value instanceof String)) {
+            throw new IllegalArgumentException(key + " is not a string");
+        }
+        return value.toString();
     }
 
     public int getPort() {

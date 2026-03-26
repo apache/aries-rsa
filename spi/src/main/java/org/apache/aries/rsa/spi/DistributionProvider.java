@@ -31,24 +31,32 @@ public interface DistributionProvider {
     /**
      * Called by RemoteServiceAdmin to export a service.
      * <p>
-     * The Distribution provider will be called if no config type was set or
-     * if it supports the config type.
+     * The Distribution provider will be called if it supports the
+     * specified config type, or if no config type was specified.
+     * <p>
+     * All config-type specific configuration properties in the returned endpoint
+     * must have names of the form {@code <config>.*}, i.e. the property name
+     * must be prefixed with the config type string itself.
+     * If any of the config-type specific properties are invalid,
+     * an IllegalArgumentException must be thrown.
      *
-     * @param serviceO service instance to be exported
+     * @param serviceObject service instance to be exported
      * @param serviceContext bundle context of the bundle exporting the service
      * @param effectiveProperties combined properties of the service and additional properties from rsa
      * @param exportedInterfaces name of the interface to be exported
+     * @throws IllegalArgumentException if any of the config-type specific properties are invalid
      * @return Endpoint that represents the service that is exposed to the outside world
      */
-    Endpoint exportService(Object serviceO,
+    Endpoint exportService(Object serviceObject,
                            BundleContext serviceContext,
                            Map<String, Object> effectiveProperties,
                            Class[] exportedInterfaces);
 
     /**
-     * Called by RemoteServiceAdmin to import a service,
-     * i.e. get a proxy that can be used to access the remote service.
-     * <p>
+     * Imports a remote endpoint by providing a proxy object that can be
+     * used by a local consumer bundle, whose provider-specific
+     * implementation accesses the remote service behind the scenes.
+     *
      * @param cl classloader of the consumer bundle
      * @param consumerContext bundle context of the consumer bundle
      * @param interfaces interfaces of the service to proxy

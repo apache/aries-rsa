@@ -127,7 +127,7 @@ public class RsaTestBase {
                          logback(),
                          systemProperty("pax.exam.osgi.unresolved.fail").value("true"),
                          systemProperty("org.ops4j.pax.logging.DefaultServiceLog.level").value("INFO"),
-                         systemProperty("aries.rsa.hostname").value("localhost"),
+                         systemProperty("aries.tcp.hostname").value("localhost"),
                          mvn("org.osgi", "org.osgi.util.function"),
                          mvn("org.osgi", "org.osgi.util.promise"),
                          mvn("org.osgi", "org.osgi.service.component"),
