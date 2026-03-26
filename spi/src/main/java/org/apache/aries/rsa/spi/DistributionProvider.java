@@ -26,6 +26,11 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 @SuppressWarnings("rawtypes")
 public interface DistributionProvider {
 
+    /**
+     * Returns config types supported by this provider.
+     *
+     * @return the config types supported by this provider
+     */
     String[] getSupportedTypes();
 
     /**
@@ -34,11 +39,15 @@ public interface DistributionProvider {
      * The Distribution provider will be called if it supports the
      * specified config type, or if no config type was specified.
      * <p>
-     * All config-type specific configuration properties in the returned endpoint
-     * must have names of the form {@code <config>.*}, i.e. the property name
-     * must be prefixed with the config type string itself.
-     * If any of the config-type specific properties are invalid,
-     * an IllegalArgumentException must be thrown.
+     * All config-type specific configuration properties in the returned
+     * endpoint must have names of the form {@code <config>.*}, i.e. the
+     * property name must be prefixed with the config type string itself.
+     * If any of the config-type specific properties are invalid, an
+     * IllegalArgumentException must be thrown.
+     * <p>
+     * The provider must set the {@code "service.imported.configs"}
+     * endpoint property to the config type that was actually exported
+     * (and its alias names, if any).
      *
      * @param serviceObject service instance to be exported
      * @param serviceContext bundle context of the bundle exporting the service

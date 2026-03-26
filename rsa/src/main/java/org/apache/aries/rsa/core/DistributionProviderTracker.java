@@ -63,6 +63,10 @@ public class DistributionProviderTracker extends ServiceTracker<DistributionProv
             // Can happen if the service is created by a service factory and an exception occurs
             return null;
         }
+        if (provider.getSupportedTypes() == null || provider.getSupportedTypes().length == 0) {
+            LOG.warn("Invalid DistributionProvider {}: no supported config types", provider);
+            return null;
+        }
         LOG.debug("Initializing RemoteServiceAdmin for DistributionProvider {} ({})",
             provider, Arrays.asList(provider.getSupportedTypes()));
         BundleContext apiContext = getAPIContext();
