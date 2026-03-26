@@ -28,8 +28,6 @@ import org.apache.aries.rsa.spi.Endpoint;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
-import javax.net.ServerSocketFactory;
-
 /**
  * Contains the details of a TcpProvider's Endpoint (exported service).
  */
@@ -59,12 +57,14 @@ public class TcpEndpoint implements Endpoint {
     private void updateEndpointDescription(Map<String, Object> effectiveProperties) {
         effectiveProperties = new HashMap<>(effectiveProperties);
         Config config = new Config(effectiveProperties);
-        String endpointId = String.format("tcp://%s:%s/%s", hostname, port, config.getId());
-        effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
+        String uri = String.format("tcp://%s:%s/%s", hostname, port, config.getId());
+        effectiveProperties.put(RemoteConstants.ENDPOINT_ID, uri);
         effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList("osgi.basic", "osgi.async"));
-        // tck tests require at least one config-type specific property... so we provide this one
-        // (it also tests that we throw IllegalArgumentException when any config-type property value is garbage)
-        effectiveProperties.put(TcpProvider.TCP_CONFIG_TYPE + ".id", endpointId);
+        // tck tests require at least one config-type specific property (with our config type prefix),
+        // we have the uri to cover that. it also tests that we throw IllegalArgumentException when any
+        // config-type property value is garbage, so we validate it here even though it's not used
+        config.getUri(); // validate for TCK
+        effectiveProperties.put(Config.URI, uri);
         this.epd = new EndpointDescription(effectiveProperties);
     }
 

@@ -191,11 +191,11 @@ public class TcpProvider implements DistributionProvider {
                                           EndpointDescription endpoint)
         throws IntentUnsatisfiedException {
         try {
-            String endpointId = endpoint.getId();
-            URI address = new URI(endpointId);
-            int timeout = new Config(endpoint.getProperties()).getTimeoutMillis();
+            Config config = new Config(endpoint.getProperties());
+            URI uri = new URI(config.getUri());
+            int timeout = config.getTimeoutMillis();
             TcpInvocationHandler handler = new TcpInvocationHandler(
-                socketFactory, cl, address.getHost(), address.getPort(), endpointId, timeout);
+                socketFactory, cl, uri.getHost(), uri.getPort(), endpoint.getId(), timeout);
             Object service = Proxy.newProxyInstance(cl, interfaces, handler);
             return new ImportedService() {
                 @Override
