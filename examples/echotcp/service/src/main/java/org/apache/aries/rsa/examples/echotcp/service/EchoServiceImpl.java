@@ -24,8 +24,8 @@ import org.osgi.service.component.annotations.Component;
 @Component(//
     property = {
                 "service.exported.interfaces=*", //
-                "aries.rsa.port=8201", //
-                "aries.rsa.id=echo"
+                "aries.tcp.port=8201", //
+                "aries.tcp.id=echo"
     })
 public class EchoServiceImpl implements EchoService {
 

@@ -47,9 +47,6 @@ public class TcpEndpoint implements Endpoint {
         if (service == null) {
             throw new NullPointerException("Service must not be null");
         }
-        if (effectiveProperties.get(TcpProvider.TCP_CONFIG_TYPE + ".id") != null) {
-            throw new IllegalArgumentException("For the tck .. Just to please you!");
-        }
         this.closeCallback = closeCallback;
         Config config = new Config(effectiveProperties);
         port = config.getPort(); // this may initially be 0 for dynamic port
@@ -66,8 +63,8 @@ public class TcpEndpoint implements Endpoint {
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
         effectiveProperties.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, "");
         effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList("osgi.basic", "osgi.async"));
-
-        // tck tests for one such property ... so we provide it
+        // tck tests require at least one config-type specific property... so we provide this one
+        // (it also tests that we throw IllegalArgumentException when any config-type property value is garbage)
         effectiveProperties.put(TcpProvider.TCP_CONFIG_TYPE + ".id", endpointId);
         this.epd = new EndpointDescription(effectiveProperties);
     }

@@ -44,6 +44,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.aries.rsa.provider.tcp.Config.PREFIX;
 import org.apache.aries.rsa.provider.tcp.myservice.ExpectedTestException;
 import org.apache.aries.rsa.provider.tcp.myservice.MyService;
 import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
@@ -90,14 +91,14 @@ public class TcpProviderTest {
         Map<String, Object> props = new HashMap<>();
         EndpointHelper.addObjectClass(props, exportedInterfaces);
         int port = getFreePort();
-        props.put("aries.rsa.hostname", "localhost");
-        props.put("aries.rsa.port", port);
-        props.put("aries.rsa.numThreads", NUM_THREADS);
+        props.put(PREFIX + "hostname", "localhost");
+        props.put(PREFIX + "port", port);
+        props.put(PREFIX + "numThreads", NUM_THREADS);
         props.put("osgi.basic.timeout", TIMEOUT);
         BundleContext bc = EasyMock.mock(BundleContext.class);
-        props.put("aries.rsa.id", "service1");
+        props.put(PREFIX + "id", "service1");
         ep = provider.exportService(new MyServiceImpl("service1"), bc, props, exportedInterfaces);
-        props.put("aries.rsa.id", "service2");
+        props.put(PREFIX + "id", "service2");
         ep2 = provider.exportService(new MyServiceImpl("service2"), bc, props, exportedInterfaces);
         assertThat(ep.description().getId(), startsWith("tcp://localhost:"));
         importedService = provider.importEndpoint(
@@ -164,8 +165,8 @@ public class TcpProviderTest {
 
     @Test
     public void testCallSharedPort() {
-        Object port1 = ep.description().getProperties().get("aries.rsa.port");
-        Object port2 = ep2.description().getProperties().get("aries.rsa.port");
+        Object port1 = ep.description().getProperties().get(PREFIX + "port");
+        Object port2 = ep2.description().getProperties().get(PREFIX + "port");
         assertEquals(port1, port2);
         assertEquals("service1", myServiceProxy.getId());
         assertEquals("service2", myServiceProxy2.getId());

@@ -229,9 +229,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 return null;
             }
             return new ExportRegistrationImpl(serviceReference, endpoint, closeHandler, eventProducer);
-        } catch (IllegalArgumentException e) {
-            // TCK expects this for garbage input
-            throw e;
+        } catch (IllegalArgumentException iae) {
+            // TCK expects this for garbage input in config-type specific properties
+            throw iae;
         } catch (Exception e) {
             return new ExportRegistrationImpl(e, closeHandler, eventProducer);
         }

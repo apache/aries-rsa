@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.aries.rsa.provider.tcp.Config.PREFIX;
 import org.apache.aries.rsa.provider.tcp.myservice.MyService;
 import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
 import org.junit.Assert;
@@ -48,9 +49,9 @@ public class TcpEndpointTest {
 
     @Test
     public void testEndpointProperties() throws IOException {
-        props.put("aries.rsa.port", PORT);
-        props.put("aries.rsa.hostname", HOSTNAME);
-        props.put("aries.rsa.id", "testme");
+        props.put(PREFIX + "port", PORT);
+        props.put(PREFIX + "hostname", HOSTNAME);
+        props.put(PREFIX + "id", "testme");
         TcpEndpoint tcpEndpoint = new TcpEndpoint(service, props, null);
         EndpointDescription epd = tcpEndpoint.description();
         Assert.assertEquals("tcp://" + HOSTNAME + ":" + PORT + "/testme", epd.getId());

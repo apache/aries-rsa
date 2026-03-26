@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.apache.aries.rsa.provider.tcp.Config.PREFIX;
 import static org.apache.aries.rsa.provider.tcp.TcpProviderTest.getFreePort;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.StringStartsWith.startsWith;
@@ -85,91 +86,91 @@ public class TcpProviderTLSTest {
     @Test
     public void testNoTLS() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyStore", "");
-        providerProps.put("aries.rsa.trustStore", null);
-        providerProps.put("aries.rsa.keyStorePassword", "asdf");
-        providerProps.put("aries.rsa.trustStorePassword", "asdf");
-        providerProps.put("aries.rsa.keyAlias", "asdf");
-        providerProps.put("aries.rsa.mtls", "false");
+        providerProps.put(PREFIX + "keyStore", "");
+        providerProps.put(PREFIX + "trustStore", null);
+        providerProps.put(PREFIX + "keyStorePassword", "asdf");
+        providerProps.put(PREFIX + "trustStorePassword", "asdf");
+        providerProps.put(PREFIX + "keyAlias", "asdf");
+        providerProps.put(PREFIX + "mtls", "false");
         test(providerProps);
     }
 
     @Test(expected = RuntimeException.class)
     public void testWrongPassword() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyStore", KEYSTORE);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", "asdf");
-        providerProps.put("aries.rsa.trustStorePassword", "asdf");
+        providerProps.put(PREFIX + "keyStore", KEYSTORE);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", "asdf");
+        providerProps.put(PREFIX + "trustStorePassword", "asdf");
         test(providerProps);
     }
 
     @Test
     public void testTLS() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyStore", KEYSTORE);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", KEYSTORE_PASSWORD);
-        providerProps.put("aries.rsa.trustStorePassword", TRUSTSTORE_PASSWORD);
+        providerProps.put(PREFIX + "keyStore", KEYSTORE);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", KEYSTORE_PASSWORD);
+        providerProps.put(PREFIX + "trustStorePassword", TRUSTSTORE_PASSWORD);
         test(providerProps);
     }
 
     @Test(expected = ServiceException.class)
     public void testWrongKey() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyStore", KEYSTORE2);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", KEYSTORE_PASSWORD);
-        providerProps.put("aries.rsa.trustStorePassword", TRUSTSTORE_PASSWORD);
+        providerProps.put(PREFIX + "keyStore", KEYSTORE2);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", KEYSTORE_PASSWORD);
+        providerProps.put(PREFIX + "trustStorePassword", TRUSTSTORE_PASSWORD);
         test(providerProps);
     }
 
     @Test
     public void testKeyAlias() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyAlias", "MyServerKey");
-        providerProps.put("aries.rsa.keyStore", KEYSTORE);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", KEYSTORE_PASSWORD);
-        providerProps.put("aries.rsa.trustStorePassword", TRUSTSTORE_PASSWORD);
+        providerProps.put(PREFIX + "keyAlias", "MyServerKey");
+        providerProps.put(PREFIX + "keyStore", KEYSTORE);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", KEYSTORE_PASSWORD);
+        providerProps.put(PREFIX + "trustStorePassword", TRUSTSTORE_PASSWORD);
         test(providerProps);
     }
 
     @Test(expected = RuntimeException.class)
     public void testWrongKeyAlias() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.keyAlias", "YourService");
-        providerProps.put("aries.rsa.keyStore", KEYSTORE2);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", KEYSTORE_PASSWORD);
-        providerProps.put("aries.rsa.trustStorePassword", TRUSTSTORE_PASSWORD);
+        providerProps.put(PREFIX + "keyAlias", "YourService");
+        providerProps.put(PREFIX + "keyStore", KEYSTORE2);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", KEYSTORE_PASSWORD);
+        providerProps.put(PREFIX + "trustStorePassword", TRUSTSTORE_PASSWORD);
         test(providerProps);
     }
 
     @Test(expected = RuntimeException.class)
     public void testMTLSWithoutKeyStore() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.mtls", "true");
-        providerProps.put("aries.rsa.trustStore", KEYSTORE);
+        providerProps.put(PREFIX + "mtls", "true");
+        providerProps.put(PREFIX + "trustStore", KEYSTORE);
         test(providerProps);
     }
 
     @Test(expected = RuntimeException.class)
     public void testMTLSWithoutTrustStore() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.mtls", "true");
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "mtls", "true");
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
         test(providerProps);
     }
 
     @Test
     public void testMTLS() throws IOException {
         HashMap<String, Object> providerProps = new HashMap<>();
-        providerProps.put("aries.rsa.mtls", "true");
-        providerProps.put("aries.rsa.keyStore", KEYSTORE);
-        providerProps.put("aries.rsa.trustStore", TRUSTSTORE);
-        providerProps.put("aries.rsa.keyStorePassword", KEYSTORE_PASSWORD);
-        providerProps.put("aries.rsa.trustStorePassword", TRUSTSTORE_PASSWORD);
+        providerProps.put(PREFIX + "mtls", "true");
+        providerProps.put(PREFIX + "keyStore", KEYSTORE);
+        providerProps.put(PREFIX + "trustStore", TRUSTSTORE);
+        providerProps.put(PREFIX + "keyStorePassword", KEYSTORE_PASSWORD);
+        providerProps.put(PREFIX + "trustStorePassword", TRUSTSTORE_PASSWORD);
         test(providerProps);
     }
 
