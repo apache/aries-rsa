@@ -29,7 +29,7 @@ public class Config {
 
     static final String PREFIX = TcpProvider.TCP_CONFIG_TYPE + ".";
 
-    // endpoint service properties
+    // configuration properties
     static final String
         PORT = PREFIX + "port",
         HOSTNAME = PREFIX + "hostname",
@@ -46,6 +46,10 @@ public class Config {
         TRUSTSTORE_PASSWORD = PREFIX + "trustStorePassword",
         KEY_ALIAS = PREFIX + "keyAlias",
         MTLS = PREFIX + "mtls";
+
+    // endpoint runtime properties
+    static final String
+        URI = PREFIX + "uri";
 
     static final int DYNAMIC_PORT = 0;
     static final int DEFAULT_TIMEOUT_MILLIS = 300000;
@@ -124,5 +128,9 @@ public class Config {
 
     public boolean isMtls() {
         return Boolean.parseBoolean(getString(MTLS, System.getProperty(MTLS)));
+    }
+
+    public String getUri() {
+        return getString(URI, null);
     }
 }
