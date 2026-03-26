@@ -87,38 +87,26 @@ public class TopologyManagerExport implements ServiceListener {
     public void serviceChanged(ServiceEvent event) {
         ServiceReference<?> sref = event.getServiceReference();
         if (!shouldExport(sref)) {
-            LOG.trace("Skipping service {}", sref);
+            LOG.trace("ignoring service {}", sref);
             return;
         }
         LOG.info("Received ServiceEvent type: {}, sref: {}", getTypeName(event), sref);
         switch (event.getType()) {
         case ServiceEvent.REGISTERED:
-            add(sref);
+            exportable.add(sref);
+            export(sref);
             break;
 
         case ServiceEvent.MODIFIED:
-            modified(sref);
+            endpointRepo.values().forEach(repo -> repo.modifyService(sref));
             break;
 
         case ServiceEvent.UNREGISTERING:
         case ServiceEvent.MODIFIED_ENDMATCH:
-            remove(sref);
+            exportable.remove(sref);
+            endpointRepo.values().forEach(repo -> repo.removeService(sref));
             break;
         }
-    }
-
-    private void add(ServiceReference<?> sref) {
-        exportable.add(sref);
-        export(sref);
-    }
-
-    private void modified(ServiceReference<?> sref) {
-        endpointRepo.values().forEach(repo -> repo.modifyService(sref));
-    }
-
-    private void remove(ServiceReference<?> sref) {
-        exportable.remove(sref);
-        endpointRepo.values().forEach(repo -> repo.removeService(sref));
     }
 
     public void add(RemoteServiceAdmin rsa) {
