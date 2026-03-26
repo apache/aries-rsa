@@ -105,27 +105,35 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<ExportRegistration> exportService(ServiceReference serviceReference, Map additionalProperties)
+    public List<ExportRegistration> exportService(ServiceReference sref, Map additionalProperties)
         throws IllegalArgumentException, UnsupportedOperationException {
-        Map<String, Object> serviceProperties = getProperties(serviceReference);
+        Map<String, Object> serviceProperties = getProperties(sref);
         if (additionalProperties != null) {
             overlayProperties(serviceProperties, additionalProperties);
         }
 
         List<String> interfaceNames = getInterfaceNames(serviceProperties);
+        List<String> exportedConfigs = StringPlus.normalize(
+            serviceProperties.get(RemoteConstants.SERVICE_EXPORTED_CONFIGS));
+        List<String> configTypes = matchConfigTypes(exportedConfigs, true); // empty means pick one
 
-        if (isImportedService(serviceReference) || !isExportConfigSupported(serviceProperties)) {
+        if (isImportedService(sref) || configTypes.isEmpty()) {
             return Collections.emptyList();
         }
 
         Map<String, Object> key = makeKey(serviceProperties);
         List<ExportRegistration> regs = getExistingOrLock(key, interfaceNames);
         if (regs == null) {
-            regs = new ArrayList<>();
             try {
-                ExportRegistration reg = exportService(interfaceNames, serviceReference, serviceProperties);
-                if (reg != null) {
-                    regs.add(reg);
+                regs = new ArrayList<>();
+                for (String configType : configTypes) {
+                    ExportRegistration reg = exportService(Arrays.asList(configType),
+                        interfaceNames, sref, serviceProperties);
+                    if (reg != null) {
+                        regs.add(reg);
+                    }
+                }
+                if (!regs.isEmpty()) {
                     store(key, regs);
                 }
             } finally {
@@ -133,27 +141,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             }
         }
         return regs;
-    }
-
-    private boolean isExportConfigSupported(Map<String, Object> serviceProperties) {
-        if (provider == null) {
-            return false;
-        }
-        List<String> exportedConfigs = StringPlus.normalize(serviceProperties.get(RemoteConstants.SERVICE_EXPORTED_CONFIGS));
-        if (exportedConfigs == null || exportedConfigs.isEmpty()) {
-            return true;
-        }
-        String[] supportedTypes = provider.getSupportedTypes();
-        if (supportedTypes == null || supportedTypes.length == 0) {
-            //if not set, all services should be accepted
-            return true;
-        }
-        for (String supportedType : supportedTypes) {
-            if (exportedConfigs.contains(supportedType)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private void store(Map<String, Object> key, List<ExportRegistration> regs) {
@@ -208,6 +195,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     private ExportRegistration exportService(
+            final List<String> configTypes,
             final List<String> interfaceNames,
             final ServiceReference<?> serviceReference,
             final Map<String, Object> serviceProperties) {
@@ -221,7 +209,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 throw new IllegalStateException("service object is null (service was unregistered?)");
             }
             final Class<?>[] interfaces = getInterfaces(serviceO, interfaceNames);
-            final Map<String, Object> eprops = createEndpointProps(serviceProperties, interfaces);
+            final Map<String, Object> eprops = createEndpointProps(serviceProperties, configTypes, interfaces);
 
             Endpoint endpoint = AccessController.doPrivileged(
                 (PrivilegedAction<Endpoint>) () -> provider.exportService(serviceO, serviceContext, eprops, interfaces));
@@ -404,8 +392,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
                 return ir;
             }
 
-            if (determineConfigTypesForImport(endpoint).isEmpty()) {
-                LOG.info("No matching handler can be found for remote endpoint {}.", endpoint.getId());
+            if (matchConfigTypes(endpoint.getConfigurationTypes(), false).isEmpty()) {
+                LOG.info("Ignoring endpoint {} as it has no compatible configuration types: {}",
+                    endpoint.getId(), endpoint.getConfigurationTypes());
                 return null;
             }
 
@@ -431,21 +420,14 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         }
     }
 
-    private List<String> determineConfigTypesForImport(EndpointDescription endpoint) {
-        List<String> remoteConfigurationTypes = endpoint.getConfigurationTypes();
-
-        List<String> usableConfigurationTypes = new ArrayList<>();
-        for (String ct : provider.getSupportedTypes()) {
-            if (remoteConfigurationTypes.contains(ct)) {
-                usableConfigurationTypes.add(ct);
-            }
+    private List<String> matchConfigTypes(List<String> types, boolean first) {
+        List<String> matched = new ArrayList<>();
+        Collections.addAll(matched, provider.getSupportedTypes());
+        if (types == null || types.isEmpty()) {
+            return matched.subList(0, first ? 1 : 0);
         }
-
-        if (usableConfigurationTypes.isEmpty()) {
-            LOG.info("Ignoring endpoint {} as it has no compatible configuration types: {}.",
-                endpoint.getId(), remoteConfigurationTypes);
-        }
-        return usableConfigurationTypes;
+        matched.retainAll(types);
+        return matched;
     }
 
     protected ImportRegistrationImpl exposeServiceFactory(String[] interfaceNames,
@@ -567,10 +549,11 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     protected Map<String, Object> createEndpointProps(Map<String, Object> effectiveProps,
-                                                      Class<?>[] ifaces) {
+            List<String> configTypes, Class<?>[] ifaces) {
         Map<String, Object> props = new HashMap<>();
         copyEndpointProperties(effectiveProps, props);
         props.remove(org.osgi.framework.Constants.SERVICE_ID);
+        props.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, configTypes);
         EndpointHelper.addObjectClass(props, ifaces);
         props.put(RemoteConstants.ENDPOINT_SERVICE_ID, effectiveProps.get(org.osgi.framework.Constants.SERVICE_ID));
         String frameworkUUID = bctx.getProperty(org.osgi.framework.Constants.FRAMEWORK_UUID);

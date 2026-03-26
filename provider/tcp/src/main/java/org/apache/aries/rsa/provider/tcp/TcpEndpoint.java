@@ -61,7 +61,6 @@ public class TcpEndpoint implements Endpoint {
         Config config = new Config(effectiveProperties);
         String endpointId = String.format("tcp://%s:%s/%s", hostname, port, config.getId());
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
-        effectiveProperties.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, "");
         effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList("osgi.basic", "osgi.async"));
         // tck tests require at least one config-type specific property... so we provide this one
         // (it also tests that we throw IllegalArgumentException when any config-type property value is garbage)
