@@ -396,7 +396,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             List<ImportReference> irs = new ArrayList<>();
             for (Collection<ImportRegistration> irl : importedServices.values()) {
                 for (ImportRegistration impl : irl) {
-                    irs.add(impl.getImportReference());
+                    if (impl.getException() == null && impl.getImportReference() != null) {
+                        irs.add(impl.getImportReference());
+                    }
                 }
             }
             return Collections.unmodifiableCollection(irs);
