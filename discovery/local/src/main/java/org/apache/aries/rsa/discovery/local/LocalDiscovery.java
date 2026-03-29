@@ -74,10 +74,6 @@ public class LocalDiscovery implements BundleListener {
     }
 
     protected void processExistingBundles(Bundle[] bundles) {
-        if (bundles == null) {
-            return;
-        }
-
         for (Bundle b : bundles) {
             if (b.getState() == Bundle.ACTIVE) {
                 addDeclaredRemoteServices(b);
