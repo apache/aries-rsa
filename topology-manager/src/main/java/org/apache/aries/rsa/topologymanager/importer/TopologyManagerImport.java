@@ -19,12 +19,16 @@
 package org.apache.aries.rsa.topologymanager.importer;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -132,27 +136,42 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         try {
             // we have a set of all current imports, and a set of all possible imports (with overlap)
             Set<ImportRegistration> imported = importedServices.get(filter);
-            Set<EndpointDescription> possible = importPossibilities.get(filter);
-            // first we iterate over all current imports, and split them into two groups:
+            Set<EndpointDescription> possibleSet = importPossibilities.get(filter);
+            Map<EndpointDescription, EndpointDescription> possible = possibleSet.stream()
+                .collect(Collectors.toMap(e -> e, e -> e)); // convert to map for getting the value
+            // first we iterate over all current imports, and split them into three groups:
             // - still valid (no null references) and possible (in possible set)
+            // - still valid and possible but with changed properties
             // - invalid (contain null references) or no longer possible (not in possible set)
             // note that this part should be concurrency-safe (get every reference only once and don't modify anything)
             Set<EndpointDescription> valid = new HashSet<>(); // imports that are still valid and possible
             Set<ImportRegistration> invalid = new LinkedHashSet<>(); // imports that are no longer valid/possible
+            Map<ImportRegistration, EndpointDescription> updated = new LinkedHashMap<>(); // valid with changed props
             for (ImportRegistration reg : imported) {
                 ImportReference ref = reg.getImportReference();
                 EndpointDescription endpoint = ref == null ? null : ref.getImportedEndpoint();
                 // check if the currently imported endpoint is still valid and possible
-                if (endpoint != null && possible.contains(endpoint)) {
-                    valid.add(endpoint); // valid and possible
+                EndpointDescription pe = possible.get(endpoint); // get the new (maybe modified) possible endpoint
+                if (pe != null) {
+                    if (getChangedProps(endpoint.getProperties(), pe.getProperties()).isEmpty())
+                        valid.add(endpoint); // valid and possible
+                    else
+                        updated.put(reg, pe); // valid and possible and changed properties
                 } else {
                     invalid.add(reg); // invalid (reg or ref or endpoint is null) or no longer possible
                 }
             }
-            // now that we figured out what needs to be done, apply the changes
+            // now that we figured out what needs to be done, apply the changes to each group
             invalid.forEach(this::unimportRegistration); // remove invalid/non-possible imports
-            possible.forEach(endpoint -> { // import all possible endpoints that are not already imported
-                if (!valid.contains(endpoint)) {
+            updated.forEach((reg, e) -> { // update modified properties for existing imports
+                try {
+                    reg.update(e);
+                } catch (IllegalStateException ise) {
+                    LOG.warn("can't update closed endpoint {}", e, ise);
+                }
+            });
+            possible.keySet().forEach(endpoint -> { // import all possible endpoints that are not already imported
+                if (!valid.contains(endpoint) && !updated.containsValue(endpoint)) {
                     importService(filter, endpoint);
                 }
             });
@@ -188,7 +207,21 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
         importedServices.remove(reg);
         reg.close();
     }
-    
+
+    private static Set<String> getChangedProps(Map<String, Object> p1, Map<String, Object> p2) {
+        Set<String> changed = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : p1.entrySet()) {
+            Object v = p2.get(entry.getKey());
+            if (!Objects.deepEquals(entry.getValue(), v) || v == null && !p2.containsKey(entry.getKey()))
+                changed.add(entry.getKey());
+        }
+        for (String k : p2.keySet()) {
+            if (!p1.containsKey(k))
+                changed.add(k);
+        }
+        return changed;
+    }
+
     @Override
     public void endpointChanged(EndpointEvent event, String filter) {
         if (stopped) {
