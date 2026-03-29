@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -378,36 +379,27 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     @Override
     public Collection<ExportReference> getExportedServices() {
         synchronized (exportedServices) {
-            List<ExportReference> ers = new ArrayList<>();
-            for (Collection<ExportRegistration> exportRegistrations : exportedServices.values()) {
-                for (ExportRegistration er : exportRegistrations) {
-                    if (er.getException() == null && er.getExportReference() != null) {
-                        ers.add(er.getExportReference());
-                    }
-                }
-            }
-            return Collections.unmodifiableCollection(ers);
+            return exportedServices.values().stream()
+                .flatMap(Collection::stream)
+                .filter(reg -> reg.getException() == null)
+                .map(ExportRegistration::getExportReference)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         }
     }
 
     @Override
     public Collection<ImportReference> getImportedEndpoints() {
         synchronized (importedServices) {
-            List<ImportReference> irs = new ArrayList<>();
-            for (Collection<ImportRegistration> irl : importedServices.values()) {
-                for (ImportRegistration impl : irl) {
-                    if (impl.getException() == null && impl.getImportReference() != null) {
-                        irs.add(impl.getImportReference());
-                    }
-                }
-            }
-            return Collections.unmodifiableCollection(irs);
+            return importedServices.values().stream()
+                .flatMap(Collection::stream)
+                .filter(reg -> reg.getException() == null)
+                .map(ImportRegistration::getImportReference)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         }
     }
 
-    /**
-     * Importing form here...
-     */
     @Override
     public ImportRegistration importService(EndpointDescription endpoint) {
         LOG.debug("importService() Endpoint: {}", endpoint.getProperties());
