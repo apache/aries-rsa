@@ -4,11 +4,11 @@ import org.apache.aries.rsa.provider.tcp.myservice.MyService;
 import org.apache.aries.rsa.provider.tcp.myservice.MyServiceImpl;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.apache.aries.rsa.spi.ImportedService;
-import org.apache.aries.rsa.util.EndpointHelper;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Test;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceException;
 
 import java.io.IOException;
@@ -56,7 +56,7 @@ public class TcpProviderTLSTest {
         TcpProvider provider = new TcpProvider();
         provider.activate(providerProps);
         Map<String, Object> props = new HashMap<>();
-        EndpointHelper.addObjectClass(props, exportedInterfaces);
+        props.put(Constants.OBJECTCLASS, new String[] {MyService.class.getName()});
         int port = getFreePort();
         props.put(Config.HOSTNAME, "localhost");
         props.put(Config.PORT, port);
