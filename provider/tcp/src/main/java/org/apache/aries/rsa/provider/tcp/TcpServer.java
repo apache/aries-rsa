@@ -51,10 +51,12 @@ public class TcpServer implements Closeable, Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(TcpServer.class);
     private ServerSocket serverSocket;
     private Map<String, MethodInvoker> invokers = new ConcurrentHashMap<>();
+    private int timeout;
     private volatile boolean running;
     private ThreadPoolExecutor executor;
 
-    public TcpServer(ServerSocketFactory serverSocketFactory, String bindAddress, int port, int numThreads) {
+    public TcpServer(ServerSocketFactory serverSocketFactory, String bindAddress,
+            int port, int numThreads, int timeout) {
         String addressStr;
         try {
             InetSocketAddress address = bindAddress == null || bindAddress.isEmpty()
@@ -68,6 +70,7 @@ public class TcpServer implements Closeable, Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        this.timeout = timeout;
         this.running = true;
         numThreads++; // plus one for server socket accepting thread
         AtomicInteger counter = new AtomicInteger();
@@ -121,6 +124,7 @@ public class TcpServer implements Closeable, Runnable {
              ObjectOutputStream out = new BasicObjectOutputStream(socket.getOutputStream());
              BasicObjectInputStream in = new BasicObjectInputStream(socket.getInputStream())) {
             socket.setTcpNoDelay(true);
+            sock.setSoTimeout(timeout);
             String endpointId = in.readUTF();
             MethodInvoker invoker = invokers.get(endpointId);
             if (invoker == null)

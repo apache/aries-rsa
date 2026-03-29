@@ -37,6 +37,7 @@ public class TcpEndpoint implements Endpoint {
     private String bindAddress;
     private int port;
     private int numThreads;
+    private int timeout;
     private Consumer<TcpEndpoint> closeCallback;
 
     private EndpointDescription epd;
@@ -51,6 +52,7 @@ public class TcpEndpoint implements Endpoint {
         hostname = config.getHostname();
         bindAddress = config.getBindAddress();
         numThreads =  config.getNumThreads();
+        timeout = config.getTimeoutMillis();
         updateEndpointDescription(effectiveProperties);
     }
 
@@ -89,6 +91,10 @@ public class TcpEndpoint implements Endpoint {
 
     public int getNumThreads() {
         return numThreads;
+    }
+
+    public int getTimeout() {
+        return timeout;
     }
 
     @Override
