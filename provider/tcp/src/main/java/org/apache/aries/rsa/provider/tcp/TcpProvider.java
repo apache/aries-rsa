@@ -160,7 +160,8 @@ public class TcpProvider implements DistributionProvider {
         int port = endpoint.getPort();
         TcpServer server = servers.get(port);
         if (server == null || port == 0) {
-            server = new TcpServer(serverSocketFactory, endpoint.getBindAddress(), port, endpoint.getNumThreads());
+            server = new TcpServer(serverSocketFactory, endpoint.getBindAddress(), port,
+                endpoint.getNumThreads(), endpoint.getTimeout());
             port = server.getPort(); // get the real port
             endpoint.setPort(port);
             servers.put(port, server);
