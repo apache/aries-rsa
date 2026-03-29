@@ -22,6 +22,7 @@ import static org.easymock.EasyMock.*;
 import static org.easymock.EasyMock.expect;
 import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,11 +32,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.ImportRegistration;
+import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdmin;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminListener;
 
@@ -52,19 +55,26 @@ public class TopologyManagerImportTest {
         return bc;
     }
 
-    private ImportRegistration mockImportRegistration(IMocksControl c, EndpointDescription endpoint) {
+    private ImportRegistration mockImportRegistration(IMocksControl c, EndpointDescription endpoint, boolean expectUpdate) {
         final ImportRegistration ireg = c.createMock(ImportRegistration.class);
         expect(ireg.getException()).andReturn(null).anyTimes();
-        expect(ireg.update(anyObject())).andReturn(true).anyTimes();
+        if (expectUpdate) {
+            expect(ireg.update(anyObject())).andReturn(true);
+        }
         ImportReference iref = c.createMock(ImportReference.class);
         expect(ireg.getImportReference()).andReturn(iref).anyTimes();
         expect(iref.getImportedEndpoint()).andReturn(endpoint).anyTimes();
         return ireg;
     }
 
-    private EndpointDescription createEndpoint() {
-        EndpointDescription endpoint = c.createMock(EndpointDescription.class);
-        final ImportRegistration ir = mockImportRegistration(c, endpoint);
+    private EndpointDescription createEndpoint(boolean expectUpdate, String id) {
+        HashMap<String, Object> props = new HashMap<>();
+        props.put(RemoteConstants.ENDPOINT_ID, id);
+        props.put(Constants.OBJECTCLASS, new String[]{String.class.getName()});
+        props.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, "config1");
+        EndpointDescription endpoint = new EndpointDescription(props);
+
+        final ImportRegistration ir = mockImportRegistration(c, endpoint, expectUpdate);
         ir.close(); // must be closed
         expectLastCall().andAnswer(() -> {
             endpoints.get(endpoint).decrementAndGet();
@@ -76,6 +86,10 @@ public class TopologyManagerImportTest {
         });
         endpoints.put(endpoint, new AtomicInteger());
         return endpoint;
+    }
+
+    private EndpointDescription createEndpoint() {
+        return createEndpoint(false, "id1");
     }
 
     IMocksControl c;
@@ -144,7 +158,7 @@ public class TopologyManagerImportTest {
         tm.endpointChanged(event, "myFilter");
         assertImports(endpoint, 1);
         tm.endpointChanged(event, "myFilter");
-        assertImports(endpoint, 1); // still one one import
+        assertImports(endpoint, 1); // still one import
     }
 
     @Test
@@ -157,5 +171,20 @@ public class TopologyManagerImportTest {
         assertImports(endpoint, 1);
         tm.endpointChanged(new EndpointEvent(EndpointEvent.REMOVED, endpoint), "myFilter");
         assertImports(endpoint, 0);
+    }
+
+    @Test
+    public void testModifyEndpoint() throws InterruptedException {
+        EndpointDescription endpoint = createEndpoint(true,  "id1");
+        start();
+
+        tm.add(rsa);
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.ADDED, endpoint), "myFilter");
+        assertImports(endpoint, 1);
+        Map<String, Object> props = new HashMap<>(endpoint.getProperties());
+        props.put("newProp", "newValue");
+        endpoint = new EndpointDescription(props);
+        tm.endpointChanged(new EndpointEvent(EndpointEvent.MODIFIED, endpoint), "myFilter");
+        assertImports(endpoint, 1);
     }
 }
