@@ -31,6 +31,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -305,9 +306,20 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     /**
-     * Converts the given properties map into one that can be used as a map key itself.
-     * For example, if a value is an array, it is converted into a list so that the
-     * equals method will compare it properly.
+     * Creates a unique key from the given exported service properties.
+     * <p>
+     * This key is used to store and lookup export registrations for a service,
+     * and so determines when a service export already exists for the given
+     * properties or whether a new one needs to be created.
+     * <p>
+     * The key must be comparable using the {@code equals} method so it can be used as
+     * a map key. Specifically, array values are converted into lists so they can be compared.
+     * <p>
+     * Custom service properties that are not RSA/distribution properties are ignored
+     * since they do not affect the export and should not cause a new endpoint to be
+     * created. It is not well-defined which properties are unique to and endpoint and
+     * which are not, but we do our best - currently we include the objectClass,
+     * service.* and config-type prefixed properties in the key.
      *
      * @param properties a properties map
      * @return a map that represents the given map, but can be safely used as a map key itself
@@ -315,14 +327,21 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     private Map<String, Object> makeKey(Map<String, Object> properties) {
         // FIXME: we should also make logically equal values actually compare as equal
         // (e.g. String+ values should be normalized)
+        List<String> configTypes = StringPlus.normalize(properties.get(Constants.SERVICE_EXPORTED_CONFIGS));
         Map<String, Object> converted = new HashMap<>(properties.size());
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
-            Object val = entry.getValue();
-            // convert arrays into lists so that they can be compared via equals()
-            if (val instanceof Object[]) {
-                val = Arrays.asList((Object[])val);
+            String k = entry.getKey().toLowerCase(Locale.ROOT);
+            // a heuristic for which service properties affect the exported endpoint and
+            // which do not (and should reuse an existing endpoint and not create a new one)
+            if (k.equals("objectclass") || k.startsWith("service.")
+                   || (configTypes != null && configTypes.stream().anyMatch(k::startsWith))) {
+                Object val = entry.getValue();
+                // convert arrays into lists so that they can be compared via equals()
+                if (val instanceof Object[]) {
+                    val = Arrays.asList((Object[]) val);
+                }
+                converted.put(k, val);
             }
-            converted.put(entry.getKey(), val);
         }
         return converted;
     }
