@@ -30,6 +30,7 @@ import java.util.concurrent.Executor;
 import org.apache.aries.rsa.spi.ExportPolicy;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.Bundle;
+import org.osgi.framework.Constants;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceListener;
@@ -138,7 +139,7 @@ public class TopologyManagerExport implements ServiceListener {
             Bundle bundle = sref.getBundle();
             String bundleName = bundle == null ? null : bundle.getSymbolicName();
             LOG.warn("Unable to export service from bundle {}, interfaces {}, as no RemoteServiceAdmin is available. Marked for later export.",
-                bundleName, sref.getProperty(org.osgi.framework.Constants.OBJECTCLASS));
+                bundleName, sref.getProperty(Constants.OBJECTCLASS));
             return;
         }
         endpointRepo.forEach((rsa, repo) -> repo.addService(sref, exportService(rsa, sref)));

@@ -37,10 +37,10 @@ import java.util.Set;
 import org.apache.aries.rsa.core.event.EventProducer;
 import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
-import org.apache.aries.rsa.util.EndpointHelper;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
@@ -275,7 +275,7 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
      * @see RemoteConstants#SERVICE_EXPORTED_INTERFACES
      */
     private List<String> getInterfaceNames(Map<String, Object> serviceProperties) {
-        List<String> providedInterfaces = StringPlus.normalize(serviceProperties.get(org.osgi.framework.Constants.OBJECTCLASS));
+        List<String> providedInterfaces = StringPlus.normalize(serviceProperties.get(Constants.OBJECTCLASS));
         if (providedInterfaces == null || providedInterfaces.isEmpty()) {
             throw new IllegalArgumentException("service is missing the objectClass property");
         }
@@ -523,8 +523,8 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         for (Map.Entry<String, Object> e : additionalProperties.entrySet()) {
             String key = e.getKey();
             String lowerKey = key.toLowerCase();
-            if (org.osgi.framework.Constants.SERVICE_ID.toLowerCase().equals(lowerKey)
-                || org.osgi.framework.Constants.OBJECTCLASS.toLowerCase().equals(lowerKey)) {
+            if (Constants.SERVICE_ID.toLowerCase().equals(lowerKey)
+                    || Constants.OBJECTCLASS.toLowerCase().equals(lowerKey)) {
                 // objectClass and service.id must not be overwritten
                 LOG.info("exportService called with additional properties map that contained illegal key: {}," +
                     " the key is ignored", key);
@@ -561,11 +561,12 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             List<String> configTypes, Class<?>[] ifaces) {
         Map<String, Object> props = new HashMap<>();
         copyEndpointProperties(effectiveProps, props);
-        props.remove(org.osgi.framework.Constants.SERVICE_ID);
+        props.remove(Constants.SERVICE_ID);
         props.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, configTypes);
-        EndpointHelper.addObjectClass(props, ifaces);
-        props.put(RemoteConstants.ENDPOINT_SERVICE_ID, effectiveProps.get(org.osgi.framework.Constants.SERVICE_ID));
-        String frameworkUUID = bctx.getProperty(org.osgi.framework.Constants.FRAMEWORK_UUID);
+        String[] inames = Arrays.stream(ifaces).map(Class::getName).toArray(String[]::new);
+        props.put(Constants.OBJECTCLASS, inames);
+        props.put(RemoteConstants.ENDPOINT_SERVICE_ID, effectiveProps.get(Constants.SERVICE_ID));
+        String frameworkUUID = bctx.getProperty(Constants.FRAMEWORK_UUID);
         props.put(RemoteConstants.ENDPOINT_FRAMEWORK_UUID, frameworkUUID);
         for (Class<?> iface : ifaces) {
             String pkg = iface.getPackage().getName();

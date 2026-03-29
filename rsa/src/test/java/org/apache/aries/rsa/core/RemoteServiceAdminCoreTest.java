@@ -328,15 +328,15 @@ public class RemoteServiceAdminCoreTest {
     public void testCreateEndpointProps() {
         c.replay();
         Map<String, Object> sd = new HashMap<>();
-        sd.put(org.osgi.framework.Constants.SERVICE_ID, 42);
+        sd.put(Constants.SERVICE_ID, 42);
         Map<String, Object> props = rsaCore.createEndpointProps(
             sd, Arrays.asList("myconfig"), new Class[]{String.class});
 
-        Assert.assertFalse(props.containsKey(org.osgi.framework.Constants.SERVICE_ID));
+        Assert.assertFalse(props.containsKey(Constants.SERVICE_ID));
         assertEquals(42, props.get(RemoteConstants.ENDPOINT_SERVICE_ID));
         assertEquals("some_uuid1", props.get(RemoteConstants.ENDPOINT_FRAMEWORK_UUID));
         assertEquals(Arrays.asList("java.lang.String"),
-            Arrays.asList((Object[]) props.get(org.osgi.framework.Constants.OBJECTCLASS)));
+            Arrays.asList((Object[]) props.get(Constants.OBJECTCLASS)));
         assertEquals(Arrays.asList("myconfig"), props.get(RemoteConstants.SERVICE_EXPORTED_CONFIGS));
         assertEquals("1.2.3", props.get("endpoint.package.version.java.lang"));
         c.verify();
