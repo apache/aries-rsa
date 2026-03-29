@@ -91,6 +91,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
             LOG.info("Interrupted while waiting for {} to terminate", execService);
             Thread.currentThread().interrupt();
         }
+        execService.shutdownNow();
         // close all imports
         importPossibilities.clear();
         importedServices.allValues().forEach(this::unimportRegistration);
