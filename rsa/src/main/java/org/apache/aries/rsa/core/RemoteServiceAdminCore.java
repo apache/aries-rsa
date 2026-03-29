@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.aries.rsa.core.event.EventProducer;
 import org.apache.aries.rsa.spi.DistributionProvider;
@@ -559,8 +560,9 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
 
     protected Map<String, Object> createEndpointProps(Map<String, Object> effectiveProps,
             List<String> configTypes, Class<?>[] ifaces) {
-        Map<String, Object> props = new HashMap<>();
-        copyEndpointProperties(effectiveProps, props);
+        Map<String, Object> props = effectiveProps.entrySet().stream()
+            .filter(e -> !e.getKey().startsWith("."))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         props.remove(Constants.SERVICE_ID);
         props.put(RemoteConstants.SERVICE_EXPORTED_CONFIGS, configTypes);
         String[] inames = Arrays.stream(ifaces).map(Class::getName).toArray(String[]::new);
@@ -574,16 +576,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
             props.put(RemoteConstants.ENDPOINT_PACKAGE_VERSION_ + pkg, version);
         }
         return props;
-    }
-
-    private void copyEndpointProperties(Map<String, Object> sd, Map<String, Object> endpointProps) {
-        Set<Map.Entry<String, Object>> keys = sd.entrySet();
-        for (Map.Entry<String, Object> entry : keys) {
-            String skey = entry.getKey();
-            if (!skey.startsWith(".")) {
-                endpointProps.put(skey, entry.getValue());
-            }
-        }
     }
 
     private void checkPermission(EndpointPermission permission) {
