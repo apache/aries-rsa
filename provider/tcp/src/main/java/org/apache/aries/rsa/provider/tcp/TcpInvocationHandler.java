@@ -32,9 +32,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
-import java.util.function.Supplier;
 
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectInputStream;
 import org.apache.aries.rsa.provider.tcp.ser.BasicObjectOutputStream;
@@ -85,8 +85,7 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
     private boolean closed;
 
     TcpInvocationHandler(SocketFactory socketFactory, ClassLoader cl,
-            String host, int port, String endpointId, int timeoutMillis)
-            throws UnknownHostException, IOException {
+            String host, int port, String endpointId, int timeoutMillis) {
         this.socketFactory = socketFactory;
         this.cl = cl;
         this.host = host;
@@ -206,32 +205,28 @@ public class TcpInvocationHandler implements InvocationHandler, Closeable {
     }
 
     private Object createFutureResult(final Method method, final Object[] args) {
-        return CompletableFuture.supplyAsync(new Supplier<Object>() {
-            public Object get() {
-                try {
-                    return handleSyncCall(method, args);
-                } catch (RuntimeException e) {
-                    throw e;
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                }
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return handleSyncCall(method, args);
+            } catch (RuntimeException e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
             }
         });
     }
 
     private Object createPromiseResult(final Method method, final Object[] args) {
         final Deferred<Object> deferred = new Deferred<>();
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    deferred.resolve(handleSyncCall(method, args));
-                } catch (Throwable e) {
+        ((CompletionStage<?>) createFutureResult(method, args))
+            .whenComplete((result, e) -> {
+                if (e == null) {
+                    deferred.resolve(result);
+                } else {
+                    e = e instanceof CompletionException ? e.getCause() : e;
                     deferred.fail(e);
                 }
-            }
-        }).start();
+            });
         return deferred.getPromise();
     }
 
