@@ -46,22 +46,29 @@ import static org.junit.Assert.*;
 
 public class EndpointDescriptionBundleParserTest {
 
-    private Bundle createBundleContaining(URL ed1URL) {
+    private Bundle createBundleContaining(URL... urls) {
         Bundle b = EasyMock.createNiceMock(Bundle.class);
-        EasyMock.expect(b.findEntries(
-            EasyMock.eq("OSGI-INF/remote-service"),
-            EasyMock.eq("*.xml"), EasyMock.anyBoolean())).andReturn(
-                Collections.enumeration(Arrays.asList(ed1URL))).anyTimes();
+        String header = "";
+        for (URL url : urls) {
+            boolean first = url == urls[0];
+            String s = url.toString();
+            int i = s.lastIndexOf('/');
+            String path = first ? "OSGI-INF/remote-service" : "/";
+            String pattern = first ? "*.xml" : s.substring(i + 1);
+            header += (header.isEmpty() ? path + "/" : ", " + path + pattern);
+            EasyMock.expect(b.findEntries(EasyMock.eq(path), EasyMock.eq(pattern), EasyMock.anyBoolean()))
+                .andReturn(Collections.enumeration(Arrays.asList(url))).anyTimes();
+        }
         Dictionary<String, String> headers = new Hashtable<>();
-        headers.put("Remote-Service", "OSGI-INF/remote-service/");
-        EasyMock.expect(b.getHeaders()).andReturn(headers).anyTimes();
+        headers.put("Remote-Service", header);
+        EasyMock.expect(b.getHeaders()).andReturn(headers);
         EasyMock.replay(b);
         return b;
     }
 
     @Test
     public void testNoRemoteServicesXMLFiles() {
-        Bundle b = createBundleContaining(null);
+        Bundle b = createBundleContaining();
 
         List<EndpointDescription> rsElements = new EndpointDescriptionBundleParser().getAllEndpointDescriptions(b);
         assertEquals(0, rsElements.size());
@@ -157,6 +164,18 @@ public class EndpointDescriptionBundleParserTest {
         assertEquals(EndpointDescriptionBundleParserTest.normXML("<other:t2 xmlns:other='http://www.acme.org/xmlns/other/v1.0.0' "
                                    + "xmlns='http://www.osgi.org/xmlns/rsa/v1.0.0'/>"),
                                    EndpointDescriptionBundleParserTest.normXML((String) l.get(0)));
+    }
+
+    @Test
+    public void testTwoPaths() {
+        URL ed1URL = getClass().getResource("/ed1.xml");
+        URL ed2URL = getClass().getResource("/ed1.xml");
+
+        Bundle b = createBundleContaining(ed1URL, ed2URL);
+
+        List<EndpointDescription> endpoints = new EndpointDescriptionBundleParser().getAllEndpointDescriptions(b);
+        assertEquals(8, endpoints.size());
+        assertEquals(endpoints.get(0), endpoints.get(4));
     }
 
     public static String stripProlog(String s) {

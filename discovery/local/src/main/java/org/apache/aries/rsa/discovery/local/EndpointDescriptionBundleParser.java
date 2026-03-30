@@ -20,10 +20,12 @@ package org.apache.aries.rsa.discovery.local;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.aries.rsa.discovery.endpoint.EndpointDescriptionParserImpl;
 import org.osgi.framework.Bundle;
@@ -56,10 +58,15 @@ public final class EndpointDescriptionBundleParser {
         return endpoints;
     }
 
-    private Collection<URL> getEndpointDescriptionURLs(Bundle b) {
-        String path = getRemoteServicesDir(b);
+    private static Collection<URL> getEndpointDescriptionURLs(Bundle b) {
+        return getRemoteServicesPaths(b).stream()
+            .map(path -> findEntries(b, path))
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
+    }
 
-        // Split path into dir and file pattern
+    private static Collection<URL> findEntries(Bundle b, String path) {
+        // split path into dir and file pattern
         String dir;
         String pattern;
         int i = path.lastIndexOf('/');
@@ -67,7 +74,7 @@ public final class EndpointDescriptionBundleParser {
             dir = path.substring(0, path.length() - 1);
             pattern = "*.xml";
         } else if (i >= 0) {
-            dir = path.substring(0, i);
+            dir = i == 0 ? "/" : path.substring(0, i);
             pattern = path.substring(i + 1);
         } else {
             dir = "";
@@ -78,9 +85,13 @@ public final class EndpointDescriptionBundleParser {
         return urls == null ? Collections.emptyList() : Collections.list(urls);
     }
 
-    private static String getRemoteServicesDir(Bundle b) {
-        Object header = b.getHeaders().get(REMOTE_SERVICES_HEADER_NAME);
-        return (header == null) ? REMOTE_SERVICES_DIRECTORY : header.toString();
+    private static Collection<String> getRemoteServicesPaths(Bundle b) {
+        String header = b.getHeaders().get(REMOTE_SERVICES_HEADER_NAME);
+        return (header == null)
+            ? Collections.singletonList(REMOTE_SERVICES_DIRECTORY)
+            : Arrays.stream(header.split("\\s*,\\s*"))
+                .filter(p -> !p.trim().isEmpty())
+                .collect(Collectors.toList());
     }
 
 }
