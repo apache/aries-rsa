@@ -23,7 +23,9 @@ import java.io.StringWriter;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Dictionary;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,14 +52,16 @@ public class EndpointDescriptionBundleParserTest {
             EasyMock.eq("OSGI-INF/remote-service"),
             EasyMock.eq("*.xml"), EasyMock.anyBoolean())).andReturn(
                 Collections.enumeration(Arrays.asList(ed1URL))).anyTimes();
+        Dictionary<String, String> headers = new Hashtable<>();
+        headers.put("Remote-Service", "OSGI-INF/remote-service/");
+        EasyMock.expect(b.getHeaders()).andReturn(headers).anyTimes();
         EasyMock.replay(b);
         return b;
     }
 
     @Test
     public void testNoRemoteServicesXMLFiles() {
-        Bundle b = EasyMock.createNiceMock(Bundle.class);
-        EasyMock.replay(b);
+        Bundle b = createBundleContaining(null);
 
         List<EndpointDescription> rsElements = new EndpointDescriptionBundleParser().getAllEndpointDescriptions(b);
         assertEquals(0, rsElements.size());
