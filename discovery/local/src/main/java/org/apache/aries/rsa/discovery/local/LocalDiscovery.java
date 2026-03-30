@@ -34,6 +34,7 @@ import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
 import org.osgi.framework.Filter;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -44,17 +45,35 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component(immediate = true)
 public class LocalDiscovery implements BundleListener {
 
+    private static final Logger LOG = LoggerFactory.getLogger(LocalDiscovery.class);
+
     final Map<Bundle, Collection<EndpointDescription>> endpoints = new ConcurrentHashMap<>();
-    final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
+    final Map<EndpointEventListener, Collection<Filter>> listenerToFilters = new HashMap<>();
 
     EndpointDescriptionBundleParser parser;
 
     public LocalDiscovery() {
         this.parser = new EndpointDescriptionBundleParser();
+    }
+
+    private static List<Filter> createFilters(ServiceReference<EndpointEventListener> ref) {
+        List<String> values = StringPlus.normalize(ref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
+        List<Filter> filters = new ArrayList<>(values.size());
+        for (String value : values) {
+            try {
+                filters.add(FrameworkUtil.createFilter(value));
+            } catch (InvalidSyntaxException ise) {
+                // invalid filter syntax means it can't match anything anyway, so we just ignore it
+                LOG.trace("ignoring invalid filter '{}'", value);
+            }
+        }
+        return filters;
     }
 
     @Activate
@@ -78,7 +97,7 @@ public class LocalDiscovery implements BundleListener {
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     void bindListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        List<String> filters = StringPlus.normalize(sref.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE));
+        List<Filter> filters = createFilters(sref);
         if (filters.isEmpty()) {
             return;
         }
@@ -116,13 +135,14 @@ public class LocalDiscovery implements BundleListener {
         }
     }
 
-    private Map<String, Collection<EndpointEventListener>> getMatchingListeners(EndpointDescription endpoint) {
+    private Map<Filter, Collection<EndpointEventListener>> getMatchingListeners(EndpointDescription endpoint) {
         // return a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
-        Map<String, Collection<EndpointEventListener>> matched = new HashMap<>();
+        Hashtable<String, Object> props = new Hashtable<>(endpoint.getProperties());
+        Map<Filter, Collection<EndpointEventListener>> matched = new HashMap<>();
         synchronized (listenerToFilters) {
-            for (Entry<EndpointEventListener, Collection<String>> entry : listenerToFilters.entrySet()) {
-                for (String filter : entry.getValue()) {
-                    if (matchFilter(filter, endpoint)) {
+            for (Entry<EndpointEventListener, Collection<Filter>> entry : listenerToFilters.entrySet()) {
+                for (Filter filter : entry.getValue()) {
+                    if (filter.match(props)) { // don't use matches() which is case-sensitive
                         matched.computeIfAbsent(filter, f -> new ArrayList<>()).add(entry.getKey());
                     }
                 }
@@ -161,37 +181,24 @@ public class LocalDiscovery implements BundleListener {
     }
 
     private void publishToAllListeners(EndpointEvent event) {
-        Map<String, Collection<EndpointEventListener>> matched = getMatchingListeners(event.getEndpoint());
-        for (Map.Entry<String, Collection<EndpointEventListener>> entry : matched.entrySet()) {
+        Map<Filter, Collection<EndpointEventListener>> matched = getMatchingListeners(event.getEndpoint());
+        for (Map.Entry<Filter, Collection<EndpointEventListener>> entry : matched.entrySet()) {
             for (EndpointEventListener listener : entry.getValue()) {
-                publishIfMatched(listener, entry.getKey(), event);
+                listener.endpointChanged(event, entry.getKey().toString());
             }
         }
     }
 
-    private void publishAllToListener(Collection<String> filters, EndpointEventListener listener) {
+    private void publishAllToListener(Collection<Filter> filters, EndpointEventListener listener) {
         endpoints.values().stream().flatMap(Collection::stream)
-            .forEach(endpoint -> filters.forEach(filter ->
-                publishIfMatched(listener, filter, new EndpointEvent(EndpointEvent.ADDED, endpoint))));
+            .forEach(endpoint -> {
+                EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
+                Hashtable<String, Object> props = new Hashtable<>(event.getEndpoint().getProperties());
+                filters.forEach(filter -> {
+                    if (filter.match(props)) {
+                        listener.endpointChanged(event, filter.toString());
+                    }
+                });
+            });
     }
-
-    private void publishIfMatched(EndpointEventListener listener, String filter, EndpointEvent event) {
-        if (LocalDiscovery.matchFilter(filter, event.getEndpoint())) {
-            listener.endpointChanged(event, filter);
-        }
-    }
-
-    private static boolean matchFilter(String filter, EndpointDescription endpoint) {
-        if (filter == null) {
-            return false;
-        }
-
-        try {
-            Filter f = FrameworkUtil.createFilter(filter);
-            return f.match(new Hashtable<>(endpoint.getProperties()));
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
 }
