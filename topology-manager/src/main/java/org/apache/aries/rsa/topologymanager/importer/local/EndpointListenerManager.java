@@ -46,6 +46,8 @@ public class EndpointListenerManager implements ServiceInterestListener {
 
     private final BundleContext bctx;
     private volatile ServiceRegistration<?> serviceRegistration;
+    private volatile ServiceRegistration<?> listenerHookeRegistration;
+    private volatile ServiceRegistration<?> findHookRegistration;
 
     private final List<String> filters = new ArrayList<>();
     private final EndpointEventListener endpointListener;
@@ -67,13 +69,19 @@ public class EndpointListenerManager implements ServiceInterestListener {
     public void start() {
         String[] ifAr = { EndpointEventListener.class.getName() };
         serviceRegistration = bctx.registerService(ifAr, endpointListener, getEELProperties());
-        bctx.registerService(ListenerHook.class, listenerHook, null);
-        bctx.registerService(FindHook.class, findHook, null);
+        listenerHookeRegistration = bctx.registerService(ListenerHook.class, listenerHook, null);
+        findHookRegistration = bctx.registerService(FindHook.class, findHook, null);
     }
 
     public void stop() {
         if (serviceRegistration != null) {
             serviceRegistration.unregister();
+        }
+        if (listenerHookeRegistration != null) {
+            listenerHookeRegistration.unregister();
+        }
+        if (findHookRegistration != null) {
+            findHookRegistration.unregister();
         }
     }
 
