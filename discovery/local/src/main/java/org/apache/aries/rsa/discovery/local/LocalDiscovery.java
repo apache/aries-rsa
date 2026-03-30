@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -49,7 +48,7 @@ import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 @Component(immediate = true)
 public class LocalDiscovery implements BundleListener {
 
-    final Map<EndpointDescription, Bundle> endpoints = new ConcurrentHashMap<>();
+    final Map<Bundle, Collection<EndpointDescription>> endpoints = new ConcurrentHashMap<>();
     final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
     final Map<String, Collection<EndpointEventListener>> filterToListeners = new HashMap<>();
 
@@ -163,21 +162,17 @@ public class LocalDiscovery implements BundleListener {
     }
 
     private void addEndpoints(Bundle bundle) {
-        List<EndpointDescription> endpoints = parser.getAllEndpointDescriptions(bundle);
-        for (EndpointDescription endpoint : endpoints) {
-            this.endpoints.put(endpoint, bundle);
-            publishToAllListeners(new EndpointEvent(EndpointEvent.ADDED, endpoint));
+        Collection<EndpointDescription> endpoints = parser.getAllEndpointDescriptions(bundle);
+        if (!endpoints.isEmpty()) {
+            this.endpoints.put(bundle, endpoints);
+            endpoints.forEach(endpoint -> publishToAllListeners(new EndpointEvent(EndpointEvent.ADDED, endpoint)));
         }
     }
 
     private void removeEndpoints(Bundle bundle) {
-        for (Iterator<Entry<EndpointDescription, Bundle>> i = endpoints.entrySet().iterator();
-             i.hasNext();) {
-            Entry<EndpointDescription, Bundle> entry = i.next();
-            if (bundle.equals(entry.getValue())) {
-                publishToAllListeners(new EndpointEvent(EndpointEvent.REMOVED, entry.getKey()));
-                i.remove();
-            }
+        Collection<EndpointDescription> endpoints = this.endpoints.remove(bundle);
+        if (endpoints != null) {
+            endpoints.forEach(endpoint -> publishToAllListeners(new EndpointEvent(EndpointEvent.REMOVED, endpoint)));
         }
     }
 
@@ -191,12 +186,9 @@ public class LocalDiscovery implements BundleListener {
     }
 
     private void publishAllToListener(Collection<String> filters, EndpointEventListener listener) {
-        for (String filter : filters) {
-            for (EndpointDescription endpoint : endpoints.keySet()) {
-                EndpointEvent event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
-                publishIfMatched(listener, filter, event);
-            }
-        }
+        endpoints.values().stream().flatMap(Collection::stream)
+            .forEach(endpoint -> filters.forEach(filter ->
+                publishIfMatched(listener, filter, new EndpointEvent(EndpointEvent.ADDED, endpoint))));
     }
 
     private void publishIfMatched(EndpointEventListener listener, String filter, EndpointEvent event) {
