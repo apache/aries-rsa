@@ -50,7 +50,6 @@ public class LocalDiscovery implements BundleListener {
 
     final Map<Bundle, Collection<EndpointDescription>> endpoints = new ConcurrentHashMap<>();
     final Map<EndpointEventListener, Collection<String>> listenerToFilters = new HashMap<>();
-    final Map<String, Collection<EndpointEventListener>> filterToListeners = new HashMap<>();
 
     EndpointDescriptionBundleParser parser;
 
@@ -86,9 +85,6 @@ public class LocalDiscovery implements BundleListener {
 
         synchronized (listenerToFilters) {
             listenerToFilters.put(listener, filters);
-            for (String filter : filters) {
-                filterToListeners.computeIfAbsent(filter, k -> new ArrayList<>()).add(listener);
-            }
         }
 
         publishAllToListener(filters, listener);
@@ -103,20 +99,7 @@ public class LocalDiscovery implements BundleListener {
      */
     void unbindListener(EndpointEventListener listener) {
         synchronized (listenerToFilters) {
-            Collection<String> filters = listenerToFilters.remove(listener);
-            if (filters == null) {
-                return;
-            }
-
-            for (String filter : filters) {
-                Collection<EndpointEventListener> listeners = filterToListeners.get(filter);
-                if (listeners != null) {
-                    listeners.remove(listener);
-                    if (listeners.isEmpty()) {
-                        filterToListeners.remove(filter);
-                    }
-                }
-            }
+            listenerToFilters.remove(listener);
         }
     }
 
@@ -137,10 +120,11 @@ public class LocalDiscovery implements BundleListener {
         // return a copy of matched filters/listeners so that caller doesn't need to hold locks while triggering events
         Map<String, Collection<EndpointEventListener>> matched = new HashMap<>();
         synchronized (listenerToFilters) {
-            for (Entry<String, Collection<EndpointEventListener>> entry : filterToListeners.entrySet()) {
-                String filter = entry.getKey();
-                if (LocalDiscovery.matchFilter(filter, endpoint)) {
-                    matched.put(filter, new ArrayList<>(entry.getValue()));
+            for (Entry<EndpointEventListener, Collection<String>> entry : listenerToFilters.entrySet()) {
+                for (String filter : entry.getValue()) {
+                    if (matchFilter(filter, endpoint)) {
+                        matched.computeIfAbsent(filter, f -> new ArrayList<>()).add(entry.getKey());
+                    }
                 }
             }
         }
