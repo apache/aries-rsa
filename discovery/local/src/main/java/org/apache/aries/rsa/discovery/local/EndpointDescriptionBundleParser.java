@@ -20,8 +20,8 @@ package org.apache.aries.rsa.discovery.local;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -44,48 +44,42 @@ public final class EndpointDescriptionBundleParser {
     }
 
     public List<EndpointDescription> getAllEndpointDescriptions(Bundle b) {
-        Enumeration<URL> urls = getEndpointDescriptionURLs(b);
-        List<EndpointDescription> elements = new ArrayList<>();
-        while (urls.hasMoreElements()) {
-            URL resourceURL = urls.nextElement();
+        Collection<URL> urls = getEndpointDescriptionURLs(b);
+        List<EndpointDescription> endpoints = new ArrayList<>();
+        for (URL url : urls) {
             try {
-                elements.addAll(parser.readEndpoints(resourceURL.openStream()));
+                endpoints.addAll(parser.readEndpoints(url.openStream()));
             } catch (Exception ex) {
-                LOG.warn("Problem parsing: {}", resourceURL, ex);
+                LOG.warn("Problem parsing: {}", url, ex);
             }
         }
-        return elements;
+        return endpoints;
     }
 
-    private Enumeration<URL> getEndpointDescriptionURLs(Bundle b) {
-        String origDir = getRemoteServicesDir(b);
+    private Collection<URL> getEndpointDescriptionURLs(Bundle b) {
+        String path = getRemoteServicesDir(b);
 
-        // Split origDir into dir and file pattern
-        String filePattern = "*.xml";
+        // Split path into dir and file pattern
         String dir;
-        if (origDir.endsWith("/")) {
-            dir = origDir.substring(0, origDir.length() - 1);
+        String pattern;
+        int i = path.lastIndexOf('/');
+        if (i == path.length() - 1) {
+            dir = path.substring(0, path.length() - 1);
+            pattern = "*.xml";
+        } else if (i >= 0) {
+            dir = path.substring(0, i);
+            pattern = path.substring(i + 1);
         } else {
-            int idx = origDir.lastIndexOf('/');
-            if (idx >= 0 & origDir.length() > idx) {
-                filePattern = origDir.substring(idx + 1);
-                dir = origDir.substring(0, idx);
-            } else {
-                filePattern = origDir;
-                dir = "";
-            }
+            dir = "";
+            pattern = path;
         }
 
-        Enumeration<URL> urls = b.findEntries(dir, filePattern, false);
-        return (urls == null) ? Collections.enumeration(new ArrayList<>()) : urls;
+        Enumeration<URL> urls = b.findEntries(dir, pattern, false);
+        return urls == null ? Collections.emptyList() : Collections.list(urls);
     }
 
     private static String getRemoteServicesDir(Bundle b) {
-        Dictionary<?, ?> headers = b.getHeaders();
-        Object header = null;
-        if (headers != null) {
-            header = headers.get(REMOTE_SERVICES_HEADER_NAME);
-        }
+        Object header = b.getHeaders().get(REMOTE_SERVICES_HEADER_NAME);
         return (header == null) ? REMOTE_SERVICES_DIRECTORY : header.toString();
     }
 
