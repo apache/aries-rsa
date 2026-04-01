@@ -46,12 +46,10 @@ public class ZookeeperEndpointListener implements Closeable {
     private static final Logger LOG = LoggerFactory.getLogger(ZookeeperEndpointListener.class);
 
     private Map<String, EndpointDescription> endpoints = new ConcurrentHashMap<>();
-
     private ZooKeeper zk;
-
     private EndpointDescriptionParser parser;
-
     private Consumer<EndpointEvent> listener;
+    private volatile boolean closed;
 
     ZookeeperEndpointListener(ZooKeeper zk, EndpointDescriptionParser parser, Consumer<EndpointEvent> listener) {
         this.zk = zk;
@@ -66,11 +64,14 @@ public class ZookeeperEndpointListener implements Closeable {
 
     @Override
     public void close() {
-        // TODO unregister watchers
+        closed = true;
         endpoints.clear();
     }
 
     private void process(WatchedEvent event) {
+        if (closed) {
+            return;
+        }
         String path = event.getPath();
         LOG.info("Received event {}", event);
         switch (event.getType()) {
