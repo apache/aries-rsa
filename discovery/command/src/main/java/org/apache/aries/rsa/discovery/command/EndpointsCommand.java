@@ -19,8 +19,10 @@
 package org.apache.aries.rsa.discovery.command;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.karaf.shell.support.table.ShellTable;
 import org.osgi.framework.BundleContext;
@@ -39,7 +41,7 @@ import org.osgi.service.remoteserviceadmin.EndpointEventListener;
                 "endpoint.listener.scope=(endpoint.framework.uuid=*)"
     })
 public class EndpointsCommand implements EndpointEventListener {
-    Set<EndpointDescription> endpoints = new HashSet<>();
+    Set<EndpointDescription> endpoints = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private String frameworkId;
 
     @Activate
