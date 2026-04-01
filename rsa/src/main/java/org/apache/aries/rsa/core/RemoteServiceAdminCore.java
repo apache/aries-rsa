@@ -204,24 +204,33 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         try {
             checkPermission(new EndpointPermission("*", EndpointPermission.EXPORT));
             final BundleContext serviceContext = getBundleContext(serviceReference);
-            final Object serviceO = serviceContext.getService(serviceReference); // unget it when export is closed
-            if (serviceO == null) {
+            final Object serviceObject = serviceContext.getService(serviceReference); // unget it when export is closed
+            if (serviceObject == null) {
                 throw new IllegalStateException("service object is null (service was unregistered?)");
             }
-            final Class<?>[] interfaces = getInterfaces(serviceO, interfaceNames);
-            final Map<String, Object> eprops = createEndpointProps(serviceProperties, configTypes, interfaces);
+            ExportRegistration reg = null;
+            try {
+                final Class<?>[] interfaces = getInterfaces(serviceObject, interfaceNames);
+                final Map<String, Object> eprops = createEndpointProps(serviceProperties, configTypes, interfaces);
 
-            Endpoint endpoint = AccessController.doPrivileged(
-                (PrivilegedAction<Endpoint>) () -> provider.exportService(serviceO, serviceContext, eprops, interfaces));
-            if (endpoint == null) {
-                return null;
+                Endpoint endpoint = AccessController.doPrivileged(
+                    (PrivilegedAction<Endpoint>) () -> provider.exportService(
+                        serviceObject, serviceContext, eprops, interfaces));
+                if (endpoint != null) {
+                    reg = new ExportRegistrationImpl(serviceReference, endpoint, closeHandler, eventProducer);
+                }
+                return reg;
+            } finally {
+                // if anything went wrong, don't leak the service reference
+                if (reg == null) {
+                    serviceContext.ungetService(serviceReference);
+                }
             }
-            return new ExportRegistrationImpl(serviceReference, endpoint, closeHandler, eventProducer);
         } catch (IllegalArgumentException iae) {
             // TCK expects this for garbage input in config-type specific properties
             throw iae;
-        } catch (Exception e) {
-            return new ExportRegistrationImpl(e, closeHandler, eventProducer);
+        } catch (Throwable t) {
+            return new ExportRegistrationImpl(t, closeHandler, eventProducer);
         }
     }
 
