@@ -92,15 +92,15 @@ public class ClientManager implements Watcher {
         if (reg != null) {
             reg.unregister();
         }
-        runAsync(this::closeClient);
-    }
-
-    private void closeClient() {
-        try {
-            zkClient.close();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        // keep current client reference to avoid race condition when re-starting a new one
+        ZooKeeper client = zkClient;
+        runAsync(() -> {
+            try {
+                client.close();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     /* Callback for ZooKeeper */
