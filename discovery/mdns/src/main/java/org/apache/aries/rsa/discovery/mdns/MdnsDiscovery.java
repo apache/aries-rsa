@@ -243,6 +243,9 @@ public class MdnsDiscovery {
                 // Not a complete record yet
                 return;
             }
+            if (path.startsWith("/")) {
+                path = path.substring(1);
+            }
             
             int port = info.getPort();
             if(port == -1) {
