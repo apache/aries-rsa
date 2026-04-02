@@ -459,9 +459,6 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
         ImportRegistrationImpl imReg = new ImportRegistrationImpl(endpoint, closeHandler, eventProducer);
         try {
             Dictionary<String, Object> serviceProps = new Hashtable<>(endpoint.getProperties());
-            serviceProps.put(RemoteConstants.SERVICE_IMPORTED, true);
-            serviceProps.remove(RemoteConstants.SERVICE_EXPORTED_INTERFACES);
-
             ClientServiceFactory csf = new ClientServiceFactory(endpoint, handler, imReg);
 
             // Export the factory using the api context as it has very few imports.
