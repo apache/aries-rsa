@@ -98,8 +98,8 @@ public class TcpServer implements Closeable, Runnable {
 
     public void setNumThreads(int numThreads) {
         numThreads++; // plus one for server socket accepting thread
-        executor.setCorePoolSize(numThreads);
-        executor.setMaximumPoolSize(numThreads);
+        executor.setMaximumPoolSize(numThreads); // first the max
+        executor.setCorePoolSize(numThreads); // then the size
     }
 
     public int getNumThreads() {
