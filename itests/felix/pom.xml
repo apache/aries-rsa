@@ -35,7 +35,7 @@
     <name>Aries Remote Service Admin itests felix</name>
 
     <properties>
-        <asm.version>9.8</asm.version>
+        <asm.version>9.9.1</asm.version>
     </properties>
 
     <dependencies>
