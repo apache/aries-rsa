@@ -212,7 +212,7 @@
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>4.2.25</version>
+            <version>4.2.38</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
