@@ -27,8 +27,8 @@ The discovery providers are responsible for finding the available endpoint descr
 
 ### Maven release
 
-    mvn clean release:prepare -DskipTests -Darguments=-DskipTests
-    mvn release:perform -DskipTests -Darguments=-DskipTests
+    ./mvnw clean release:prepare -DskipTests -Darguments=-DskipTests
+    ./mvnw release:perform -DskipTests -Darguments=-DskipTests
 
 This creates a staging repository. After all artifacts are deployed login to the [Apache maven repo](https://repository.apache.org) and close the staging repository.
 
