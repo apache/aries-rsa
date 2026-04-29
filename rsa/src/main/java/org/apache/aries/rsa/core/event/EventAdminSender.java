@@ -38,8 +38,12 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.ExportReference;
 import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EventAdminSender {
+
+    private static final Logger LOG = LoggerFactory.getLogger(EventAdminSender.class);
 
     private BundleContext context;
 
@@ -47,16 +51,23 @@ public class EventAdminSender {
         this.context = context;
     }
 
-    private void notifyEventAdmins(Event event) {
-        ServiceReference<EventAdmin> sref = this.context.getServiceReference(EventAdmin.class);
+    private void notifyEventAdmins(String type, Event event) {
+        // according to the EventAdmin specs, we publish to the service with the
+        // highest ranking (which is the one returned by getServiceReference)
+        ServiceReference<EventAdmin> sref = context.getServiceReference(EventAdmin.class);
         if (sref != null) {
-            final EventAdmin eventAdmin = this.context.getService(sref);
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                public Void run() {
-                    eventAdmin.postEvent(event);
-                    return null;
+            LOG.debug("Publishing event {} to EventAdmin", type);
+            final EventAdmin eventAdmin = context.getService(sref);
+            if (eventAdmin != null) {
+                try {
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        eventAdmin.postEvent(event);
+                        return null;
+                    });
+                } finally {
+                    context.ungetService(sref);
                 }
-            });
+            }
             this.context.ungetService(sref);
         }
     }
@@ -66,7 +77,7 @@ public class EventAdminSender {
         String topic = "org/osgi/service/remoteserviceadmin/" + type;
         Map<String, Object> props = createProps(rsae);
         Event event = new Event(topic, props);
-        notifyEventAdmins(event);
+        notifyEventAdmins(type, event);
     }
 
     private static <K, V> void putIfNotNull(Map<K, V> map, K key, V val) {
