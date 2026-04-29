@@ -107,6 +107,8 @@ public class EventProducer {
                                         rsal, bundle.getSymbolicName());
                                 rsal.remoteAdminEvent(rsae);
                             }
+                        } catch (RuntimeException re) {
+                            LOG.error("unexpected exception when notifying {} of {}", rsal, rsae, re);
                         } finally {
                             bctx.ungetService(sref);
                         }
