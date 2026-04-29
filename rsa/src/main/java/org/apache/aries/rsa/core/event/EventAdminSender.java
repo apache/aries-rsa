@@ -20,15 +20,19 @@ package org.apache.aries.rsa.core.event;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.Version;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
+import org.osgi.service.remoteserviceadmin.ExportReference;
 import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
 
@@ -73,32 +77,60 @@ public class EventAdminSender {
         notifyEventAdmins(event);
     }
 
-    private Map<String, Object> createProps(RemoteServiceAdminEvent rsaEvent) {
+    private static <K, V> void putIfNotNull(Map<K, V> map, K key, V val) {
+        if (val != null) {
+            map.put(key, val);
+        }
+    }
+
+    private Map<String, Object> createProps(RemoteServiceAdminEvent rsae) {
         Map<String, Object> props = new HashMap<>();
-        Bundle bundle = rsaEvent.getSource();
+        // bundle properties
+        Bundle bundle = rsae.getSource();
         props.put("bundle", bundle);
         props.put("bundle.id", bundle.getBundleId());
         props.put("bundle.symbolicname", bundle.getSymbolicName());
-        props.put("bundle.version", bundle.getVersion());
-        props.put("bundle.signer", ""); // TODO What to put here
-        Throwable exception = rsaEvent.getException();
+
+        String version = bundle.getHeaders().get("Bundle-Version");
+        Version v = version != null ? new Version(version) : Version.emptyVersion;
+        putIfNotNull(props, "bundle.version", v);
+
+        Map<X509Certificate, List<X509Certificate>> signers = bundle.getSignerCertificates(Bundle.SIGNERS_ALL);
+        if (signers != null) {
+            String[] names = signers.keySet().stream()
+                    .map(cert -> cert.getSubjectX500Principal().getName())
+                    .filter(s -> s != null && !s.isEmpty())
+                    .toArray(String[]::new);
+            if (names.length > 0) {
+                props.put("bundle.signer", names);
+            }
+        }
+
+        // exception properties
+        Throwable exception = rsae.getException();
         if (exception != null) {
             props.put("exception", exception);
             props.put("exception.class", exception.getClass().getName());
-            props.put("exception.message", exception.getMessage());
+            putIfNotNull(props, "exception.message", exception.getMessage());
         }
-        if (rsaEvent.getExportReference() != null) {
-            EndpointDescription endpoint = rsaEvent.getExportReference().getExportedEndpoint();
-            props.put("endpoint.framework.uuid", endpoint.getFrameworkUUID());
-            props.put("endpoint.id", endpoint.getId());
-            props.put("objectClass", endpoint.getInterfaces());
+
+        // endpoint properties
+        ImportReference importReference = rsae.getImportReference();
+        ExportReference exportReference = rsae.getExportReference();
+        EndpointDescription endpoint = importReference == null ? null : importReference.getImportedEndpoint();
+        endpoint = endpoint == null && exportReference != null ? exportReference.getExportedEndpoint() : endpoint;
+        if (endpoint != null) {
+            putIfNotNull(props, "endpoint.service.id", endpoint.getServiceId());
+            putIfNotNull(props, "endpoint.framework.uuid", endpoint.getFrameworkUUID());
+            putIfNotNull(props, "endpoint.id", endpoint.getId());
+            props.put("objectClass", endpoint.getInterfaces().toArray(new String[0]));
+            putIfNotNull(props, "service.imported.configs", endpoint.getConfigurationTypes());
         }
-        ImportReference importReference = rsaEvent.getImportReference();
-        if (importReference != null && importReference.getImportedEndpoint() != null) {
-            props.put("service.imported.configs", importReference.getImportedEndpoint().getConfigurationTypes());
-        }
+
+        // general properties
         props.put("timestamp", System.currentTimeMillis());
-        props.put("event", rsaEvent);
+        props.put("event", rsae);
+
         return props;
     }
 }
