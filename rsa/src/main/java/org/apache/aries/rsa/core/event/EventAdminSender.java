@@ -51,8 +51,7 @@ public class EventAdminSender {
         typeToTopic.put(RemoteServiceAdminEvent.IMPORT_WARNING, "IMPORT_WARNING");
     }
 
-    public void send(RemoteServiceAdminEvent rsaEvent) {
-        final Event event = toEvent(rsaEvent);
+    private void notifyEventAdmins(Event event) {
         ServiceReference<EventAdmin> sref = this.context.getServiceReference(EventAdmin.class);
         if (sref != null) {
             final EventAdmin eventAdmin = this.context.getService(sref);
@@ -66,8 +65,15 @@ public class EventAdminSender {
         }
     }
 
-    private Event toEvent(RemoteServiceAdminEvent rsaEvent) {
-        String topic = getTopic(rsaEvent);
+    public void send(RemoteServiceAdminEvent rsae) {
+        String type = typeToTopic.get(rsae.getType());
+        String topic = "org/osgi/service/remoteserviceadmin/" + type;
+        Map<String, Object> props = createProps(rsae);
+        Event event = new Event(topic, props);
+        notifyEventAdmins(event);
+    }
+
+    private Map<String, Object> createProps(RemoteServiceAdminEvent rsaEvent) {
         Map<String, Object> props = new HashMap<>();
         Bundle bundle = rsaEvent.getSource();
         props.put("bundle", bundle);
@@ -93,10 +99,6 @@ public class EventAdminSender {
         }
         props.put("timestamp", System.currentTimeMillis());
         props.put("event", rsaEvent);
-        return new Event(topic, props);
-    }
-
-    private String getTopic(RemoteServiceAdminEvent rsaEvent) {
-        return "org/osgi/service/remoteserviceadmin/" + typeToTopic.get(rsaEvent.getType());
+        return props;
     }
 }
