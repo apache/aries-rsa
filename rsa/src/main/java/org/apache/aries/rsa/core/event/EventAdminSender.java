@@ -18,12 +18,15 @@
  */
 package org.apache.aries.rsa.core.event;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -37,22 +40,11 @@ import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
 
 public class EventAdminSender {
-    private HashMap<Integer, String> typeToTopic;
+
     private BundleContext context;
 
     public EventAdminSender(BundleContext context) {
         this.context = context;
-        typeToTopic = new HashMap<>();
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_ERROR, "EXPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_REGISTRATION, "EXPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, "EXPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UPDATE, "EXPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_WARNING, "EXPORT_WARNING");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_ERROR, "IMPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_REGISTRATION, "IMPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UNREGISTRATION, "IMPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UPDATE, "IMPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_WARNING, "IMPORT_WARNING");
     }
 
     private void notifyEventAdmins(Event event) {
@@ -70,7 +62,7 @@ public class EventAdminSender {
     }
 
     public void send(RemoteServiceAdminEvent rsae) {
-        String type = typeToTopic.get(rsae.getType());
+        String type = getConstName(RemoteServiceAdminEvent.class, null, rsae.getType(), "UNKNOWN_EVENT");
         String topic = "org/osgi/service/remoteserviceadmin/" + type;
         Map<String, Object> props = createProps(rsae);
         Event event = new Event(topic, props);
@@ -81,6 +73,32 @@ public class EventAdminSender {
         if (val != null) {
             map.put(key, val);
         }
+    }
+
+    /**
+     * Returns the name of the first constant field (public static final) in the given class
+     * whose value is equal to the given value and name starts with the given prefix,
+     * or a default value if it is not found.
+     *
+     * @param cls the class containing the constant
+     * @param prefix the constant name prefix (or null for any name)
+     * @param value the constant value
+     * @param defaultValue a default value to return if the constant is not found
+     * @return the constant name, or the default value if it is not found
+     */
+    private static String getConstName(Class<?> cls, String prefix, Object value, String defaultValue) {
+        for (Field f : cls.getDeclaredFields()) {
+            try {
+                int m = f.getModifiers();
+                if (Modifier.isFinal(m) && Modifier.isStatic(m) && Modifier.isPublic(m)
+                        && Objects.equals(f.get(null), value)
+                        && (prefix == null || f.getName().startsWith(prefix))) {
+                    return f.getName();
+                }
+            } catch (IllegalAccessException ignore) {
+            }
+        }
+        return defaultValue;
     }
 
     private Map<String, Object> createProps(RemoteServiceAdminEvent rsae) {
