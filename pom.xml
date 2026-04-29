@@ -50,7 +50,6 @@
         <module>parent</module>
         <module>spi</module>
         <module>rsa</module>
-        <module>eapub</module>
         <module>topology-manager</module>
         <module>provider</module>
         <module>discovery</module>
