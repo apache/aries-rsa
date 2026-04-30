@@ -55,7 +55,6 @@
         <module>provider</module>
         <module>discovery</module>
         <module>examples</module>
-        <module>repository</module>
         <module>features</module>
         <module>itests</module>
     </modules>
