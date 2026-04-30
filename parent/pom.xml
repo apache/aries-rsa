@@ -33,7 +33,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <bnd.version>6.4.0</bnd.version>
+        <bnd.version>7.2.3</bnd.version>
         <zookeeper.version>3.9.3_1</zookeeper.version>
         <netty.version>4.1.121.Final</netty.version>
         <slf4j.version>2.0.17</slf4j.version>
