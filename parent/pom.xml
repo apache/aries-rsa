@@ -239,7 +239,7 @@
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-osgi</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.7</version>
         </dependency>
         <dependency>
             <groupId>jakarta.activation</groupId>
