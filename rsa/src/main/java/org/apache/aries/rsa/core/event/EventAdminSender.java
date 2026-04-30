@@ -18,85 +18,148 @@
  */
 package org.apache.aries.rsa.core.event;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.Version;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
+import org.osgi.service.remoteserviceadmin.ExportReference;
 import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EventAdminSender {
-    private HashMap<Integer, String> typeToTopic;
+
+    private static final Logger LOG = LoggerFactory.getLogger(EventAdminSender.class);
+
     private BundleContext context;
 
     public EventAdminSender(BundleContext context) {
         this.context = context;
-        typeToTopic = new HashMap<>();
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_ERROR, "EXPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_REGISTRATION, "EXPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, "EXPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UPDATE, "EXPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_WARNING, "EXPORT_WARNING");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_ERROR, "IMPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_REGISTRATION, "IMPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UNREGISTRATION, "IMPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UPDATE, "IMPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_WARNING, "IMPORT_WARNING");
     }
 
-    public void send(RemoteServiceAdminEvent rsaEvent) {
-        final Event event = toEvent(rsaEvent);
-        ServiceReference<EventAdmin> sref = this.context.getServiceReference(EventAdmin.class);
+    private void notifyEventAdmins(String type, Event event) {
+        // according to the EventAdmin specs, we publish to the service with the
+        // highest ranking (which is the one returned by getServiceReference)
+        ServiceReference<EventAdmin> sref = context.getServiceReference(EventAdmin.class);
         if (sref != null) {
-            final EventAdmin eventAdmin = this.context.getService(sref);
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                public Void run() {
-                    eventAdmin.postEvent(event);
-                    return null;
+            LOG.debug("Publishing event {} to EventAdmin", type);
+            final EventAdmin eventAdmin = context.getService(sref);
+            if (eventAdmin != null) {
+                try {
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        eventAdmin.postEvent(event);
+                        return null;
+                    });
+                } finally {
+                    context.ungetService(sref);
                 }
-            });
+            }
             this.context.ungetService(sref);
         }
     }
 
-    private Event toEvent(RemoteServiceAdminEvent rsaEvent) {
-        String topic = getTopic(rsaEvent);
+    public void send(RemoteServiceAdminEvent rsae) {
+        String type = getConstName(RemoteServiceAdminEvent.class, null, rsae.getType(), "UNKNOWN_EVENT");
+        String topic = "org/osgi/service/remoteserviceadmin/" + type;
+        Map<String, Object> props = createProps(rsae);
+        Event event = new Event(topic, props);
+        notifyEventAdmins(type, event);
+    }
+
+    private static <K, V> void putIfNotNull(Map<K, V> map, K key, V val) {
+        if (val != null) {
+            map.put(key, val);
+        }
+    }
+
+    /**
+     * Returns the name of the first constant field (public static final) in the given class
+     * whose value is equal to the given value and name starts with the given prefix,
+     * or a default value if it is not found.
+     *
+     * @param cls the class containing the constant
+     * @param prefix the constant name prefix (or null for any name)
+     * @param value the constant value
+     * @param defaultValue a default value to return if the constant is not found
+     * @return the constant name, or the default value if it is not found
+     */
+    private static String getConstName(Class<?> cls, String prefix, Object value, String defaultValue) {
+        for (Field f : cls.getDeclaredFields()) {
+            try {
+                int m = f.getModifiers();
+                if (Modifier.isFinal(m) && Modifier.isStatic(m) && Modifier.isPublic(m)
+                        && Objects.equals(f.get(null), value)
+                        && (prefix == null || f.getName().startsWith(prefix))) {
+                    return f.getName();
+                }
+            } catch (IllegalAccessException ignore) {
+            }
+        }
+        return defaultValue;
+    }
+
+    private Map<String, Object> createProps(RemoteServiceAdminEvent rsae) {
         Map<String, Object> props = new HashMap<>();
-        Bundle bundle = rsaEvent.getSource();
+        // bundle properties
+        Bundle bundle = rsae.getSource();
         props.put("bundle", bundle);
         props.put("bundle.id", bundle.getBundleId());
         props.put("bundle.symbolicname", bundle.getSymbolicName());
-        props.put("bundle.version", bundle.getVersion());
-        props.put("bundle.signer", ""); // TODO What to put here
-        Throwable exception = rsaEvent.getException();
+
+        String version = bundle.getHeaders().get("Bundle-Version");
+        Version v = version != null ? new Version(version) : Version.emptyVersion;
+        putIfNotNull(props, "bundle.version", v);
+
+        Map<X509Certificate, List<X509Certificate>> signers = bundle.getSignerCertificates(Bundle.SIGNERS_ALL);
+        if (signers != null) {
+            String[] names = signers.keySet().stream()
+                    .map(cert -> cert.getSubjectX500Principal().getName())
+                    .filter(s -> s != null && !s.isEmpty())
+                    .toArray(String[]::new);
+            if (names.length > 0) {
+                props.put("bundle.signer", names);
+            }
+        }
+
+        // exception properties
+        Throwable exception = rsae.getException();
         if (exception != null) {
             props.put("exception", exception);
             props.put("exception.class", exception.getClass().getName());
-            props.put("exception.message", exception.getMessage());
+            putIfNotNull(props, "exception.message", exception.getMessage());
         }
-        if (rsaEvent.getExportReference() != null) {
-            EndpointDescription endpoint = rsaEvent.getExportReference().getExportedEndpoint();
-            props.put("endpoint.framework.uuid", endpoint.getFrameworkUUID());
-            props.put("endpoint.id", endpoint.getId());
-            props.put("objectClass", endpoint.getInterfaces());
-        }
-        ImportReference importReference = rsaEvent.getImportReference();
-        if (importReference != null && importReference.getImportedEndpoint() != null) {
-            props.put("service.imported.configs", importReference.getImportedEndpoint().getConfigurationTypes());
-        }
-        props.put("timestamp", System.currentTimeMillis());
-        props.put("event", rsaEvent);
-        return new Event(topic, props);
-    }
 
-    private String getTopic(RemoteServiceAdminEvent rsaEvent) {
-        return "org/osgi/service/remoteserviceadmin/" + typeToTopic.get(rsaEvent.getType());
+        // endpoint properties
+        ImportReference importReference = rsae.getImportReference();
+        ExportReference exportReference = rsae.getExportReference();
+        EndpointDescription endpoint = importReference == null ? null : importReference.getImportedEndpoint();
+        endpoint = endpoint == null && exportReference != null ? exportReference.getExportedEndpoint() : endpoint;
+        if (endpoint != null) {
+            putIfNotNull(props, "endpoint.service.id", endpoint.getServiceId());
+            putIfNotNull(props, "endpoint.framework.uuid", endpoint.getFrameworkUUID());
+            putIfNotNull(props, "endpoint.id", endpoint.getId());
+            props.put("objectClass", endpoint.getInterfaces().toArray(new String[0]));
+            putIfNotNull(props, "service.imported.configs", endpoint.getConfigurationTypes());
+        }
+
+        // general properties
+        props.put("timestamp", System.currentTimeMillis());
+        props.put("event", rsae);
+
+        return props;
     }
 }

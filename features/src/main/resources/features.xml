@@ -26,7 +26,6 @@
         <bundle>mvn:org.apache.aries.rsa/org.apache.aries.rsa.core/${project.version}</bundle>
         <bundle>mvn:org.apache.aries.rsa/org.apache.aries.rsa.topology-manager/${project.version}</bundle>
         <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.command/${project.version}</bundle>
-        <bundle>mvn:org.apache.aries.rsa/org.apache.aries.rsa.eapub/${project.version}</bundle>
     </feature>
 
     <feature name="aries-rsa-provider-tcp" version="${project.version}">

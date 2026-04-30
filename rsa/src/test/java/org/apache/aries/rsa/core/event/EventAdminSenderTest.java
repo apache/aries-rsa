@@ -16,13 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.aries.rsa.eapub;
-
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.UUID;
+package org.apache.aries.rsa.core.event;
 
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
@@ -38,8 +32,10 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.ExportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
 
+import java.util.*;
+
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class EventAdminHelperTest {
+public class EventAdminSenderTest {
 
     @Test
     public void testPublishNotification() throws Exception {
@@ -71,7 +67,7 @@ public class EventAdminHelperTest {
         ea.postEvent(EasyMock.anyObject());
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
-            public Object answer() throws Throwable {
+            public Object answer() {
                 Event event = (Event) EasyMock.getCurrentArguments()[0];
 
                 Assert.assertEquals("org/osgi/service/remoteserviceadmin/EXPORT_REGISTRATION", event.getTopic());
@@ -79,16 +75,19 @@ public class EventAdminHelperTest {
                 Assert.assertEquals(42L, event.getProperty("bundle.id"));
                 Assert.assertEquals("test.bundle", event.getProperty("bundle.symbolicname"));
                 Assert.assertEquals(new Version(1, 2, 3, "test"), event.getProperty("bundle.version"));
-                Assert.assertNull(event.getProperty("cause"));
-                Assert.assertEquals(epd, event.getProperty("export.registration"));
+                Assert.assertNull(event.getProperty("exception"));
+                Assert.assertNull(event.getProperty("exception.message"));
+                Assert.assertNull(event.getProperty("exception.class"));
 
-                Assert.assertEquals(Long.MAX_VALUE, event.getProperty("service.remote.id"));
-                Assert.assertEquals(uuid, event.getProperty("service.remote.uuid"));
-                Assert.assertEquals("foo://bar", event.getProperty("service.remote.uri"));
-                Assert.assertArrayEquals(interfaces.toArray(new String[]{}),
-                        (String[]) event.getProperty("objectClass"));
+                Assert.assertEquals(Long.MAX_VALUE, event.getProperty("endpoint.service.id"));
+                Assert.assertEquals(uuid, event.getProperty("endpoint.framework.uuid"));
+                Assert.assertEquals("foo://bar", event.getProperty("endpoint.id"));
+                Assert.assertArrayEquals(interfaces.toArray(new String[]{}), (String[]) event.getProperty("objectClass"));
+                Assert.assertEquals(epd.getConfigurationTypes(), event.getProperty("service.imported.configs"));
 
                 Assert.assertNotNull(event.getProperty("timestamp"));
+                Assert.assertTrue((Long)event.getProperty("timestamp") <= System.currentTimeMillis());
+                Assert.assertTrue((Long)event.getProperty("timestamp") > System.currentTimeMillis() - 30000);
 
                 RemoteServiceAdminEvent rsae = (RemoteServiceAdminEvent) event.getProperty("event");
                 Assert.assertNull(rsae.getException());
@@ -108,8 +107,7 @@ public class EventAdminHelperTest {
 
         BundleContext bc = EasyMock.createNiceMock(BundleContext.class);
         EasyMock.expect(bc.getBundle()).andReturn(bundle).anyTimes();
-        EasyMock.expect(bc.getAllServiceReferences(EventAdmin.class.getName(), null))
-            .andReturn(new ServiceReference[] {eaSref}).anyTimes();
+        EasyMock.expect(bc.getServiceReference(EventAdmin.class)).andReturn(eaSref).anyTimes();
         EasyMock.expect(bc.getService(eaSref)).andReturn(ea).anyTimes();
         EasyMock.replay(bc);
 
@@ -119,7 +117,7 @@ public class EventAdminHelperTest {
                 er,
                 null
         );
-        new EventAdminHelper(bc).remoteAdminEvent(event);
+        new EventAdminSender(bc).send(event);
         EasyMock.verify(epd, sref, er, ea, eaSref, bc);
     }
 
@@ -147,7 +145,7 @@ public class EventAdminHelperTest {
         ea.postEvent(EasyMock.anyObject());
         EasyMock.expectLastCall().andAnswer(new IAnswer<Object>() {
             @Override
-            public Object answer() throws Throwable {
+            public Object answer() {
                 Event event = (Event) EasyMock.getCurrentArguments()[0];
 
                 Assert.assertEquals("org/osgi/service/remoteserviceadmin/EXPORT_ERROR", event.getTopic());
@@ -155,10 +153,11 @@ public class EventAdminHelperTest {
                 Assert.assertEquals(42L, event.getProperty("bundle.id"));
                 Assert.assertEquals("test.bundle", event.getProperty("bundle.symbolicname"));
                 Assert.assertEquals(new Version("0"), event.getProperty("bundle.version"));
-                Assert.assertSame(exportException, event.getProperty("cause"));
-                Assert.assertEquals(epd, event.getProperty("export.registration"));
-                Assert.assertArrayEquals(new String[]{"org.foo.Bar"},
-                        (String[]) event.getProperty("objectClass"));
+                Assert.assertSame(exportException, event.getProperty("exception"));
+                Assert.assertSame(exportException.getMessage(), event.getProperty("exception.message"));
+                Assert.assertSame(exportException.getClass().getName(), event.getProperty("exception.class"));
+                Assert.assertEquals(epd.getConfigurationTypes(), event.getProperty("service.imported.configs"));
+                Assert.assertArrayEquals(new String[]{"org.foo.Bar"}, (String[]) event.getProperty("objectClass"));
 
                 RemoteServiceAdminEvent rsae = (RemoteServiceAdminEvent) event.getProperty("event");
                 Assert.assertSame(exportException, rsae.getException());
@@ -179,8 +178,7 @@ public class EventAdminHelperTest {
         BundleContext bc = EasyMock.createNiceMock(BundleContext.class);
 
         EasyMock.expect(bc.getBundle()).andReturn(bundle).anyTimes();
-        EasyMock.expect(bc.getAllServiceReferences(EventAdmin.class.getName(), null))
-            .andReturn(new ServiceReference[] {eaSref}).anyTimes();
+        EasyMock.expect(bc.getServiceReference(EventAdmin.class)).andReturn(eaSref).anyTimes();
         EasyMock.expect(bc.getService(eaSref)).andReturn(ea).anyTimes();
         EasyMock.replay(bc);
 
@@ -190,7 +188,7 @@ public class EventAdminHelperTest {
                 er,
                 exportException
         );
-        new EventAdminHelper(bc).remoteAdminEvent(event);
+        new EventAdminSender(bc).send(event);
         EasyMock.verify(epd, sref, er, ea, eaSref, bc);
     }
 }
