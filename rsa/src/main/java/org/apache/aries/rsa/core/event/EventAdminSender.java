@@ -37,22 +37,11 @@ import org.osgi.service.remoteserviceadmin.ImportReference;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
 
 public class EventAdminSender {
-    private HashMap<Integer, String> typeToTopic;
+
     private BundleContext context;
 
     public EventAdminSender(BundleContext context) {
         this.context = context;
-        typeToTopic = new HashMap<>();
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_ERROR, "EXPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_REGISTRATION, "EXPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, "EXPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_UPDATE, "EXPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.EXPORT_WARNING, "EXPORT_WARNING");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_ERROR, "IMPORT_ERROR");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_REGISTRATION, "IMPORT_REGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UNREGISTRATION, "IMPORT_UNREGISTRATION");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_UPDATE, "IMPORT_UPDATE");
-        typeToTopic.put(RemoteServiceAdminEvent.IMPORT_WARNING, "IMPORT_WARNING");
     }
 
     private void notifyEventAdmins(Event event) {
@@ -70,11 +59,27 @@ public class EventAdminSender {
     }
 
     public void send(RemoteServiceAdminEvent rsae) {
-        String type = typeToTopic.get(rsae.getType());
+        String type = getTypeName(rsae.getType());
         String topic = "org/osgi/service/remoteserviceadmin/" + type;
         Map<String, Object> props = createProps(rsae);
         Event event = new Event(topic, props);
         notifyEventAdmins(event);
+    }
+    
+    private static String getTypeName(int type) {
+        switch (type) {
+            case RemoteServiceAdminEvent.EXPORT_ERROR: return "EXPORT_ERROR";
+            case RemoteServiceAdminEvent.EXPORT_REGISTRATION: return "EXPORT_REGISTRATION";
+            case RemoteServiceAdminEvent.EXPORT_UNREGISTRATION: return "EXPORT_UNREGISTRATION";
+            case RemoteServiceAdminEvent.EXPORT_UPDATE: return "EXPORT_UPDATE";
+            case RemoteServiceAdminEvent.EXPORT_WARNING: return "EXPORT_WARNING";
+            case RemoteServiceAdminEvent.IMPORT_ERROR: return "IMPORT_ERROR";
+            case RemoteServiceAdminEvent.IMPORT_REGISTRATION: return "IMPORT_REGISTRATION";
+            case RemoteServiceAdminEvent.IMPORT_UNREGISTRATION: return "IMPORT_UNREGISTRATION";
+            case RemoteServiceAdminEvent.IMPORT_UPDATE: return "IMPORT_UPDATE";
+            case RemoteServiceAdminEvent.IMPORT_WARNING: return "IMPORT_WARNING";
+            default: return "UNKNOWN_REMOTE_EVENT";
+        }
     }
 
     private static <K, V> void putIfNotNull(Map<K, V> map, K key, V val) {
