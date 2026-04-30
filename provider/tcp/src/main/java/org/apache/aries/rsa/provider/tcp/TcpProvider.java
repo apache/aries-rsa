@@ -65,9 +65,9 @@ import javax.net.ssl.SSLContext;
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.async",
         RemoteConstants.REMOTE_CONFIGS_SUPPORTED + "=" + TcpProvider.TCP_CONFIG_TYPE //
         },
-        configurationPid = TcpProvider.DISCOVERY_TCP_PID)
+        configurationPid = TcpProvider.DISTRIBUTION_PROVIDER_TCP_PID)
 public class TcpProvider implements DistributionProvider {
-    public static final String DISCOVERY_TCP_PID = "org.apache.aries.rsa.provider.tcp";
+    public static final String DISTRIBUTION_PROVIDER_TCP_PID = "org.apache.aries.rsa.provider.tcp";
     public static final String TCP_CONFIG_TYPE = "aries.tcp";
     private static final String[] SUPPORTED_INTENTS = { "osgi.basic", "osgi.async"};
 
