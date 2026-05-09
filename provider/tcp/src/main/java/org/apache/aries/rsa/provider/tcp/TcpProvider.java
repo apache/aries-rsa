@@ -59,7 +59,7 @@ import javax.net.ssl.SSLContext;
  * method invocations to the service instance.)
  */
 @SuppressWarnings("rawtypes")
-@RSADistributionProvider(configs=TcpProvider.TCP_CONFIG_TYPE)
+@RSADistributionProvider(configs = TcpProvider.TCP_CONFIG_TYPE)
 @Component(property = { //
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.basic",
         RemoteConstants.REMOTE_INTENTS_SUPPORTED + "=osgi.async",
@@ -69,7 +69,7 @@ import javax.net.ssl.SSLContext;
 public class TcpProvider implements DistributionProvider {
     public static final String DISTRIBUTION_PROVIDER_TCP_PID = "org.apache.aries.rsa.provider.tcp";
     public static final String TCP_CONFIG_TYPE = "aries.tcp";
-    private static final String[] SUPPORTED_INTENTS = { "osgi.basic", "osgi.async"};
+    private static final String[] SUPPORTED_INTENTS = { "osgi.basic", "osgi.async" };
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpProvider.class);
 

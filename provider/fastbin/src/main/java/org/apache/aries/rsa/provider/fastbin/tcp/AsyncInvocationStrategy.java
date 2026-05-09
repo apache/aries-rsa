@@ -62,7 +62,7 @@ public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
         }
 
         public void set(final DataByteArrayInputStream source) {
-            if( queue!=null ) {
+            if (queue != null) {
                 queue.execute(new Runnable() {
                     public void run() {
                         decodeIt(source);
@@ -122,7 +122,6 @@ public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
 
         final AsyncServiceResponse helper = new AsyncServiceResponse(loader, method, responseStream, onComplete, serializationStrategy);
         try {
-
             Object[] new_args = new Object[method.getParameterTypes().length];
             serializationStrategy.decodeRequest(loader, payloadTypes(method), requestStream, new_args);
             new_args[new_args.length - 1] = new AsyncCallback<Object>() {
@@ -134,10 +133,8 @@ public class AsyncInvocationStrategy extends AbstractInvocationStrategy {
                 }
             };
             method.invoke(target, new_args);
-
         } catch (Throwable t) {
             helper.send(t, null);
         }
-
     }
 }

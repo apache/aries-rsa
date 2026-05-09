@@ -100,7 +100,7 @@ public class BlockingInvocationStrategy extends AbstractInvocationStrategy {
                 final Object[] args = new Object[types.length];
                 serializationStrategy.decodeRequest(loader, types, requestStream, args);
                 value = method.invoke(target, args);
-                if(isStream(method.getReturnType())) {
+                if (isStream(method.getReturnType())) {
                     value = replaceStream(value);
                 }
             } catch (Throwable t) {
@@ -113,7 +113,7 @@ public class BlockingInvocationStrategy extends AbstractInvocationStrategy {
 
             serializationStrategy.encodeResponse(loader, method.getReturnType(), value, error, responseStream);
 
-        } catch(Exception e) {
+        } catch (Exception e) {
 
             LOG.warn("Initial Encoding response for method {} failed. Retrying", method, e);
             // we failed to encode the response... reposition and write that error.
@@ -123,7 +123,6 @@ public class BlockingInvocationStrategy extends AbstractInvocationStrategy {
             } catch (Exception unexpected) {
                 LOG.error("Error while servicing {}", method, unexpected);
             }
-
         } finally {
             onComplete.run();
         }

@@ -80,10 +80,10 @@ public class FastBinProvider implements DistributionProvider {
         final Semaphore counter = new Semaphore(0);
         server.stop(() -> counter.release(1));
         try {
-            if(!counter.tryAcquire(1, 30, TimeUnit.SECONDS)) {
+            if (!counter.tryAcquire(1, 30, TimeUnit.SECONDS)) {
                 LOG.warn("Server/Client failed to shut down in time. Proceeding shutdown anyway...");
             }
-        } catch(InterruptedException e) {
+        } catch (InterruptedException e) {
             LOG.warn("Interrupted while waiting for Server/Client shutdown");
         }
     }

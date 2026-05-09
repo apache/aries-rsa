@@ -103,20 +103,20 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
 
         private MethodData getMethodData(Buffer data) throws IOException, NoSuchMethodException, ClassNotFoundException {
             MethodData rc = method_cache.get(data);
-            if( rc == null ) {
+            if (rc == null) {
                 String[] parts = data.utf8().toString().split(",");
                 String name = parts[0];
                 Class[] params = new Class[parts.length - 1];
-                for( int i = 0; i < params.length; i++) {
+                for (int i = 0; i < params.length; i++) {
                     params[i] = decodeClass(parts[i + 1]);
                 }
                 Method method = clazz.getMethod(name, params);
 
                 Serialization annotation = method.getAnnotation(Serialization.class);
                 SerializationStrategy serializationStrategy;
-                if( annotation!=null ) {
+                if (annotation != null) {
                     serializationStrategy = serializationStrategies.get(annotation.value());
-                    if( serializationStrategy==null ) {
+                    if (serializationStrategy == null) {
                         throw new RuntimeException("Could not find the serialization strategy named: "+annotation.value());
                     }
                 } else {
@@ -132,18 +132,17 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
         }
 
         private Class<?> decodeClass(String s) throws ClassNotFoundException {
-            if( s.startsWith("[")) {
+            if (s.startsWith("[")) {
                 Class<?> nested = decodeClass(s.substring(1));
                 return Array.newInstance(nested, 0).getClass();
             }
             String c = s.substring(0, 1);
-            if( c.equals("L") ) {
+            if (c.equals("L")) {
                 return loader.loadClass(s.substring(1));
             } else {
                 return PRIMITIVE_TO_CLASS.get(c);
             }
         }
-
     }
 
     public ServerInvokerImpl(String address, DispatchQueue queue, Map<String, SerializationStrategy> serializationStrategies) throws Exception {
@@ -206,7 +205,7 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
             }
 
             @Override
-            public void unget(){
+            public void unget() {
                 // nothing to do
             }
         }, getClass().getClassLoader());
@@ -241,13 +240,13 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
 
             final ServiceFactoryHolder holder = holders.get(service);
             Runnable task = null;
-            if(holder==null) {
+            if (holder == null) {
                 String message = "The requested service {"+service+"} is not available";
                 LOG.warn(message);
                 task = new SendTask(bais, correlation, transport, message);
             }
-            final Object svc = holder==null ? null : holder.factory.get();
-            if(holder!=null) {
+            final Object svc = holder == null ? null : holder.factory.get();
+            if (holder != null) {
                 try {
                     final MethodData methodData = holder.getMethodData(encoded_method);
                     task = new SendTask(svc, bais, holder, correlation, methodData, transport);
@@ -261,13 +260,12 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
             }
 
             Executor executor;
-            if( svc instanceof Dispatched ) {
+            if (svc instanceof Dispatched) {
                 executor = ((Dispatched)svc).queue();
             } else {
                 executor = blockingExecutor;
             }
             executor.execute(task);
-
         } catch (Exception e) {
             LOG.info("Error while reading request", e);
         }
@@ -351,10 +349,10 @@ public class ServerInvokerImpl implements ServerInvoker, Dispatched {
             // Let's decode the remaining args on the target's executor
             // to take cpu load off the
 
-            ClassLoader loader = holder==null ? getClass().getClassLoader() : holder.loader;
+            ClassLoader loader = holder == null ? getClass().getClassLoader() : holder.loader;
             methodData.invocationStrategy.service(methodData.serializationStrategy, loader, methodData.method, svc, bais, baos, new Runnable() {
                 public void run() {
-                    if(holder!=null)
+                    if (holder != null)
                         holder.factory.unget();
                     final Buffer command = baos.toBuffer();
 

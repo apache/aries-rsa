@@ -136,12 +136,12 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
     protected void onCommand(TransportPool pool, Object data) {
         try {
-            DataByteArrayInputStream bais = new DataByteArrayInputStream( (Buffer) data);
+            DataByteArrayInputStream bais = new DataByteArrayInputStream((Buffer) data);
             bais.readInt();
             long correlation = bais.readVarLong();
             pool.onDone(correlation);
             ResponseFuture response = requests.remove(correlation);
-            if( response!=null ) {
+            if (response != null) {
                 response.set(bais);
             }
         } catch (Exception e) {
@@ -151,7 +151,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
     protected void onFailure(Object id, Throwable throwable) {
         ResponseFuture response = requests.remove(id);
-        if( response!=null ) {
+        if (response != null) {
             response.fail(throwable);
         }
     }
@@ -175,13 +175,13 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
         synchronized (method_cache) {
             rc = method_cache.get(method);
         }
-        if( rc==null ) {
+        if (rc == null) {
             StringBuilder sb = new StringBuilder();
             sb.append(method.getName());
             sb.append(",");
             Class<?>[] types = method.getParameterTypes();
-            for(int i = 0; i < types.length; i++) {
-                if( i != 0 ) {
+            for (int i = 0; i < types.length; i++) {
+                if (i != 0) {
                     sb.append(",");
                 }
                 sb.append(encodeClassName(types[i]));
@@ -190,9 +190,9 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
             Serialization annotation = method.getAnnotation(Serialization.class);
             SerializationStrategy serializationStrategy;
-            if( annotation!=null ) {
+            if (annotation != null) {
                 serializationStrategy = serializationStrategies.get(annotation.value());
-                if( serializationStrategy==null ) {
+                if (serializationStrategy == null) {
                     throw new RuntimeException("Could not find the serialization strategy named: "+annotation.value());
                 }
             } else {
@@ -210,10 +210,10 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
     }
 
     String encodeClassName(Class<?> type) {
-        if( type.getComponentType()!=null ) {
+        if (type.getComponentType() != null) {
             return "["+ encodeClassName(type.getComponentType());
         }
-        if( type.isPrimitive() ) {
+        if (type.isPrimitive()) {
             return CLASS_TO_PRIMITIVE.get(type);
         } else {
             return "L"+type.getName();
@@ -293,7 +293,7 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             try {
-                if(method.getDeclaringClass()==Object.class) {
+                if (method.getDeclaringClass() == Object.class) {
 
                     if (args != null && args.length == 1 && "equals".equals(method.getName())) {
                         //special treatment for equals to make sure proxy.equals(proxy) -> true
@@ -320,13 +320,12 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
                 }
                 Class< ? >[] exceptionTypes = method.getExceptionTypes();
                 for (Class< ? > exceptionType : exceptionTypes) {
-                    if(exceptionType.isAssignableFrom(e.getClass()))
+                    if (exceptionType.isAssignableFrom(e.getClass()))
                         throw e;
                 }
                 throw new ServiceException(e.getMessage(), e);
             }
         }
-
     }
 
     protected class InvokerTransportPool extends TransportPool {

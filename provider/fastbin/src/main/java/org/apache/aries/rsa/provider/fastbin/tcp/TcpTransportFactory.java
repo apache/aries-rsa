@@ -79,7 +79,7 @@ public class TcpTransportFactory {
      * TcpTransportServer.
      */
     protected TcpTransportServer createTcpTransportServer(final URI location) throws IOException, URISyntaxException, Exception {
-        if( !location.getScheme().equals("tcp") ) {
+        if (!location.getScheme().equals("tcp")) {
             return null;
         }
         return new TcpTransportServer(location);
@@ -112,7 +112,7 @@ public class TcpTransportFactory {
 
     protected String getOption(Map options, String key, String def) {
         String rc = (String) options.remove(key);
-        if( rc == null ) {
+        if (rc == null) {
             rc = def;
         }
         return rc;

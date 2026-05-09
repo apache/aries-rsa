@@ -25,14 +25,14 @@ import org.apache.aries.rsa.provider.fastbin.api.AsyncCallback;
 import org.osgi.util.promise.Promise;
 
 public enum InvocationType {
-    ASYNC_FUTURE(new AsyncFutureInvocationStrategy()){
+    ASYNC_FUTURE(new AsyncFutureInvocationStrategy()) {
 
         @Override
         protected boolean applies(Method method) {
             return Future.class.isAssignableFrom(method.getReturnType());
         }
 
-    }, ASYNC_CALLBACK(new AsyncInvocationStrategy()){
+    }, ASYNC_CALLBACK(new AsyncInvocationStrategy()) {
 
         @Override
         protected boolean applies(Method method) {
@@ -40,14 +40,14 @@ public enum InvocationType {
             return types.length != 0 && types[types.length - 1] == AsyncCallback.class;
         }
 
-    }, PROMISE(new AsyncPromiseInvocationStrategy()){
+    }, PROMISE(new AsyncPromiseInvocationStrategy()) {
 
         @Override
         protected boolean applies(Method method) {
             return promiseAvailable && Promise.class.isAssignableFrom(method.getReturnType());
         }
 
-    }, BLOCKING(new BlockingInvocationStrategy()){
+    }, BLOCKING(new BlockingInvocationStrategy()) {
 
         @Override
         protected boolean applies(Method method) {
@@ -69,7 +69,7 @@ public enum InvocationType {
     public static InvocationStrategy forMethod(Method method) {
         InvocationType[] values = values();
         for (InvocationType invocationType : values) {
-            if(invocationType.applies(method)) {
+            if (invocationType.applies(method)) {
                 return invocationType.strategy;
             }
         }

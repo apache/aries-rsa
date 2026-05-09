@@ -140,7 +140,7 @@ public class LengthPrefixedCodecTest {
         assertEquals(bytesThatWillBeWritten, codec.getWriteCounter());
     }
 
-    @Test(expected=ProtocolException.class)
+    @Test(expected = ProtocolException.class)
     public void testReadEvilPackage() throws Exception {
 
         expect(readableByteChannel.read(EasyMock.anyObject())).andAnswer(new IAnswer<Integer>() {
@@ -162,7 +162,7 @@ public class LengthPrefixedCodecTest {
             @Override
             public Integer answer() throws Throwable {
                 final ByteBuffer buffer = (ByteBuffer) getCurrentArguments()[0];
-                if(buffer.remaining() < length)
+                if (buffer.remaining() < length)
                     throw new BufferUnderflowException();
                 buffer.position(buffer.position() + length);
                 return length;

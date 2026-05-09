@@ -47,10 +47,10 @@ public abstract class AbstractInvocationStrategy implements InvocationStrategy {
 
     protected void replaceStreamParameters(Method method, Object[] args) {
         Class< ? >[] types = method.getParameterTypes();
-        if(args==null)
+        if (args == null)
             return;
         for (int i = 0; i < args.length; i++) {
-            if(isStream(types[i])) {
+            if (isStream(types[i])) {
                 args[i] = replaceStream(args[i]);
             }
         }
@@ -71,7 +71,7 @@ public abstract class AbstractInvocationStrategy implements InvocationStrategy {
     }
 
     protected boolean isStream(Class<?> clazz) {
-        return clazz==InputStream.class || clazz==OutputStream.class;
+        return clazz == InputStream.class || clazz == OutputStream.class;
     }
 
     /**
@@ -100,24 +100,20 @@ public abstract class AbstractInvocationStrategy implements InvocationStrategy {
 
     @Override
     public final void service(SerializationStrategy serializationStrategy, ClassLoader loader, Method method, Object target, DataByteArrayInputStream requestStream, DataByteArrayOutputStream responseStream, Runnable onComplete) {
-        if(method==null && target instanceof ServiceException) {
+        if (method == null && target instanceof ServiceException) {
             handleInvalidRequest(serializationStrategy, loader, method, target, responseStream, onComplete);
             return;
         }
         doService(serializationStrategy, loader, method, target, requestStream, responseStream, onComplete);
-
     }
 
     protected void handleInvalidRequest(SerializationStrategy serializationStrategy, ClassLoader loader, Method method, Object target, DataByteArrayOutputStream responseStream, Runnable onComplete) {
         //client made an invalid request
         int pos = responseStream.position();
         try {
-
             Throwable error = (Throwable)target;
             serializationStrategy.encodeResponse(loader, null, null, error, responseStream);
-
-        } catch(Exception e) {
-
+        } catch (Exception e) {
             LOG.warn("Initial Encoding response for method {} failed. Retrying", method, e);
             // we failed to encode the response... reposition and write that error
             try {
@@ -126,7 +122,6 @@ public abstract class AbstractInvocationStrategy implements InvocationStrategy {
             } catch (Exception unexpected) {
                 LOG.error("Error while servicing {}", method, unexpected);
             }
-
         } finally {
             onComplete.run();
         }
@@ -169,7 +164,7 @@ public abstract class AbstractInvocationStrategy implements InvocationStrategy {
         }
 
         public void send(Throwable error, Object value) {
-            if( responded.compareAndSet(false, true) ) {
+            if (responded.compareAndSet(false, true)) {
                 Class resultType = getResultType(method);
                 try {
                     serializationStrategy.encodeResponse(loader, resultType, value, error, responseStream);

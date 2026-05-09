@@ -42,7 +42,7 @@ public class InputStreamProxyTest {
     public void testUnsignedBytes() throws IOException {
         int length = 1024;
         ByteArrayOutputStream out = new ByteArrayOutputStream(length);
-        for(int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++) {
             out.write((byte)i);
         }
         byte[] data = out.toByteArray();
@@ -134,7 +134,7 @@ public class InputStreamProxyTest {
         try{
             streamProvider.read(id);
             fail("must have been closed already");
-        } catch(IOException e) {}
+        } catch (IOException e) {}
     }
 
     private OwnInputStream fillStream(char c, int repetitions) {

@@ -42,18 +42,18 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
     }
 
     private void encodeProtobuf(Class<?> type, Object arg, DataByteArrayOutputStream target) throws IOException {
-        if( !PBMessage.class.isAssignableFrom(type) ) {
+        if (!PBMessage.class.isAssignableFrom(type)) {
             throw new IllegalArgumentException("Invalid "+name()+" serialization method: method argument not a "+PBMessage.class.getName());
         }
         PBMessage msg = (PBMessage) arg;
-        if( msg==null ) {
+        if (msg == null) {
             return;
         }
         msg.freeze().writeUnframed(target);
     }
 
     private Object decodeProtobuf(Class<?> type, DataByteArrayInputStream source) throws IllegalAccessException, NoSuchFieldException, IOException {
-        if( !PBMessage.class.isAssignableFrom(type) ) {
+        if (!PBMessage.class.isAssignableFrom(type)) {
             throw new IllegalArgumentException("Invalid "+name()+" serialization method: method argument not a "+PBMessage.class.getName());
         }
 
@@ -62,7 +62,7 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
         PBMessage msg = factory.parseUnframed(source);
         String name = type.getName();
         Object rc;
-        if( name.endsWith("$Getter") || name.endsWith("$Buffer") ) {
+        if (name.endsWith("$Getter") || name.endsWith("$Buffer")) {
             // Interface is ok we us giving them a read only impl.
             rc = msg;
         } else {
@@ -73,9 +73,9 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
     }
 
     public void encodeRequest(ClassLoader loader, Class<?>[] types, Object[] args, DataByteArrayOutputStream target) throws IOException {
-        if( types.length == 0 ) {
+        if (types.length == 0) {
             return;
-        } else if( types.length == 1 ) {
+        } else if (types.length == 1) {
             encodeProtobuf(types[0], args[0], target);
         } else {
             throw new IllegalArgumentException("Invalid "+name()+" serialization method: methods must have zero or one argument.");
@@ -83,9 +83,9 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
     }
 
     public void decodeRequest(ClassLoader loader, Class<?>[] types, DataByteArrayInputStream source, Object[] target) throws IOException, ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
-        if( types.length == 0 ) {
+        if (types.length == 0) {
             return;
-        } else if( types.length == 1 ) {
+        } else if (types.length == 1) {
             target[0] = decodeProtobuf(types[0], source);
         } else {
             throw new IllegalArgumentException("Invalid "+name()+" serialization method: methods must have zero or one argument.");
@@ -93,7 +93,7 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
     }
 
     public void encodeResponse(ClassLoader loader, Class<?> type, Object value, Throwable error, DataByteArrayOutputStream target) throws IOException, ClassNotFoundException {
-        if( error!=null ) {
+        if (error != null) {
             target.writeBoolean(true);
             target.writeUTF(error.getClass().getName());
             target.writeUTF(error.getMessage());
@@ -105,7 +105,7 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
 
     @SuppressWarnings("unchecked")
     public void decodeResponse(ClassLoader loader, Class<?> type, DataByteArrayInputStream source, AsyncCallback result) throws IOException, ClassNotFoundException, NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException {
-        if( source.readBoolean() ) {
+        if (source.readBoolean()) {
             String className = source.readUTF();
             String message = source.readUTF();
 
@@ -119,11 +119,9 @@ public class ProtobufSerializationStrategy implements SerializationStrategy {
                 error = new RuntimeException(className+": "+message);
             }
             result.onFailure(error);
-
         } else {
             result.onSuccess(decodeProtobuf(type, source));
         }
-
     }
 
 }

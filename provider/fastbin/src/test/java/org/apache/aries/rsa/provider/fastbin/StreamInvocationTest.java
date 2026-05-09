@@ -88,29 +88,26 @@ public class StreamInvocationTest {
     @Test
     public void testToString() throws IOException {
         assertEquals("Test", testService.toString(new ByteArrayInputStream("Test".getBytes())));
-
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void testToStringLarge() throws IOException {
         InputStream in = fillStream('a', 1000000);
         long time = System.currentTimeMillis();
         String result = testService.toString(in); //roughly 1 MB of data
         System.out.println("Transferred 1MB of data in "+(System.currentTimeMillis()-time)+"ms");
         assertEquals(1000000, result.length());
-        for(int i = 0; i < result.length(); i++) {
+        for (int i = 0; i < result.length(); i++) {
             assertEquals('a', result.charAt(i));
         }
-
     }
 
     @Test
     public void testToStream() throws IOException {
         assertEquals("Test", new BufferedReader(new InputStreamReader(testService.toStream("Test"))).readLine());
-
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 5000)
     public void testToStreamLarge() throws IOException {
         String string = fillBuffer('a', 1000000);
         long time = System.currentTimeMillis();
@@ -119,10 +116,9 @@ public class StreamInvocationTest {
         String result = reader.readLine();
         System.out.println("Transferred 1MB of data in "+(System.currentTimeMillis()-time)+"ms");
         assertEquals(1000000, result.length());
-        for(int i = 0;i < result.length(); i++) {
+        for (int i = 0;i < result.length(); i++) {
             assertEquals('a', result.charAt(i));
         }
-
     }
 
     @Test
@@ -131,7 +127,6 @@ public class StreamInvocationTest {
         testService.intoStream(result, "Test");
         Thread.sleep(100);
         assertEquals("Test", result.toString());
-
     }
 
     @Test
@@ -141,7 +136,6 @@ public class StreamInvocationTest {
         byte[] digest = digester.digest(testString.getBytes());
         Future<byte[]> future = testService.digest(new ByteArrayInputStream(testString.getBytes()));
         assertArrayEquals(digest, future.get());
-
     }
 
     public interface TestService {
@@ -175,7 +169,7 @@ public class StreamInvocationTest {
                 try{
                     out.write(string.getBytes());
                     out.close();
-                } catch(Exception e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }).start();
@@ -188,7 +182,7 @@ public class StreamInvocationTest {
                     MessageDigest digest = MessageDigest.getInstance("MD5");
                     ByteArrayOutputStream out = new ByteArrayOutputStream();
                     int i;
-                    while((i = in.read()) != -1) {
+                    while ((i = in.read()) != -1) {
                         out.write(i);
                     }
                     return digest.digest(out.toByteArray());
@@ -203,7 +197,7 @@ public class StreamInvocationTest {
 
     protected InputStream fillStream(char c, int repetitions) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        for (int i = 0; i < repetitions; i++){
+        for (int i = 0; i < repetitions; i++) {
             out.write(c);
         }
         return new ByteArrayInputStream(out.toByteArray());

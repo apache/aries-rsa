@@ -30,7 +30,6 @@ import org.osgi.service.cm.ManagedServiceFactory;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.osgi.util.tracker.ServiceTracker;
 
-
 @Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 @org.osgi.annotation.bundle.Capability( //
         namespace = "osgi.remoteserviceadmin.discovery", //

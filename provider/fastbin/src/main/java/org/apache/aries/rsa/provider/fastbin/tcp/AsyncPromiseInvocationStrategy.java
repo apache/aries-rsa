@@ -46,13 +46,12 @@ public class AsyncPromiseInvocationStrategy extends AbstractInvocationStrategy {
             final Promise<Object> promise = (Promise<Object>)method.invoke(target, args);
             promise.onResolve(() -> {
                 try{
-                    helper.send(promise.getFailure(), promise.getFailure()==null ? promise.getValue() : null);
+                    helper.send(promise.getFailure(), promise.getFailure() == null ? promise.getValue() : null);
                 }
-                catch (Exception e){
+                catch (Exception e) {
                     helper.send(e, null);
                 }
             });
-
         } catch (Throwable t) {
             helper.send(t, null);
         }
@@ -91,7 +90,7 @@ public class AsyncPromiseInvocationStrategy extends AbstractInvocationStrategy {
         }
 
         public void set(final DataByteArrayInputStream source) {
-            if( queue != null ) {
+            if (queue != null) {
                 queue.execute(new Runnable() {
                     public void run() {
                         decodeIt(source);

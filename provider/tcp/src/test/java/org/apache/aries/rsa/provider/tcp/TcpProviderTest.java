@@ -143,7 +143,7 @@ public class TcpProviderTest {
         assertEquals("test", myServiceProxy.echo("test"));
     }
 
-    @Test(expected=ExpectedTestException.class)
+    @Test(expected = ExpectedTestException.class)
     public void testCallException() {
         myServiceProxy.callException();
     }

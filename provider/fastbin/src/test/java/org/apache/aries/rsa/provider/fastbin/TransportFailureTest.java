@@ -84,7 +84,6 @@ public class TransportFailureTest {
                 assertTrue(t1 - t0 > SLEEP_TIME / 2);
                 assertTrue(t1 - t0 < MAX_DELAY / 2);
             }
-
         }
         finally {
             server.stop();

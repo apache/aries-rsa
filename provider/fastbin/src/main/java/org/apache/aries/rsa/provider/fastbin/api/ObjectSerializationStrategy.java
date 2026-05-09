@@ -61,7 +61,7 @@ public class ObjectSerializationStrategy implements SerializationStrategy {
         final ClassLoaderObjectInputStream ois = new ClassLoaderObjectInputStream(source);
         ois.setClassLoader(loader);
         final Object[] args = (Object[]) ois.readObject();
-        if( args!=null ) {
+        if (args != null) {
             System.arraycopy(args, 0, target, 0, args.length);
         }
     }

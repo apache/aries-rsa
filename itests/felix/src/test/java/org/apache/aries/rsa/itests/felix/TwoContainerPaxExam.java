@@ -47,12 +47,10 @@ public class TwoContainerPaxExam extends PaxExam {
     public void run(RunNotifier notifier) {
         TestContainer remoteContainer = null;
         try {
-
             ExamSystem testSystem = PaxExamRuntime.createTestSystem(remoteConfig());
             remoteContainer = PaxExamRuntime.createContainer(testSystem);
             remoteContainer.start();
             super.run(notifier);
-
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {

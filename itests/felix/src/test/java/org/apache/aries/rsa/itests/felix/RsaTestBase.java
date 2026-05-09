@@ -81,7 +81,7 @@ public class RsaTestBase {
         Bundle serviceBundle = null;
         Bundle[] bundles = bundleContext.getBundles();
         for (Bundle bundle : bundles) {
-            if(symName.equals(bundle.getSymbolicName())) {
+            if (symName.equals(bundle.getSymbolicName())) {
                 serviceBundle = bundle;
                 break;
             }

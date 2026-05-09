@@ -75,7 +75,7 @@ public class EventAdminSender {
         Event event = new Event(topic, props);
         notifyEventAdmins(type, event);
     }
-    
+
     private static String getTypeName(int type) {
         switch (type) {
             case RemoteServiceAdminEvent.EXPORT_ERROR: return "EXPORT_ERROR";
