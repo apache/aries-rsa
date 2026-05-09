@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
 @RequireJaxrsWhiteboard
 public class PublishingEndpointListener {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MdnsDiscovery.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PublishingEndpointListener.class);
     
     private final String uuid;
 
