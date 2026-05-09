@@ -36,6 +36,7 @@ import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.SseEventSource;
 
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
+import org.osgi.framework.Constants;
 import org.osgi.service.jaxrs.client.SseEventSourceFactory;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
@@ -47,7 +48,6 @@ import org.slf4j.LoggerFactory;
  * Establishes SSE event sources to be called back on all changes in the remote targets.
  * Events are then forwarded to all interested {@link EndpointEventListener}s.
  */
-@SuppressWarnings("deprecation")
 public class InterestManager {
     private static final Logger LOG = LoggerFactory.getLogger(InterestManager.class);
 
@@ -150,46 +150,38 @@ public class InterestManager {
         }
     }
 
-    public void bindEndpointEventListener(EndpointEventListener epListener, Map<String, Object> props) {
-        addInterest(epListener, props);
-    }
-
-    public void updatedEndpointEventListener(Map<String, Object> props) {
-        updatedInterest(props);
-    }
-
-    public void unbindEndpointEventListener(Map<String, Object> props) {
-        interests.remove(getServiceId(props));
-    }
-
     private Long getServiceId(Map<String, Object> props) {
-        return (Long) props.get("service.id");
+        return (Long) props.get(Constants.SERVICE_ID);
     }
 
-    private void addInterest(EndpointEventListener epListener, Map<String, Object> props) {
-        
+    public void addInterest(EndpointEventListener epListener, Map<String, Object> props) {
+
         Long id = getServiceId(props);
-        
+
         if(LOG.isInfoEnabled()) {
             LOG.info("Service {} has registered an interest in endpoint events", id);
         }
-        
-        Interest interest = new Interest(getServiceId(props), epListener, props);
-       
-        interests.put(getServiceId(props), interest);
+
+        Interest interest = new Interest(id, epListener, props);
+
+        interests.put(id, interest);
         endpointsBySource.values().stream()
             .flatMap(Set::stream)
             .forEach(interest::endpointChanged);
     }
 
-    private void updatedInterest(Map<String, Object> props) {
-        
+    public void updateInterest(Map<String, Object> props) {
+
         Long id = getServiceId(props);
-        
+
         if(LOG.isInfoEnabled()) {
             LOG.info("Service {} has changed its interest in endpoint events", id);
         }
-        
+
         interests.get(id).update(props);
+    }
+
+    public void removeInterest(Map<String, Object> props) {
+        interests.remove(getServiceId(props));
     }
 }

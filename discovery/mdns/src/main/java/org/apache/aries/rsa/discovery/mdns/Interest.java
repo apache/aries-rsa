@@ -45,13 +45,13 @@ public class Interest {
     private final Long id;
     private final ConcurrentMap<String, EndpointDescription> added = new ConcurrentHashMap<>();
     private final AtomicReference<List<String>> scopes = new AtomicReference<>();
-    private final EndpointEventListener epListener;
+    private final EndpointEventListener listener;
 
 
-    public Interest(Long id, EndpointEventListener epListener, Map<String, Object> props) {
+    public Interest(Long id, EndpointEventListener listener, Map<String, Object> props) {
         this.id = id;
         this.scopes.set(StringPlus.normalize(props.get(ENDPOINT_LISTENER_SCOPE)));
-        this.epListener = epListener;
+        this.listener = listener;
     }
 
     public void update(Map<String, Object> props) {
@@ -84,10 +84,6 @@ public class Interest {
             
             return remove;
         });
-    }
-    
-    public Object getEpListener() {
-        return epListener;
     }
 
     public void endpointChanged(EndpointDescription ed) {
@@ -133,8 +129,8 @@ public class Interest {
     private void notifyListener(EndpointEvent event, String filter) {
         EndpointDescription endpoint = event.getEndpoint();
         LOG.info("Calling endpointChanged on class {} for filter {}, type {}, endpoint {} ",
-                epListener, filter, event.getType(), endpoint);
-        epListener.endpointChanged(event, filter);
+                listener, filter, event.getType(), endpoint);
+        listener.endpointChanged(event, filter);
     }
     
     private Optional<String> getFirstMatch(EndpointDescription endpoint, List<String> scopes) {
@@ -143,7 +139,7 @@ public class Interest {
 
     @Override
     public String toString() {
-        return "Interest [scopes=" + scopes + ", epListener=" + epListener.getClass() + "]";
+        return "Interest [scopes=" + scopes + ", listener=" + listener.getClass() + "]";
     }
 
 }
