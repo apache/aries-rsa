@@ -87,15 +87,15 @@ public class MdnsDiscovery {
     
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindEndpointEventListener(EndpointEventListener epListener, Map<String, Object> props) {
-        interestManager.bindEndpointEventListener(epListener, props);
+        interestManager.addInterest(epListener, props);
     }
 
     public void updatedEndpointEventListener(Map<String, Object> props) {
-        interestManager.updatedEndpointEventListener(props);
+        interestManager.updateInterest(props);
     }
 
     public void unbindEndpointEventListener(Map<String, Object> props) {
-        interestManager.unbindEndpointEventListener(props);
+        interestManager.removeInterest(props);
     }
 
     @Reference(policy = ReferencePolicy.DYNAMIC)
@@ -165,8 +165,8 @@ public class MdnsDiscovery {
         }
     }
     
-    public static @interface Config {
-        public String bind_address();
+    public @interface Config {
+        String bind_address();
     }
     
     @Activate

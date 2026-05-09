@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
  * Listens for local {@link EndpointEvent}s using {@link EndpointEventListener}
  * and publishes changes to listeners using Server Sent Events (SSE)
  */
-@SuppressWarnings("deprecation")
 @RequireJaxrsWhiteboard
 public class PublishingEndpointListener {
 
@@ -83,7 +82,7 @@ public class PublishingEndpointListener {
         Dictionary<String, Object> props = serviceProperties(uuid);
         listenerReg = bctx.registerService(ifAr, new ListenerFactory(), props);
         resourceReg = bctx.registerService(PublishingEndpointListener.class, this, 
-                new Hashtable<String, Object>() {{put("osgi.jaxrs.resource", Boolean.TRUE);}});
+                new Hashtable<>() {{put("osgi.jaxrs.resource", Boolean.TRUE);}});
     }
 
     @Deactivate
@@ -103,10 +102,10 @@ public class PublishingEndpointListener {
         switch(type) {
             case EndpointEvent.ADDED:
             case EndpointEvent.MODIFIED:
-                localEndpoints.compute(id, (k,v) -> {
-                    return v == null ? new SponsoredEndpoint(ed, singleton(bundleId)) :
-                        new SponsoredEndpoint(ed, concat(v.sponsors.stream(), Stream.of(bundleId)).collect(toSet()));
-                });
+                localEndpoints.compute(id, (k,v) -> new SponsoredEndpoint(ed,
+                    v == null
+                    ? singleton(bundleId)
+                    : concat(v.sponsors.stream(), Stream.of(bundleId)).collect(toSet())));
                 String data = toEndpointData(ed);
                 listeners.forEach(s -> s.update(data));
                 break;
@@ -237,7 +236,6 @@ public class PublishingEndpointListener {
         private final Set<Long> sponsors;
         
         public SponsoredEndpoint(EndpointDescription ed, Set<Long> sponsors) {
-            super();
             this.ed = ed;
             this.sponsors = sponsors;
         }
