@@ -58,7 +58,6 @@ public class MyServiceImpl implements MyService {
 
     @Override
     public void callWithList(List<String> msg) {
-
     }
 
     @Override
@@ -71,7 +70,6 @@ public class MyServiceImpl implements MyService {
                 sleep(delay);
                 return "Finished";
             }
-
         });
     }
 
@@ -85,7 +83,6 @@ public class MyServiceImpl implements MyService {
                 sleep(delay);
                 return "Finished";
             }
-
         });
     }
 

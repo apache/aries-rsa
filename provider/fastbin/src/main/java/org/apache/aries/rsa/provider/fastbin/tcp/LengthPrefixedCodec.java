@@ -86,7 +86,7 @@ public class LengthPrefixedCodec implements ProtocolCodec {
 
     public BufferState flush() throws IOException {
         final long writeCounterBeforeFlush = write_counter;
-        while(!next_write_buffers.isEmpty()) {
+        while (!next_write_buffers.isEmpty()) {
             final ByteBuffer nextBuffer = next_write_buffers.peek();
             if (nextBuffer.remaining() < 1) {
                 next_write_buffers.remove();
@@ -130,8 +130,8 @@ public class LengthPrefixedCodec implements ProtocolCodec {
     }
 
     public Object read() throws IOException {
-        while(true) {
-            if( read_buffer.remaining()!=0 ) {
+        while (true) {
+            if (read_buffer.remaining() != 0) {
                 // keep reading from the channel until we fill the read buffer
                 int count = read_channel.read(read_buffer);
                 if (count == -1) {
@@ -144,16 +144,16 @@ public class LengthPrefixedCodec implements ProtocolCodec {
                 //read buffer is full... interpret it
                 read_buffer.flip();
 
-                if( read_buffer.capacity() == 4 ) {
+                if (read_buffer.capacity() == 4) {
                     // Finding out the
                     int size = read_buffer.getInt(0);
-                    if( size < 4 ) {
+                    if (size < 4) {
                         throw new ProtocolException("Expecting a size greater than 3");
                     }
-                    else if( size > MAX_PACKET_SIZE ) {
+                    else if (size > MAX_PACKET_SIZE) {
                         throw new ProtocolException("Packet length was declared as " + size + " but at most " + MAX_PACKET_SIZE + "is allowed. You can configure this limit with the system property aries.fastbin.max.packet.bytes");
                     }
-                    if( size == 4 ) {
+                    if (size == 4) {
                         // weird... empty frame... guess it could happen.
                         Buffer rc = new Buffer(read_buffer);
                         read_buffer = ByteBuffer.allocate(4);

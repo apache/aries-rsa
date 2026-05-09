@@ -203,7 +203,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
             }
         }
     }
-    
+
     private void unimportRegistration(ImportRegistration reg) {
         importedServices.remove(reg);
         reg.close();

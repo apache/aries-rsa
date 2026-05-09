@@ -104,7 +104,6 @@ public class ExportRegistrationImpl implements ExportRegistration, ExportReferen
     private AtomicBoolean closing = new AtomicBoolean();
     private volatile boolean closed;
 
-
     /**
      * Constructs an export registration that is linked
      * (shares state) with the given export registration.

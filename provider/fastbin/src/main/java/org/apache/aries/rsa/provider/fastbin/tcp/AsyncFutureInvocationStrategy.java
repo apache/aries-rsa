@@ -55,7 +55,7 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
             serializationStrategy.decodeRequest(loader, types, requestStream, args);
             Future<Object> future = (Future<Object>)method.invoke(target, args);
             CompletableFuture<Object> completable;
-            if(future instanceof CompletableFuture) {
+            if (future instanceof CompletableFuture) {
                 completable = (CompletableFuture<Object>)future;
             }
             else {
@@ -66,7 +66,6 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
                     helper.send(exception, returnValue);
                 }
             });
-
         } catch (Throwable t) {
             helper.send(t, null);
         }
@@ -105,7 +104,7 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
         }
 
         public void set(final DataByteArrayInputStream source) {
-            if( queue != null ) {
+            if (queue != null) {
                 queue.execute(new Runnable() {
                     public void run() {
                         decodeIt(source);
@@ -167,7 +166,7 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
 
         @Override
         public void run() {
-            while(true) {
+            while (true) {
                 // all currently available entries will be processed
                 int takenPermits = Math.max(1, counter.availablePermits());
                 try {
@@ -179,12 +178,12 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
                 Set<Entry<Future<Object>, CompletableFuture<Object >>> entrySet = futures.entrySet();
                 int processed = 0;
                 for (Entry<Future<Object>, CompletableFuture<Object>> entry : entrySet) {
-                    if(processed == takenPermits) {
+                    if (processed == takenPermits) {
                         //we only release as many as we took permits. The remainder will be handled in the next iteration
                         break;
                     }
                     Future< ? > future = entry.getKey();
-                    if(future.isDone()) {
+                    if (future.isDone()) {
                         try {
                             Object object = future.get();
                             entry.getValue().complete(object);
@@ -213,7 +212,7 @@ public class AsyncFutureInvocationStrategy extends AbstractInvocationStrategy {
         }
 
         public CompletableFuture<Object> complete(Future<Object> future) {
-            if(started.compareAndSet(false, true)) {
+            if (started.compareAndSet(false, true)) {
                 start();
             }
             CompletableFuture<Object> completable = new CompletableFuture<>();

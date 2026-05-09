@@ -74,7 +74,7 @@ public class ClassLoaderObjectInputStream extends ObjectInputStream {
                 try{
                     //try to load it with our own classloader (could be e.g. a service exception)
                     return Class.forName(className, false, getClass().getClassLoader());
-                } catch(ClassNotFoundException e2) {
+                } catch (ClassNotFoundException e2) {
                     //ignore
                 }
                 throw e;

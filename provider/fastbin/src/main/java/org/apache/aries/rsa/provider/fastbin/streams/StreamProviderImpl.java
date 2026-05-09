@@ -33,7 +33,7 @@ public class StreamProviderImpl implements StreamProvider {
     protected static final int CHUNK_SIZE = 4096 * 16; //64k
     private static final byte[] EMPTY = new byte[0];
 
-    ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>(){
+    ThreadLocal<byte[]> buffer = new ThreadLocal<byte[]>() {
         @Override
         protected byte[] initialValue() {
             return new byte[CHUNK_SIZE];
@@ -59,7 +59,7 @@ public class StreamProviderImpl implements StreamProvider {
     public void close(int streamID) throws IOException {
         Closeable stream = streams.remove(streamID);
         chunks.remove(streamID);
-        if(stream != null) {
+        if (stream != null) {
             stream.close();
         }
     }
@@ -70,11 +70,11 @@ public class StreamProviderImpl implements StreamProvider {
         AtomicInteger chunkNumber = chunks.get(streamID);
         byte[] result = buffer.get();
         int read = inputStream.read(result);
-        if(read<0) {
+        if (read < 0) {
             close(streamID); //we are finished, best clean it up right away
             return new Chunk(EMPTY, chunkNumber.incrementAndGet(), true);
         }
-        if(read!=result.length) {
+        if (read != result.length) {
             byte[] tmp = new byte[read];
             System.arraycopy(result, 0, tmp, 0, read);
             result = tmp;
@@ -86,7 +86,7 @@ public class StreamProviderImpl implements StreamProvider {
     public void write(int streamID, Chunk chunk) throws IOException {
         OutputStream out = getStream(streamID);
         int nextChunkNumber = chunks.get(streamID).incrementAndGet();
-        if(chunk.getChunkNumber() != nextChunkNumber) {
+        if (chunk.getChunkNumber() != nextChunkNumber) {
             throw new IOException("Stream corrupted. Received Chunk "+chunk.getChunkNumber()+" but expected "+nextChunkNumber);
         }
         out.write(chunk.getData());
@@ -95,7 +95,7 @@ public class StreamProviderImpl implements StreamProvider {
     @SuppressWarnings({"unchecked"})
     private <T extends Closeable> T getStream(int id) throws IOException {
         Closeable closeable = streams.get(id);
-        if(closeable == null)
+        if (closeable == null)
             throw new IOException("No Stream with id " + id + "available");
         try {
             return (T)closeable;

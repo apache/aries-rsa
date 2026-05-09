@@ -185,7 +185,6 @@ public class URISupport {
             p = ssp.lastIndexOf(")");
             componentString = ssp.substring(initialParen + 1, p);
             params = ssp.substring(p + 1).trim();
-
         } else {
             componentString = ssp;
             params = "";

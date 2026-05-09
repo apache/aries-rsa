@@ -80,41 +80,39 @@ public class OutputStreamProxy extends OutputStream implements Serializable {
     public void write(int b) throws IOException {
         try{
             writeInternal(b);
-        } catch(IOException e) {
+        } catch (IOException e) {
             closeSilent();
             throw e;
         }
-
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         try{
             writeInternal(b, off, len);
-        } catch(IOException e) {
+        } catch (IOException e) {
             closeSilent();
             throw e;
         }
     }
 
     public void writeInternal(int b) throws IOException {
-        if(position == buffer.length)
+        if (position == buffer.length)
             flush();
         buffer[position++] = (byte)b;
-
     }
 
     public void writeInternal(byte[] b, int off, int len) throws IOException {
-        if(len <= 0)
+        if (len <= 0)
             return;
         int processed = 0;
-        while(processed < len) {
+        while (processed < len) {
             int available = buffer.length - position;
             int chunkLength = Math.min(len - processed, available);
             System.arraycopy(b, off, buffer, position, chunkLength);
             position += chunkLength;
             processed += chunkLength;
-            if(processed < len) {
+            if (processed < len) {
                 //there is more to go, but now the buffer is full -> flush it
                 flush();
             }
@@ -125,17 +123,17 @@ public class OutputStreamProxy extends OutputStream implements Serializable {
     public void flush() throws IOException {
         try{
             flushInternal();
-        } catch(IOException e) {
+        } catch (IOException e) {
             closeSilent();
             throw e;
         }
     }
 
     public void flushInternal() throws IOException {
-        if(position==0)
+        if (position == 0)
             return;
         byte[] toSend = buffer;
-        if(position < buffer.length) {
+        if (position < buffer.length) {
             toSend = new byte[position];
             System.arraycopy(buffer, 0, toSend, 0, position);
         }

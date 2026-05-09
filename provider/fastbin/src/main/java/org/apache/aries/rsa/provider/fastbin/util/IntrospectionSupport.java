@@ -79,10 +79,8 @@ public final class IntrospectionSupport {
                     }
                     props.put(optionPrefix + name, strValue);
                     rc = true;
-
                 } catch (Throwable ignore) {
                 }
-
             }
         }
 
@@ -185,8 +183,8 @@ public final class IntrospectionSupport {
     }
 
     private static Object convert(Object value, Class<?> type) {
-        if( type.isArray() ) {
-            if( value.getClass().isArray() ) {
+        if (type.isArray()) {
+            if (value.getClass().isArray()) {
                 int length = Array.getLength(value);
                 Class<?> componentType = type.getComponentType();
                 Object rc = Array.newInstance(componentType, length);
@@ -252,13 +250,13 @@ public final class IntrospectionSupport {
             LinkedHashMap<String, Object> map = new LinkedHashMap<>();
             addFields(target, target.getClass(), stopClass, map);
             if (overrideFields != null) {
-                for(String key : overrideFields.keySet()) {
+                for (String key : overrideFields.keySet()) {
                     Object value = overrideFields.get(key);
                     map.put(key, value);
                 }
             }
 
-            if( fields!=null ) {
+            if (fields != null) {
                 map.keySet().retainAll(Arrays.asList(fields));
             }
 
@@ -267,9 +265,9 @@ public final class IntrospectionSupport {
             for (Entry<String, Object> entry : map.entrySet()) {
                 String key = entry.getKey();
                 String value = null;
-                if( entry.getValue() !=null ) {
+                if (entry.getValue() != null) {
                     value = entry.getValue().toString();
-                    if( value!=null && ( value.indexOf('\n')>=0 || (key.length()+value.length())>70 ) ) {
+                    if (value != null && (value.indexOf('\n') >= 0 || (key.length() + value.length()) > 70)) {
                         useMultiLine = true;
                     }
                 }
@@ -277,7 +275,7 @@ public final class IntrospectionSupport {
             }
 
             StringBuilder buffer = new StringBuilder();
-            if( useMultiLine) {
+            if (useMultiLine) {
                 buffer.append("{\n");
                 boolean first = true;
                 for (Entry<String, String> entry : props.entrySet()) {
@@ -350,7 +348,6 @@ public final class IntrospectionSupport {
                 e.printStackTrace();
             }
         }
-
     }
 
 }

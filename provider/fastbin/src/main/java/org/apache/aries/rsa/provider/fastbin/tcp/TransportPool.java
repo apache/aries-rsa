@@ -89,7 +89,7 @@ public abstract class TransportPool implements Service {
                 Transport transport = getIdleTransport();
                 if (transport != null) {
                     doOffer(transport, data, id);
-                    if( transport.full() ) {
+                    if (transport.full()) {
                         transports.get(transport).time = 0L;
                     }
                 } else {
@@ -208,7 +208,7 @@ public abstract class TransportPool implements Service {
                 assert accepted: "Should have been accepted since the transport was not full";
             }
 
-            if( transport.full() ) {
+            if (transport.full()) {
                 transports.get(transport).time = 0L;
             } else {
                 final long time = System.currentTimeMillis();
@@ -225,7 +225,6 @@ public abstract class TransportPool implements Service {
                     });
                 }
             }
-
         }
 
         public void onTransportFailure(Transport transport, IOException error) {

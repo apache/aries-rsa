@@ -57,7 +57,7 @@ public class InvocationTest {
     final int BENCHMARK_CLIENTS = 100;
     final int BENCHMARK_INVOCATIONS_PER_CLIENT = 1000;
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testInvoke() throws Exception {
 
         DispatchQueue queue = Dispatch.createQueue();
@@ -103,7 +103,6 @@ public class InvocationTest {
             AsyncCallbackFuture<StringValue.Getter> future2 = new AsyncCallbackFuture<>();
             hello.protobuf(stringValue("Hiram Async"), future2);
             assertEquals("Hello Hiram Async!", future2.get(2, TimeUnit.SECONDS).getValue());
-
         }
         finally {
             server.stop();
@@ -115,7 +114,7 @@ public class InvocationTest {
      * tests that requests to an unknown ID throw an exception instead of deadlocking the request
      * @throws Exception
      */
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testInvokeInvalidServiceID() throws Exception {
 
         DispatchQueue queue = Dispatch.createQueue();
@@ -196,7 +195,7 @@ public class InvocationTest {
         }
     }
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testOverflowAsync() throws Exception {
 
         DispatchQueue queue = Dispatch.createQueue();
@@ -225,13 +224,13 @@ public class InvocationTest {
             String payload = new String(chars);
 
             final List<AsyncCallbackFuture<String>> futures = new ArrayList<>();
-            for(int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++) {
                 AsyncCallbackFuture<String> future = new AsyncCallbackFuture<>();
                 hello.hello(payload, future);
                 futures.add(future);
             }
 
-            for(Future<String> f : futures) {
+            for (Future<String> f : futures) {
                 f.get(3, TimeUnit.SECONDS);
             }
             //future2.get(2, TimeUnit.SECONDS);
@@ -245,7 +244,7 @@ public class InvocationTest {
         }
     }
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testOverflow() throws Exception {
 
         DispatchQueue queue = Dispatch.createQueue();
@@ -305,7 +304,6 @@ public class InvocationTest {
             assertEquals(BENCHMARK_CLIENTS, requests.get());
             assertEquals(BENCHMARK_CLIENTS, responses.get());
             assertEquals(0, failures.get());
-
         }
         finally {
             server.stop();
@@ -313,7 +311,7 @@ public class InvocationTest {
         }
     }
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testNoOverflow() throws Exception {
 
         DispatchQueue queue = Dispatch.createQueue();
@@ -341,7 +339,7 @@ public class InvocationTest {
             char[] chars = new char[65 * 1024];
             String payload = new String(chars);
 
-            for(int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++) {
                 hello.hello(payload);
             }
         }
@@ -351,7 +349,7 @@ public class InvocationTest {
         }
     }
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testUnderLoadSyncObject() throws Exception {
         HashMap<String, SerializationStrategy> map = new HashMap<>();
 
@@ -474,7 +472,7 @@ public class InvocationTest {
         }
 
         private void sendNext() {
-            if( i < nbInvocationsPerThread ) {
+            if (i < nbInvocationsPerThread) {
                 requests.incrementAndGet();
                 start = System.nanoTime();
                 hello.protobuf(msg, this);
@@ -501,7 +499,7 @@ public class InvocationTest {
         }
     }
 
-    @Test(timeout=30*1000)
+    @Test(timeout = 30 * 1000)
     public void testUnderLoadAsyncProto() throws Exception {
         HashMap<String, SerializationStrategy> map = new HashMap<>();
         map.put("protobuf", new ProtobufSerializationStrategy());
@@ -600,7 +598,7 @@ public class InvocationTest {
         }
 
         private void queueCheck() {
-            if( !queue.isExecuting() ) {
+            if (!queue.isExecuting()) {
                 throw new IllegalStateException("Not executing on our dispatch queue");
             }
         }

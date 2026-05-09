@@ -71,7 +71,7 @@ public class ConfigTest {
         Assert.assertEquals(11111, getParser().getPort());
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testTimeoutInvalid() {
         props.put(Config.TIMEOUT, new Date());
         getParser().getTimeoutMillis();

@@ -47,7 +47,6 @@ public class Interest {
     private final AtomicReference<List<String>> scopes = new AtomicReference<>();
     private final EndpointEventListener listener;
 
-
     public Interest(Long id, EndpointEventListener listener, Map<String, Object> props) {
         this.id = id;
         this.scopes.set(StringPlus.normalize(props.get(ENDPOINT_LISTENER_SCOPE)));
@@ -55,20 +54,19 @@ public class Interest {
     }
 
     public void update(Map<String, Object> props) {
-        
         List<String> newScopes = StringPlus.normalize(props.get(ENDPOINT_LISTENER_SCOPE));
         List<String> oldScopes = this.scopes.getAndSet(newScopes);
-        
+
         added.values().removeIf(ed -> {
             Optional<String> newScope = getFirstMatch(ed, newScopes);
             Optional<String> oldScope = getFirstMatch(ed, oldScopes);
             EndpointEvent event;
             boolean remove;
             String filter;
-            if(newScope.isPresent()) {
+            if (newScope.isPresent()) {
                 remove = false;
                 filter = newScope.get();
-                if(oldScope.isPresent() && oldScope.get().equals(filter)) {
+                if (oldScope.isPresent() && oldScope.get().equals(filter)) {
                     event = null;
                 } else {
                     event = new EndpointEvent(MODIFIED, ed);
@@ -81,7 +79,7 @@ public class Interest {
 
             if (event != null)
                 notifyListener(event, filter);
-            
+
             return remove;
         });
     }
@@ -93,33 +91,33 @@ public class Interest {
         EndpointEvent event;
         String filter;
         if (currentScope.isPresent()) {
-            if(LOG.isDebugEnabled()) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Listener {} is interested in endpoint {}. It will be {}", id, ed, alreadyAdded ? "MODIFIED" : "ADDED");
             }
             added.put(ed.getId(), ed);
             event = new EndpointEvent(alreadyAdded ? MODIFIED : ADDED, ed);
             filter = currentScope.get();
-        } else if(alreadyAdded) {
-            if(LOG.isDebugEnabled()) {
+        } else if (alreadyAdded) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Listener {} is no longer interested in endpoint {}. It will be {}", id, ed, "MODIFIED");
             }
             EndpointDescription previous = added.remove(ed.getId());
             event = new EndpointEvent(MODIFIED_ENDMATCH, ed);
             filter = getFirstMatch(previous, scopes).orElse(null);
         } else {
-            if(LOG.isDebugEnabled()) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Listener {} not interested in endpoint {}", id, ed);
             }
             return;
         }
-        
+
         notifyListener(event, filter);
     }
 
     public void endpointRemoved(String id) {
         EndpointDescription previous = added.remove(id);
-        if(previous != null) {
-            if(LOG.isDebugEnabled()) {
+        if (previous != null) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("Endpoint {} is no longer available for listener {}", id, this.id);
             }
             notifyListener(new EndpointEvent(REMOVED, previous), getFirstMatch(previous, scopes.get()).orElse(null));
@@ -132,7 +130,7 @@ public class Interest {
                 listener, filter, event.getType(), endpoint);
         listener.endpointChanged(event, filter);
     }
-    
+
     private Optional<String> getFirstMatch(EndpointDescription endpoint, List<String> scopes) {
         return scopes.stream().filter(endpoint::matches).findFirst();
     }

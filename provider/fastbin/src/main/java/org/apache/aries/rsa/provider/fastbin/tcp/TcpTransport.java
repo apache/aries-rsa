@@ -150,7 +150,7 @@ public class TcpTransport implements Transport {
     public void connected(SocketChannel channel) throws IOException, Exception {
         this.channel = channel;
 
-        if( codec !=null ) {
+        if (codec != null) {
             initializeCodec();
         }
 
@@ -218,7 +218,6 @@ public class TcpTransport implements Transport {
                 });
                 readSource.setCancelHandler(CANCEL_HANDLER);
                 readSource.resume();
-
             } else if (socketState.isConnected()) {
                 dispatchQueue.execute(new Runnable() {
                     public void run() {
@@ -234,7 +233,7 @@ public class TcpTransport implements Transport {
                 System.err.println("cannot be started.  socket state is: "+socketState);
             }
         } finally {
-            if( onCompleted!=null ) {
+            if (onCompleted != null) {
                 onCompleted.run();
             }
         }
@@ -247,7 +246,7 @@ public class TcpTransport implements Transport {
 
     protected String resolveHostName(String host) throws UnknownHostException {
         try {
-            if(isUseLocalHost()) {
+            if (isUseLocalHost()) {
                 String localName = InetAddress.getLocalHost().getHostName();
                 if (localName != null) {
                     if (localName.equals(host)) {
@@ -280,7 +279,7 @@ public class TcpTransport implements Transport {
             }
         });
 
-        if( max_read_rate!=0 || max_write_rate!=0 ) {
+        if (max_read_rate != 0 || max_write_rate != 0) {
             rateLimitingChannel = new RateLimitingChannel();
             scheduleRateAllowanceReset();
         }
@@ -290,7 +289,7 @@ public class TcpTransport implements Transport {
     }
 
     private void scheduleRateAllowanceReset() {
-        dispatchQueue.executeAfter(1, TimeUnit.SECONDS, new Runnable(){
+        dispatchQueue.executeAfter(1, TimeUnit.SECONDS, new Runnable() {
             public void run() {
                 if (!socketState.isConnected()) {
                     return;
@@ -302,12 +301,12 @@ public class TcpTransport implements Transport {
     }
 
     private void dispose() {
-        if( readSource != null ) {
+        if (readSource != null) {
             readSource.cancel();
             readSource = null;
         }
 
-        if( writeSource != null ) {
+        if (writeSource != null) {
             writeSource.cancel();
             writeSource = null;
         }
@@ -334,11 +333,11 @@ public class TcpTransport implements Transport {
             }
 
             ProtocolCodec.BufferState rc = codec.write(command);
-            switch (rc ) {
+            switch (rc) {
                 case FULL:
                     return false;
                 default:
-                    if( drained ) {
+                    if (drained) {
                         drained = false;
                         resumeWrite();
                     }
@@ -359,8 +358,8 @@ public class TcpTransport implements Transport {
             return;
         }
         try {
-            if( codec.flush() == ProtocolCodec.BufferState.WAS_EMPTY && flush() ) {
-                if( !drained ) {
+            if (codec.flush() == ProtocolCodec.BufferState.WAS_EMPTY && flush()) {
+                if (!drained) {
                     drained = true;
                     suspendWrite();
                     listener.onRefill(this);
@@ -383,9 +382,9 @@ public class TcpTransport implements Transport {
             long initial = codec.getReadCounter();
             // Only process up to 64k worth of data at a time, so we can give
             // other connections a chance to process their requests.
-            while( codec.getReadCounter() - initial < 1024 * 64 ) {
+            while (codec.getReadCounter() - initial < 1024 * 64) {
                 Object command = codec.read();
-                if ( command!=null ) {
+                if (command != null) {
                     try {
                         listener.onTransportCommand(this, command);
                     } catch (Throwable e) {
@@ -410,14 +409,14 @@ public class TcpTransport implements Transport {
     }
 
     public void suspendRead() {
-        if( isConnected() && readSource!=null ) {
+        if (isConnected() && readSource != null) {
             readSource.suspend();
         }
     }
 
     public void resumeRead() {
-        if( isConnected() && readSource!=null ) {
-            if( rateLimitingChannel!=null ) {
+        if (isConnected() && readSource != null) {
+            if (rateLimitingChannel != null) {
                 rateLimitingChannel.resumeRead();
             } else {
                 _resumeRead();
@@ -426,7 +425,7 @@ public class TcpTransport implements Transport {
     }
     private void _resumeRead() {
         readSource.resume();
-        dispatchQueue.execute(new Runnable(){
+        dispatchQueue.execute(new Runnable() {
             public void run() {
                 drainInbound();
             }
@@ -434,14 +433,14 @@ public class TcpTransport implements Transport {
     }
 
     protected void suspendWrite() {
-        if( isConnected() && writeSource!=null ) {
+        if (isConnected() && writeSource != null) {
             writeSource.suspend();
         }
     }
     protected void resumeWrite() {
-        if( isConnected() && writeSource!=null ) {
+        if (isConnected() && writeSource != null) {
             writeSource.resume();
-            dispatchQueue.execute(new Runnable(){
+            dispatchQueue.execute(new Runnable() {
                 public void run() {
                     drainOutbound();
                 }
@@ -463,7 +462,7 @@ public class TcpTransport implements Transport {
 
     public void setProtocolCodec(ProtocolCodec protocolCodec) {
         this.codec = protocolCodec;
-        if( channel!=null && codec!=null ) {
+        if (channel != null && codec != null) {
             initializeCodec();
         }
     }
@@ -494,9 +493,9 @@ public class TcpTransport implements Transport {
     }
 
     private void trace(String message) {
-        if( LOG.isTraceEnabled() ) {
+        if (LOG.isTraceEnabled()) {
             final String label = dispatchQueue.getLabel();
-            if( label !=null ) {
+            if (label != null) {
                 LOG.trace("{} | {}", label, message);
             } else {
                 LOG.trace(message);
@@ -509,7 +508,7 @@ public class TcpTransport implements Transport {
     }
 
     public ReadableByteChannel readChannel() {
-        if(rateLimitingChannel!=null) {
+        if (rateLimitingChannel != null) {
             return rateLimitingChannel;
         } else {
             return channel;
@@ -517,7 +516,7 @@ public class TcpTransport implements Transport {
     }
 
     public WritableByteChannel writeChannel() {
-        if(rateLimitingChannel!=null) {
+        if (rateLimitingChannel != null) {
             return rateLimitingChannel;
         } else {
             return channel;
@@ -549,17 +548,17 @@ public class TcpTransport implements Transport {
         boolean write_suspended = false;
 
         public void resetAllowance() {
-            if( read_allowance != max_read_rate || write_allowance != max_write_rate) {
+            if (read_allowance != max_read_rate || write_allowance != max_write_rate) {
                 read_allowance = max_read_rate;
                 write_allowance = max_write_rate;
-                if( write_suspended ) {
+                if (write_suspended) {
                     write_suspended = false;
                     resumeWrite();
                 }
-                if( read_suspended ) {
+                if (read_suspended) {
                     read_suspended = false;
                     resumeRead();
-                    for( int i = 0; i < read_resume_counter ; i++ ) {
+                    for (int i = 0; i < read_resume_counter ; i++) {
                         resumeRead();
                     }
                 }
@@ -567,16 +566,16 @@ public class TcpTransport implements Transport {
         }
 
         public int read(ByteBuffer dst) throws IOException {
-            if( max_read_rate==0 ) {
+            if (max_read_rate == 0) {
                 return channel.read(dst);
             } else {
                 int remaining = dst.remaining();
-                if( read_allowance ==0 || remaining ==0 ) {
+                if (read_allowance == 0 || remaining == 0) {
                     return 0;
                 }
 
                 int reduction = 0;
-                if( remaining > read_allowance) {
+                if (remaining > read_allowance) {
                     reduction = remaining - read_allowance;
                     dst.limit(dst.limit() - reduction);
                 }
@@ -585,8 +584,8 @@ public class TcpTransport implements Transport {
                     rc = channel.read(dst);
                     read_allowance -= rc;
                 } finally {
-                    if( reduction!=0 ) {
-                        if( dst.remaining() == 0 ) {
+                    if (reduction != 0) {
+                        if (dst.remaining() == 0) {
                             // we need to suspend the read now until we get
                             // a new allowance...
                             readSource.suspend();
@@ -600,16 +599,16 @@ public class TcpTransport implements Transport {
         }
 
         public int write(ByteBuffer src) throws IOException {
-            if( max_write_rate==0 ) {
+            if (max_write_rate == 0) {
                 return channel.write(src);
             } else {
                 int remaining = src.remaining();
-                if( write_allowance ==0 || remaining ==0 ) {
+                if (write_allowance == 0 || remaining == 0) {
                     return 0;
                 }
 
                 int reduction = 0;
-                if( remaining > write_allowance) {
+                if (remaining > write_allowance) {
                     reduction = remaining - write_allowance;
                     src.limit(src.limit() - reduction);
                 }
@@ -618,8 +617,8 @@ public class TcpTransport implements Transport {
                     rc = channel.write(src);
                     write_allowance -= rc;
                 } finally {
-                    if( reduction!=0 ) {
-                        if( src.remaining() == 0 ) {
+                    if (reduction != 0) {
+                        if (src.remaining() == 0) {
                             // we need to suspend the read now until we get
                             // a new allowance...
                             write_suspended = true;
@@ -641,13 +640,12 @@ public class TcpTransport implements Transport {
         }
 
         public void resumeRead() {
-            if( read_suspended ) {
+            if (read_suspended) {
                 read_resume_counter += 1;
             } else {
                 _resumeRead();
             }
         }
-
     }
 
     //
@@ -723,7 +721,7 @@ public class TcpTransport implements Transport {
         void onCanceled() {
         }
         boolean is(Class<? extends SocketState> clazz) {
-            return getClass()==clazz;
+            return getClass() == clazz;
         }
         boolean isConnecting() {
             return is(CONNECTING.class);
@@ -767,7 +765,7 @@ public class TcpTransport implements Transport {
             state.onCanceled();
         }
         Runnable createDisconnectTask() {
-            return new Runnable(){
+            return new Runnable() {
                 public void run() {
                     listener.onTransportDisconnected(TcpTransport.this);
                 }
@@ -781,11 +779,11 @@ public class TcpTransport implements Transport {
         private boolean dispose;
 
         public CANCELING() {
-            if( readSource!=null ) {
+            if (readSource != null) {
                 remaining++;
                 readSource.cancel();
             }
-            if( writeSource!=null ) {
+            if (writeSource != null) {
                 remaining++;
                 writeSource.cancel();
             }
@@ -796,14 +794,14 @@ public class TcpTransport implements Transport {
             dispose = true;
         }
         void add(Runnable onCompleted) {
-            if( onCompleted!=null ) {
+            if (onCompleted != null) {
                 runnables.add(onCompleted);
             }
         }
         void onCanceled() {
             trace("CANCELING.onCanceled");
             remaining--;
-            if( remaining!=0 ) {
+            if (remaining != 0) {
                 return;
             }
             try {
@@ -829,7 +827,7 @@ public class TcpTransport implements Transport {
 
         void onStop(Runnable onCompleted) {
             trace("CANCELED.onStop");
-            if( !disposed ) {
+            if (!disposed) {
                 disposed = true;
                 dispose();
             }

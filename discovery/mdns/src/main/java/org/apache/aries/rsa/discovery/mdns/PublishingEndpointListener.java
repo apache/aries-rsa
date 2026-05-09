@@ -62,16 +62,16 @@ import org.slf4j.LoggerFactory;
 public class PublishingEndpointListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishingEndpointListener.class);
-    
+
     private final String uuid;
 
     private final EndpointDescriptionParser parser;
-    
+
     private final ServiceRegistration<?> listenerReg;
     private final ServiceRegistration<?> resourceReg;
-    
+
     private final ConcurrentMap<String, SponsoredEndpoint> localEndpoints = new ConcurrentHashMap<>();
-    
+
     private final Set<Subscription> listeners = ConcurrentHashMap.newKeySet();
 
     @SuppressWarnings("serial")
@@ -81,7 +81,7 @@ public class PublishingEndpointListener {
         String[] ifAr = { EndpointEventListener.class.getName() };
         Dictionary<String, Object> props = serviceProperties(uuid);
         listenerReg = bctx.registerService(ifAr, new ListenerFactory(), props);
-        resourceReg = bctx.registerService(PublishingEndpointListener.class, this, 
+        resourceReg = bctx.registerService(PublishingEndpointListener.class, this,
                 new Hashtable<>() {{put("osgi.jaxrs.resource", Boolean.TRUE);}});
     }
 
@@ -94,7 +94,7 @@ public class PublishingEndpointListener {
 
     private void endpointUpdate(Long bundleId, EndpointDescription ed, int type) {
         String edFwUuid = ed.getFrameworkUUID();
-        if(edFwUuid == null || !edFwUuid.equals(uuid)) {
+        if (edFwUuid == null || !edFwUuid.equals(uuid)) {
             LOG.warn("This listener has been called with an endpoint {} for a remote framework {}", ed.getId(), edFwUuid);
             return;
         }
@@ -112,7 +112,7 @@ public class PublishingEndpointListener {
             case EndpointEvent.MODIFIED_ENDMATCH:
             case EndpointEvent.REMOVED:
                 boolean act = localEndpoints.compute(id, (k,v) -> {
-                    if(v == null) {
+                    if (v == null) {
                         return null;
                     } else {
                       Set<Long> updated = v.sponsors.stream().filter(l -> !bundleId.equals(l)).collect(toSet());
@@ -120,7 +120,7 @@ public class PublishingEndpointListener {
                     }
                 }) == null;
 
-                if(act) {
+                if (act) {
                     listeners.forEach(s -> s.revoke(id));
                 }
                 break;
@@ -147,14 +147,14 @@ public class PublishingEndpointListener {
             throw new RuntimeException(e);
         }
     }
-    
+
     @GET
     @Produces(SERVER_SENT_EVENTS)
     @Path("aries/rsa/discovery")
     public void listen(@Context Sse sse, @Context SseEventSink sink) {
         Subscription subscription = new Subscription(sse, sink);
         listeners.add(subscription);
-        
+
         localEndpoints.values().stream()
             .map(s -> toEndpointData(s.ed))
             .forEach(subscription::update);
@@ -176,13 +176,13 @@ public class PublishingEndpointListener {
                 .filter(s -> s.sponsors.contains(bundleId))
                 .forEach(s -> endpointUpdate(bundleId, s.ed, EndpointEvent.REMOVED));
         }
-        
+
     }
-    
+
     private class PerClientEndpointEventListener implements EndpointEventListener {
-        
+
         private final Long bundleId;
-        
+
         public PerClientEndpointEventListener(Long bundleId) {
             super();
             this.bundleId = bundleId;
@@ -195,13 +195,13 @@ public class PublishingEndpointListener {
     }
 
     class Subscription {
-        
+
         static final String ENDPOINT_UPDATED = "UPDATED";
         static final String ENDPOINT_REVOKED = "REVOKED";
-        
+
         Sse sse;
         SseEventSink eventSink;
-        
+
         public Subscription(Sse sse, SseEventSink eventSink) {
             this.sse = sse;
             this.eventSink = eventSink;
@@ -211,30 +211,30 @@ public class PublishingEndpointListener {
             eventSink.send(sse.newEvent(ENDPOINT_UPDATED, endpointData))
                 .whenComplete(this::sendFailure);
         }
-        
+
         public void revoke(String endpointId) {
             eventSink.send(sse.newEvent(ENDPOINT_REVOKED, endpointId))
                 .whenComplete(this::sendFailure);
         }
-        
+
         public void close() {
             eventSink.close();
             listeners.remove(this);
         }
-        
+
         private void sendFailure(Object o, Throwable t) {
-            if(t != null) {
+            if (t != null) {
                 LOG.error("Failed to send endpoint message, closing");
                 listeners.remove(this);
                 eventSink.close();
             }
         }
     }
-    
+
     private static class SponsoredEndpoint {
         private final EndpointDescription ed;
         private final Set<Long> sponsors;
-        
+
         public SponsoredEndpoint(EndpointDescription ed, Set<Long> sponsors) {
             this.ed = ed;
             this.sponsors = sponsors;

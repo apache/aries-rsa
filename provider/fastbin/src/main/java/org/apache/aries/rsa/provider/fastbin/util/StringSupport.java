@@ -27,7 +27,7 @@ import java.util.Arrays;
 public class StringSupport {
 
     public static String indent(String value, int spaces) {
-        if( value == null ) {
+        if (value == null) {
             return null;
         }
         String indent = fillString(spaces, ' ');

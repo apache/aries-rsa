@@ -104,7 +104,7 @@ public class TcpTransportServer implements TransportServer {
             public void run() {
                 try {
                     SocketChannel client = channel.accept();
-                    while( client!=null ) {
+                    while (client != null) {
                         handleSocket(client);
                         client = channel.accept();
                     }
@@ -122,7 +122,7 @@ public class TcpTransportServer implements TransportServer {
             }
         });
         acceptSource.resume();
-        if( onCompleted!=null ) {
+        if (onCompleted != null) {
             dispatchQueue.execute(onCompleted);
         }
     }
@@ -162,7 +162,7 @@ public class TcpTransportServer implements TransportServer {
         stop(null);
     }
     public void stop(final Runnable onCompleted) {
-        if( acceptSource.isCanceled() ) {
+        if (acceptSource.isCanceled()) {
             onCompleted.run();
         } else {
             acceptSource.setCancelHandler(new Runnable() {
@@ -171,7 +171,7 @@ public class TcpTransportServer implements TransportServer {
                         channel.close();
                     } catch (IOException e) {
                     }
-                    if( onCompleted!=null ) {
+                    if (onCompleted != null) {
                         onCompleted.run();
                     }
                 }
@@ -206,7 +206,7 @@ public class TcpTransportServer implements TransportServer {
     protected TcpTransport createTransport(SocketChannel socketChannel, HashMap<String, Object> options) throws Exception {
         TcpTransport transport = createTransport();
         transport.connected(socketChannel);
-        if( options!=null ) {
+        if (options != null) {
             IntrospectionSupport.setProperties(transport, options);
         }
         if (transportOptions != null) {

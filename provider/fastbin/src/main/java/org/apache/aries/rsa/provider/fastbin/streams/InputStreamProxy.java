@@ -73,12 +73,12 @@ public class InputStreamProxy extends InputStream implements Serializable {
      * @see java.io.InputStream#read()
      */
     public int readInternal() throws IOException {
-        if(buffer == null || position==buffer.length)
+        if (buffer == null || position == buffer.length)
             fillBuffer();
 
-        if(position==buffer.length) {
+        if (position == buffer.length) {
             //still no data.
-            if(reachedEnd)
+            if (reachedEnd)
                 return -1;
             //try again
             return read();
@@ -87,12 +87,12 @@ public class InputStreamProxy extends InputStream implements Serializable {
     }
 
     private void fillBuffer() throws IOException {
-        if(reachedEnd) {
+        if (reachedEnd) {
             return;
         }
         position = 0;
         Chunk chunk = streamProvider.read(streamID);
-        if(expectedChunkNumber!=chunk.getChunkNumber())
+        if (expectedChunkNumber != chunk.getChunkNumber())
             throw new IOException("Stream corrupted. Received Chunk "+chunk.getChunkNumber()+" but expected "+expectedChunkNumber);
         expectedChunkNumber++;
         buffer = chunk.getData();
@@ -100,11 +100,11 @@ public class InputStreamProxy extends InputStream implements Serializable {
     }
 
     public int readInternal(byte[] b, int off, int len) throws IOException {
-        if(len==0)
+        if (len == 0)
             return 0;
         int available = available();
-        if(available <= 0) {
-            if(reachedEnd)
+        if (available <= 0) {
+            if (reachedEnd)
                 return -1;
             fillBuffer();
             return read(b, off, len);
@@ -124,7 +124,7 @@ public class InputStreamProxy extends InputStream implements Serializable {
 
     @Override
     public int available() throws IOException {
-        if(buffer == null)
+        if (buffer == null)
             return 0;
         return buffer.length - position;
     }
