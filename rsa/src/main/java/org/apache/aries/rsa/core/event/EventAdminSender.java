@@ -53,7 +53,7 @@ public class EventAdminSender {
         // highest ranking (which is the one returned by getServiceReference)
         ServiceReference<EventAdmin> sref = context.getServiceReference(EventAdmin.class);
         if (sref != null) {
-            LOG.debug("Publishing event {} to EventAdmin", type);
+            LOG.debug("Publishing event {} to EventAdmin: {}", type, event);
             final EventAdmin eventAdmin = context.getService(sref);
             if (eventAdmin != null) {
                 try {

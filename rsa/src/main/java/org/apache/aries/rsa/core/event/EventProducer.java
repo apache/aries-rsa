@@ -103,8 +103,8 @@ public class EventProducer {
                         try {
                             Bundle bundle = sref.getBundle();
                             if (bundle != null) {
-                                LOG.debug("notify RemoteServiceAdminListener {} of bundle {}",
-                                        rsal, bundle.getSymbolicName());
+                                LOG.debug("notify RemoteServiceAdminListener {} of bundle {} (type {})",
+                                    rsal, bundle.getSymbolicName(), rsae.getType());
                                 rsal.remoteAdminEvent(rsae);
                             }
                         } catch (RuntimeException re) {
