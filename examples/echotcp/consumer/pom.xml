@@ -35,5 +35,10 @@
             <artifactId>org.apache.aries.rsa.examples.echotcp.api</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+        </dependency>
     </dependencies>
 </project>

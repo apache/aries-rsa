@@ -44,6 +44,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.cm</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.shazam</groupId>
             <artifactId>shazamcrest</artifactId>
             <scope>test</scope>

@@ -44,6 +44,12 @@
             <artifactId>org.apache.aries.rsa.spi</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>xmlunit</groupId>
             <artifactId>xmlunit</artifactId>
