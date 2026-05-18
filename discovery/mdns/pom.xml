@@ -21,6 +21,7 @@
             <artifactId>org.apache.aries.rsa.spi</artifactId>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component.annotations</artifactId>
@@ -30,6 +31,7 @@
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.jaxrs</artifactId>
         </dependency>
+
         <dependency>
             <groupId>jakarta.ws.rs</groupId>
             <artifactId>jakarta.ws.rs-api</artifactId>

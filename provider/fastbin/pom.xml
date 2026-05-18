@@ -42,6 +42,18 @@
             <artifactId>org.apache.aries.rsa.spi</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.cm</artifactId>
+        </dependency>
+        <!-- this is only needed if you want to use the Promise for remote services -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.util.promise</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.fusesource.hawtdispatch</groupId>
             <artifactId>hawtdispatch</artifactId>
@@ -54,12 +66,6 @@
         <dependency>
             <groupId>org.fusesource.hawtbuf</groupId>
             <artifactId>hawtbuf-proto</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <!-- this is only needed if you want to use the Promise for remote services -->
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.util.promise</artifactId>
             <optional>true</optional>
         </dependency>
     </dependencies>
