@@ -74,6 +74,19 @@
                 <artifactId>pax-exam-link-mvn</artifactId>
                 <version>${exam.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.ops4j.pax.tinybundles</groupId>
+                <artifactId>tinybundles</artifactId>
+                <version>4.0.1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>biz.aQute.bndlib</artifactId>
+                <version>${bnd.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
 
     </dependencyManagement>
