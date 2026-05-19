@@ -15,6 +15,24 @@
 #    KIND, either express or implied.  See the License for the
 #    specific language governing permissions and limitations
 #    under the License.
+
+-split-package:=merge-first
+-fixupmessages: "Split package*";is:=ignore
+
+Export-Package: \
+    org.apache.aries.rsa.discovery.zookeeper*,\
+    org.apache.zookeeper*;version="${zookeeper.version}",\
+    org.apache.jute*;version="${zookeeper.version}"
+
 Import-Package: \
-  org.apache.zookeeper.metrics.impl;resolution:=optional,\
-  *
+    !com.fasterxml.jackson.*,\
+    io.netty.channel.epoll.*;resolution:=optional,\
+    io.netty.channel.kqueue.*;resolution:=optional,\
+    io.netty.incubator.*;resolution:=optional,\
+    io.netty.internal.tcnative.*;resolution:=optional,\
+    io.netty.*,\
+    org.slf4j.*,\
+    org.osgi.*,\
+    javax.security.*,\
+    org.apache.aries.rsa.*,\
+    *;resolution:=optional
