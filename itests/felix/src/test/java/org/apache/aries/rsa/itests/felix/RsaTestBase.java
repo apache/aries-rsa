@@ -18,12 +18,12 @@
  */
 package org.apache.aries.rsa.itests.felix;
 
-import static org.ops4j.pax.exam.CoreOptions.bundle;
 import static org.ops4j.pax.exam.CoreOptions.composite;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.CoreOptions.vmOption;
 import static org.ops4j.pax.exam.CoreOptions.when;
+import static org.ops4j.pax.exam.CoreOptions.wrappedBundle;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 import java.io.IOException;
@@ -33,6 +33,7 @@ import java.net.ServerSocket;
 import javax.inject.Inject;
 
 import org.ops4j.pax.exam.CoreOptions;
+import org.ops4j.pax.exam.MavenUtils;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.options.MavenArtifactProvisionOption;
 import org.ops4j.pax.exam.options.OptionalCompositeOption;
@@ -108,17 +109,20 @@ public class RsaTestBase {
         );
     }
 
-    /**
-     * We create our own junit option to also provide hamcrest and Awaitility support
-     */
     protected static Option junit() {
-        // based on CoreOptions.junitBundles()
+        // we use a custom configuration and not CoreOptions.junitBundles
+        // because so hamcrest is not too old and not too new for awaitility
+        String junitVersion = MavenUtils.getArtifactVersion("junit", "junit");
+        String hamcrestVersion = MavenUtils.getArtifactVersion("org.hamcrest", "hamcrest");
         return composite(
-                systemProperty("pax.exam.invoker").value("junit"),
-                bundle("link:classpath:META-INF/links/org.ops4j.pax.tipi.junit.link"),
-                bundle("link:classpath:META-INF/links/org.ops4j.pax.exam.invoker.junit.link"),
-                mvn("org.apache.servicemix.bundles", "org.apache.servicemix.bundles.hamcrest"),
-                mvn("org.awaitility", "awaitility"));
+            wrappedBundle(mavenBundle("junit", "junit", junitVersion)).instructions(
+                "Bundle-SymbolicName=junit",
+                "Export-Package=org.junit.*;version=" + junitVersion + ",junit.*;version=" + junitVersion,
+                "Import-Package=org.hamcrest;version=\"" + hamcrestVersion
+                    + "\",org.hamcrest.core;version=\"" + hamcrestVersion + "\""
+            ),
+            mvn("org.hamcrest", "hamcrest"),
+            mvn("org.awaitility", "awaitility"));
     }
 
     protected static Option rsaCore() {
