@@ -57,7 +57,6 @@
 
     <feature name="aries-rsa-discovery-zookeeper" version="${project.version}">
         <feature>aries-rsa-core</feature>
-        <bundle>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.zookeeper/${zookeeper.version}</bundle>
         <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.local/${project.version}</bundle>
         <bundle>mvn:org.apache.aries.rsa.discovery/org.apache.aries.rsa.discovery.zookeeper/${project.version}</bundle>
 

@@ -282,12 +282,6 @@
             <classifier>uber</classifier>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.apache.servicemix.bundles</groupId>
-            <artifactId>org.apache.servicemix.bundles.zookeeper</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
