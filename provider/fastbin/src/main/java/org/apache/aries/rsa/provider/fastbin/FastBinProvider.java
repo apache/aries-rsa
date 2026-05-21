@@ -45,6 +45,7 @@ import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
 import org.apache.aries.rsa.util.StringPlus;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.fusesource.hawtdispatch.ShutdownException;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
@@ -90,7 +91,11 @@ public class FastBinProvider implements DistributionProvider {
     }
 
     public void close() {
-        client.stop();
+        try {
+            client.stop();
+        } catch (ShutdownException se) {
+            LOG.trace("exception while shutting down client", se);
+        }
         final Semaphore counter = new Semaphore(0);
         server.stop(() -> counter.release(1));
         try {

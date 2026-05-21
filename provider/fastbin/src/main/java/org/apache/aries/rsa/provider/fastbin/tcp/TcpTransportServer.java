@@ -30,6 +30,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.aries.rsa.provider.fastbin.io.TransportAcceptListener;
 import org.apache.aries.rsa.provider.fastbin.io.TransportServer;
@@ -163,22 +165,39 @@ public class TcpTransportServer implements TransportServer {
     public void stop() {
         stop(null);
     }
+
     public void stop(final Runnable onCompleted) {
         if (acceptSource.isCanceled()) {
             onCompleted.run();
         } else {
-            acceptSource.setCancelHandler(new Runnable() {
-                public void run() {
-                    try {
-                        channel.close();
-                    } catch (IOException e) {
-                    }
-                    if (onCompleted != null) {
-                        onCompleted.run();
-                    }
-                }
+            CountDownLatch latch = new CountDownLatch(1);
+            acceptSource.setCancelHandler(() -> {
+                closeChannel(onCompleted);
+                latch.countDown();
             });
             acceptSource.cancel();
+            // due to a race condition, sometimes during shutdown the hawt dispatcher
+            // bundle is stopped before we get here, so the handler above will never
+            // get executed. We give it a chance, but make sure to ultimately close
+            // the channel anyway to avoid leaving the socket in use.
+            try {
+                latch.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+            if (channel.isOpen()) { // always close at the end
+                closeChannel(onCompleted);
+            }
+        }
+    }
+
+    private void closeChannel(Runnable onCompleted) {
+        try {
+            channel.close();
+        } catch (IOException ioe) {
+        }
+        if (onCompleted != null) {
+            onCompleted.run();
         }
     }
 
