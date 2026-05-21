@@ -67,7 +67,7 @@ public class Activator extends BaseActivator implements ManagedService {
         client = provider.getClient();
         server = provider.getServer();
         Dictionary<String, Object> props = new Hashtable<>();
-        props.put(RemoteConstants.REMOTE_INTENTS_SUPPORTED, new String[]{});
+        props.put(RemoteConstants.REMOTE_INTENTS_SUPPORTED, FastBinProvider.SUPPORTED_INTENTS);
         props.put(RemoteConstants.REMOTE_CONFIGS_SUPPORTED, provider.getSupportedTypes());
         register(DistributionProvider.class, provider, props);
     }
