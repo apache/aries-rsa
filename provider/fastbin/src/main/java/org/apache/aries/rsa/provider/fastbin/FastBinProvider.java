@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.aries.rsa.provider.fastbin.api.SerializationStrategy;
 import org.apache.aries.rsa.provider.fastbin.io.ClientInvoker;
@@ -137,6 +138,14 @@ public class FastBinProvider implements DistributionProvider {
         if (!intents.isEmpty()) {
             LOG.warn("Unsupported intents found: {}. Not exporting service", intents);
             return null;
+        }
+
+        // to please the TCK - throw IAE for invalid config-type properties (we don't support any)
+        Map<String, Object> configProperties = effectiveProperties.entrySet().stream()
+            .filter(e -> e.getKey().startsWith(FASTBIN_CONFIG_TYPE))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        if (!configProperties.isEmpty()) {
+            throw new IllegalArgumentException("invalid config-type properties: " + configProperties);
         }
 
         String endpointId = UuidGenerator.getUUID();
