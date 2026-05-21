@@ -22,7 +22,11 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +41,7 @@ import org.apache.aries.rsa.spi.DistributionProvider;
 import org.apache.aries.rsa.spi.Endpoint;
 import org.apache.aries.rsa.spi.ImportedService;
 import org.apache.aries.rsa.spi.IntentUnsatisfiedException;
+import org.apache.aries.rsa.util.StringPlus;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.osgi.framework.BundleContext;
@@ -49,6 +54,14 @@ import org.slf4j.LoggerFactory;
 public class FastBinProvider implements DistributionProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(FastBinProvider.class);
+
+    /**
+     * All intents supported by this provider.
+     * <p>
+     * We currently don't support any intents, but the TCK requires at least
+     * one to exist, so we add a placeholder default one that does nothing.
+     */
+    static final String[] SUPPORTED_INTENTS = { "aries.rsa.default" };
 
     public static final String FASTBIN_CONFIG_TYPE = "aries.fastbin";
 
@@ -101,43 +114,30 @@ public class FastBinProvider implements DistributionProvider {
         return new String[] {FASTBIN_CONFIG_TYPE};
     }
 
+    @SafeVarargs
+    private static <T> Set<T> union(Collection<T>... collections) {
+        Set<T> union = new HashSet<>();
+        for (Collection<T> c : collections)
+            if (c != null)
+                union.addAll(c);
+        return union;
+    }
+
     @Override
     public Endpoint exportService(final Object serviceO,
                                   BundleContext serviceContext,
                                   Map<String, Object> effectiveProperties,
                                   Class[] exportedInterfaces) {
 
-        // Compute properties
-        /*
-        Map<String, Object> properties = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
-        for (String k : reference.getPropertyKeys()) {
-            properties.put(k, reference.getProperty(k));
+        effectiveProperties.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, getSupportedTypes());
+        Set<String> intents = union(
+                StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS)),
+                StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA)));
+        intents.removeAll(Arrays.asList(SUPPORTED_INTENTS));
+        if (!intents.isEmpty()) {
+            LOG.warn("Unsupported intents found: {}. Not exporting service", intents);
+            return null;
         }
-        // Bail out if there is any intents specified, we don't support any
-        Set<String> intents = Utils.normalize(properties.get(SERVICE_EXPORTED_INTENTS));
-        Set<String> extraIntents = Utils.normalize(properties.get(SERVICE_EXPORTED_INTENTS_EXTRA));
-        if (!intents.isEmpty() || !extraIntents.isEmpty()) {
-            throw new UnsupportedOperationException();
-        }
-        // Bail out if there are any configurations specified, we don't support any
-        Set<String> configs = Utils.normalize(properties.get(SERVICE_EXPORTED_CONFIGS));
-        if (configs.isEmpty()) {
-            configs.add(CONFIG);
-        } else if (!configs.contains(CONFIG)) {
-            throw new UnsupportedOperationException();
-        }
-
-        URI connectUri = new URI(this.server.getConnectAddress());
-        String fabricAddress = connectUri.getScheme() + "://" + exportedAddress + ":" + connectUri.getPort();
-
-        properties.remove(SERVICE_EXPORTED_CONFIGS);
-        properties.put(SERVICE_IMPORTED_CONFIGS, new String[] { CONFIG });
-        properties.put(ENDPOINT_FRAMEWORK_UUID, this.uuid);
-        properties.put(FABRIC_ADDRESS, fabricAddress);
-
-        String uuid = UuidGenerator.getUUID();
-        properties.put(ENDPOINT_ID, uuid);
-        */
 
         String endpointId = UuidGenerator.getUUID();
         effectiveProperties.put(RemoteConstants.ENDPOINT_ID, endpointId);
@@ -145,12 +145,11 @@ public class FastBinProvider implements DistributionProvider {
         URI connectUri = URI.create(this.server.getConnectAddress());
         String fastbinAddress = connectUri.getScheme() + "://" + exportedAddress + ":" + connectUri.getPort();
         effectiveProperties.put(FASTBIN_ADDRESS, fastbinAddress);
-        effectiveProperties.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, getSupportedTypes());
+        effectiveProperties.put(RemoteConstants.SERVICE_INTENTS, Arrays.asList(SUPPORTED_INTENTS));
 
-        // Now, export the service
         final EndpointDescription description = new EndpointDescription(effectiveProperties);
 
-        // Export it
+        // export it
         server.registerService(description.getId(), new ServerInvoker.ServiceFactory() {
             public Object get() {
                 return serviceO;
