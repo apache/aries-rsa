@@ -21,6 +21,7 @@ package org.apache.aries.rsa.provider.fastbin.tcp;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
@@ -94,6 +95,7 @@ public class TcpTransportServer implements TransportServer {
         try {
             channel = ServerSocketChannel.open();
             channel.configureBlocking(false);
+            channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
             channel.socket().bind(bindAddress, backlog);
         } catch (IOException e) {
             throw new IOException("Failed to bind to server socket: " + bindAddress + " due to: " + e, e);
