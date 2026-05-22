@@ -61,9 +61,78 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.aries.rsa.discovery</groupId>
+            <artifactId>org.apache.aries.rsa.discovery.zookeeper</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.aries.rsa.provider</groupId>
             <artifactId>org.apache.aries.rsa.provider.tcp</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.aries.rsa.provider</groupId>
+            <artifactId>org.apache.aries.rsa.provider.fastbin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- ZooKeeper discovery dependencies -->
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial.snappy</groupId>
+            <artifactId>snappy-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-common</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-transport-native-unix-common</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+
+        <!-- fastbin provider dependencies -->
+        <dependency>
+            <groupId>org.fusesource.hawtbuf</groupId>
+            <artifactId>hawtbuf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fusesource.hawtdispatch</groupId>
+            <artifactId>hawtdispatch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fusesource.hawtbuf</groupId>
+            <artifactId>hawtbuf-proto</artifactId>
         </dependency>
 
         <!-- JAXB dependencies (used by e.g. discovery.local) -->
@@ -156,6 +225,16 @@
         <!-- OSGi compendium services -->
         <dependency>
             <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr</artifactId>
+            <version>2.2.18</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.fileinstall</artifactId>
+            <version>3.7.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.configadmin</artifactId>
             <version>1.9.26</version>
         </dependency>
@@ -163,11 +242,6 @@
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.eventadmin</artifactId>
             <version>1.6.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.scr</artifactId>
-            <version>2.2.18</version>
         </dependency>
 
     </dependencies>
@@ -196,7 +270,8 @@
                 <version>${bnd.version}</version>
                 <configuration>
                     <bndruns>
-                        <bndrun>tck.bndrun</bndrun>
+                        <bndrun>tck-tcp-tcp.bndrun</bndrun>
+                        <bndrun>tck-zookeeper-fastbin.bndrun</bndrun>
                     </bndruns>
                     <failOnChanges>false</failOnChanges>
                     <!-- enables passing -Dtck.test=<TestClass> on maven command line to run specific tests -->
@@ -215,4 +290,3 @@
     </build>
 
 </project>
-
