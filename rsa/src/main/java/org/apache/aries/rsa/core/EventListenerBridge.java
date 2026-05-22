@@ -257,7 +257,8 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
         if (event.getType() == ServiceEvent.UNREGISTERING)
             el = eel = false; // remove both
         // update our consumer lists with relevant one-interface-only consumers
-        boolean modified = false;
+        boolean modified = event.getType() == ServiceEvent.MODIFIED
+            && (oldConsumers.contains(sref) || newConsumers.contains(sref));
         if (!el)
             modified |= oldConsumers.remove(sref);
         else if (!eel) // only EL (not EEL)
