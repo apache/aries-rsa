@@ -171,7 +171,7 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
     private final Map<Long, Integer> producers = new ConcurrentHashMap<>(); // bundleId to producer types bitmap
 
     private final BundleContext context;
-    private ServiceRegistration<ServiceFactory<Adapter>> factoryRegistration;
+    private volatile ServiceRegistration<ServiceFactory<Adapter>> factoryRegistration;
     private ServiceRegistration<ListenerHook> hookRegistration;
 
     public EventListenerBridge(BundleContext context) {
@@ -215,11 +215,18 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
 
     @SuppressWarnings("unchecked")
     public void start() throws InvalidSyntaxException {
-        // ServiceListener to track consumers
+        // add ServiceListener to track new/updated consumers
         context.addServiceListener(this, SERVICE_LISTENER_FILTER);
-        // ListenerHook to track what producers are looking for
+        // process previously registered consumers
+        ServiceReference<?>[] existing = context.getServiceReferences((String)null, SERVICE_LISTENER_FILTER);
+        if (existing != null) {
+            for (ServiceReference<?> sref : existing) {
+                serviceChanged(new ServiceEvent(ServiceEvent.REGISTERED, sref));
+            }
+        }
+        // register ListenerHook to track what producers are looking for
         hookRegistration = context.registerService(ListenerHook.class, this, null);
-        // our listener, backed by a ServiceFactory, to be used by producers
+        // register our listener, backed by a ServiceFactory, to be used by producers
         factoryRegistration = (ServiceRegistration<ServiceFactory<Adapter>>)
             context.registerService(
                 new String[] { ENDPOINT_LISTENER_CLASS_NAME, ENDPOINT_EVENT_LISTENER_CLASS_NAME },
@@ -268,7 +275,7 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
         else if (!el) // only EEL (not EL)
             modified |= newConsumers.add((ServiceReference<EndpointEventListener>)sref);
         // update our own listener's scopes accordingly
-        if (modified) {
+        if (modified && factoryRegistration != null) {
             factoryRegistration.setProperties(getListenerProperties());
         }
     }
