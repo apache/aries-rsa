@@ -161,8 +161,8 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
         OWN_LISTENER_PROP = EventListenerBridge.class.getName(),
         ENDPOINT_LISTENER_CLASS_NAME = EndpointListener.class.getName(),
         ENDPOINT_EVENT_LISTENER_CLASS_NAME = EndpointEventListener.class.getName(),
-        SERVICE_LISTENER_FILTER = "(|" + getObjectClass(EndpointListener.class)
-            + getObjectClass(EndpointEventListener.class) + "(" + OWN_LISTENER_PROP + "=true))";
+        SERVICE_LISTENER_FILTER = "(&(|" + getObjectClass(EndpointListener.class)
+            + getObjectClass(EndpointEventListener.class) + ")(!(" + OWN_LISTENER_PROP + "=*)))";
 
     private final Set<ServiceReference<EndpointListener>> oldConsumers =
         Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -251,12 +251,10 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
     @SuppressWarnings("unchecked")
     public void serviceChanged(ServiceEvent event) {
         ServiceReference<?> sref = event.getServiceReference();
-        boolean ignore = sref.getProperty(OWN_LISTENER_PROP) != null; // ignore our own listener
-        List<String> classes = Arrays.asList(
-            (String[])event.getServiceReference().getProperty(Constants.OBJECTCLASS));
+        List<String> classes = Arrays.asList((String[])sref.getProperty(Constants.OBJECTCLASS));
         boolean el = classes.contains(ENDPOINT_LISTENER_CLASS_NAME);
         boolean eel = classes.contains(ENDPOINT_EVENT_LISTENER_CLASS_NAME);
-        if (event.getType() == ServiceEvent.UNREGISTERING || ignore)
+        if (event.getType() == ServiceEvent.UNREGISTERING)
             el = eel = false; // remove both
         // update our consumer lists with relevant one-interface-only consumers
         boolean modified = false;
