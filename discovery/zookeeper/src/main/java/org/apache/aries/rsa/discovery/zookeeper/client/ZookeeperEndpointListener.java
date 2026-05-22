@@ -21,8 +21,11 @@ package org.apache.aries.rsa.discovery.zookeeper.client;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -113,6 +116,10 @@ public class ZookeeperEndpointListener implements Closeable {
 
     private void onChanged(String path, EndpointDescription endpoint) {
         EndpointDescription old = endpoints.put(path, endpoint);
+        if (old != null && getChangedProps(old.getProperties(), endpoint.getProperties()).isEmpty()) {
+            LOG.trace("ignoring endpoint that hasn't changed: {}", endpoint);
+            return;
+        }
         int type = old == null ? EndpointEvent.ADDED : EndpointEvent.MODIFIED;
         EndpointEvent event = new EndpointEvent(type, endpoint);
         listener.accept(event);
@@ -134,6 +141,20 @@ public class ZookeeperEndpointListener implements Closeable {
         } else {
             return parser.readEndpoint(new ByteArrayInputStream(data));
         }
+    }
+
+    private static Set<String> getChangedProps(Map<String, Object> p1, Map<String, Object> p2) {
+        Set<String> changed = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : p1.entrySet()) {
+            Object v = p2.get(entry.getKey());
+            if (!Objects.deepEquals(entry.getValue(), v) || v == null && !p2.containsKey(entry.getKey()))
+                changed.add(entry.getKey());
+        }
+        for (String k : p2.keySet()) {
+            if (!p1.containsKey(k))
+                changed.add(k);
+        }
+        return changed;
     }
 
 }
