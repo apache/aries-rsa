@@ -58,17 +58,6 @@
         <module>itests</module>
     </modules>
 
-    <profiles>
-        <profile>
-            <id>rat</id>
-            <build>
-                <plugins>
-
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <build>
         <defaultGoal>install</defaultGoal>
         <plugins>
