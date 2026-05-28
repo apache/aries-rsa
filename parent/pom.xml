@@ -42,6 +42,7 @@
         <hawtbuf.version>1.11</hawtbuf.version>
         <exam.version>4.14.0</exam.version>
         <paxlogging.version>2.3.3</paxlogging.version>
+        <jaxb.version>4.0.9</jaxb.version>
     </properties>
 
     <dependencies>
@@ -281,7 +282,7 @@
             <dependency>
                 <groupId>com.sun.xml.bind</groupId>
                 <artifactId>jaxb-osgi</artifactId>
-                <version>4.0.8</version>
+                <version>${jaxb.version}</version>
             </dependency>
             <dependency>
                 <groupId>jakarta.activation</groupId>
