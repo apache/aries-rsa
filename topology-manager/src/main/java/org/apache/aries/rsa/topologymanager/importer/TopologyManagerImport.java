@@ -21,6 +21,7 @@ package org.apache.aries.rsa.topologymanager.importer;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -110,9 +111,12 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     public void remoteAdminEvent(RemoteServiceAdminEvent event) {
         ImportReference ref = event.getImportReference();
         if (event.getType() == RemoteServiceAdminEvent.IMPORT_UNREGISTRATION && ref != null) {
-            importedServices.allValues().stream()
-                .filter(reg -> ref.equals(reg.getImportReference()))
-                .forEach(this::unimportRegistration);
+            synchronized (this) {
+                List<ImportRegistration> closing = importedServices.allValues().stream()
+                    .filter(reg -> ref.equals(reg.getImportReference()))
+                    .collect(Collectors.toList()); // make a copy to prevent CME
+                closing.forEach(this::unimportRegistration);
+            }
         }
     }
 
@@ -133,7 +137,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
      *
      * @param filter the filter whose endpoints are synchronized
      */
-    private void synchronizeImports(final String filter) {
+    private synchronized void synchronizeImports(final String filter) {
         try {
             // we have a set of all current imports, and a set of all possible imports (with overlap)
             Set<ImportRegistration> imported = importedServices.get(filter);
