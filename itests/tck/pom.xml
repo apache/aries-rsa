@@ -248,6 +248,24 @@
 
     <build>
         <plugins>
+            <!-- copy dependencies to a folder for the bnd indexer to index -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>copy-dependencies</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- create an index from the dependencies folder that will be used
+                 both for the resolve below and for the 'latest' version in the
+                 second container's bundles property -->
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-indexer-maven-plugin</artifactId>
@@ -258,12 +276,37 @@
                 <executions>
                     <execution>
                         <id>index</id>
-                        <goals>
-                            <goal>index</goal>
-                        </goals>
+                        <phase>package</phase>
+                        <goals><goal>local-index</goal></goals>
+                        <configuration>
+                            <inputDir>${project.build.directory}/dependency</inputDir>
+                            <outputFile>${project.build.directory}/index.xml</outputFile>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
+            <!-- resolve the runrequires list in the bndrun files and update the
+                 runbundles list automatically with the appropriate bundles and versions -->
+            <plugin>
+                <groupId>biz.aQute.bnd</groupId>
+                <artifactId>bnd-resolver-maven-plugin</artifactId>
+                <version>${bnd.version}</version>
+                <executions>
+                    <execution>
+                        <id>resolve</id>
+                        <goals><goal>resolve</goal></goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failOnChanges>false</failOnChanges>
+                    <bndruns>
+                        <bndrun>tck-tcp-tcp.bndrun</bndrun>
+                        <bndrun>tck-zookeeper-fastbin.bndrun</bndrun>
+                    </bndruns>
+                </configuration>
+            </plugin>
+            <!-- run the tests via the bndrun files -->
             <plugin>
                 <groupId>biz.aQute.bnd</groupId>
                 <artifactId>bnd-testing-maven-plugin</artifactId>
