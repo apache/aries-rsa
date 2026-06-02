@@ -161,8 +161,6 @@
 	net.bytebuddy.byte-buddy;version='[1.18.8,1.18.9)',\
 	jakarta.activation-api;version='[2.1.4,2.1.5)',\
 	jakarta.xml.bind-api;version='[4.0.5,4.0.6)',\
-	com.sun.xml.bind.jaxb-core;version='[4.0.8,4.0.9)',\
-	com.sun.xml.bind.jaxb-impl;version='[4.0.8,4.0.9)',\
 	com.sun.istack.commons-runtime;version='[4.2.0,4.2.1)',\
 	org.fusesource.hawtbuf.hawtbuf;version='[1.11.0,1.11.1)',\
 	org.fusesource.hawtdispatch.hawtdispatch;version='[1.22.0,1.22.1)',\
@@ -181,4 +179,6 @@
 	org.apache.aries.rsa.core;version='[2.0.0,2.0.1)',\
 	org.apache.aries.rsa.topology-manager;version='[2.0.0,2.0.1)',\
 	org.osgi.test.cases.remoteserviceadmin;version='[8.1.0,8.1.1)',\
-	org.xerial.snappy.snappy-java;version='[1.1.10,1.1.11)'
+	org.xerial.snappy.snappy-java;version='[1.1.10,1.1.11)',\
+	com.sun.xml.bind.jaxb-core;version='[4.0.9,4.0.10)',\
+	com.sun.xml.bind.jaxb-impl;version='[4.0.9,4.0.10)'

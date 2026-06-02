@@ -29,7 +29,7 @@
 
     <properties>
         <tck.version>8.1.0</tck.version>
-        <jaxb.version>4.0.8</jaxb.version>
+        <jaxb.version>4.0.9</jaxb.version>
     </properties>
 
     <dependencies>
