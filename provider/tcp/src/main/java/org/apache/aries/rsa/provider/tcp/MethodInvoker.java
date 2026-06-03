@@ -19,7 +19,6 @@
 package org.apache.aries.rsa.provider.tcp;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -54,19 +53,22 @@ public class MethodInvoker {
     }
 
     public MethodInvoker(Object service, List<String> interfaces) {
-        this(service, loadClasses(interfaces, service.getClass().getClassLoader()));
+        this(service, interfaces.stream().map(iface -> toClass(iface, service.getClass())).toArray(Class<?>[]::new));
     }
 
-    private static Class<?>[] loadClasses(List<String> interfaces, ClassLoader loader) {
-        List<Class<?>> classes = new ArrayList<>();
-        for (String iface : interfaces) {
-            try {
-                classes.add(loader.loadClass(iface));
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
+    private static Class<?> toClass(String iface, Class<?> serviceClass) {
+        // find the interface class by name using the class of the service
+        // that implements it as well as all of its superclasses (which
+        // may come from a different bundle - the service classloader is not enough)
+        for (Class<?> cls = serviceClass; cls != null; cls = cls.getSuperclass()) {
+            for (Class<?> c : cls.getInterfaces()) {
+                if (c.getName().equals(iface)) {
+                    return c;
+                }
             }
         }
-        return classes.toArray(new Class<?>[0]);
+        throw new RuntimeException("service of type " + serviceClass.getSimpleName()
+            + " does not implement interface " + iface);
     }
 
     public Object getService() {
