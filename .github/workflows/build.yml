@@ -45,6 +45,8 @@ jobs:
       shell: bash
       run: ./mvnw -U -e -B -ntp clean install
     - name: Check for dirty workspace
+      # When dependency is updated then the tck bndruns may have updated version ranges
+      # If that happends we want to have it explicitly committed to the repository.
       shell: bash
       run: |
         DIRTY=$(git status --porcelain)
