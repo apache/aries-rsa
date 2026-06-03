@@ -48,13 +48,13 @@ public class InterestManager {
         // an existing listener is not notified, but we do need to update its scopes (interest)
         Interest interest = new Interest(sref, listener);
         interests.put(sref, interest); // if it already exists - replace it with the new interest (scopes)
-        LOG.trace("Updated interest {} (new={})", interest, isNew);
-        if (isNew) {
-            // notify new listener of all known remote endpoints
-            remoteEndpoints.values().stream()
-                .flatMap(endpoints -> endpoints.values().stream())
+        LOG.trace("Updated interest {} (new={})", isNew, interest);
+        // notify new or updated listener of all known remote endpoints
+        // (according to the spec, the listener is idempotent so we don't worry about ADDED duplicates)
+        LOG.debug("Notifying new interest {} of all known remote endpoints {}", interest, remoteEndpoints.values());
+        remoteEndpoints.values().stream()
+            .flatMap(endpoints -> endpoints.values().stream())
                 .forEach(endpoint -> interest.notifyListener(new EndpointEvent(ADDED, endpoint)));
-        }
     }
 
     public void removeListener(ServiceReference<EndpointEventListener> sref) {
