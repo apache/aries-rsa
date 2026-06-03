@@ -144,6 +144,9 @@ public class TopologyManagerExport implements ServiceListener {
         LOG.debug("exporting Service {} using RemoteServiceAdmin {}", sref, rsa.getClass().getName());
         Map<String, ?> addProps = policy.additionalParameters(sref);
         Collection<ExportRegistration> regs = rsa.exportService(sref, addProps);
+        if (regs.isEmpty()) {
+            LOG.warn("no supported configs found for exporting service {}", sref);
+        }
 
         // process successful/failed registrations
         for (ExportRegistration reg : regs) {

@@ -50,6 +50,12 @@ public class TcpMessage implements Serializable {
         public List<String> getPeers() {
             return peers;
         }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[uuid=" + uuid + ", address=" + address + ", peers=" + peers + "]";
+        }
+
     }
 
     // there is no distinction between add and update, since it's
@@ -65,6 +71,11 @@ public class TcpMessage implements Serializable {
         public Map<String, Object> getProperties() {
             return properties;
         }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[properties=" + properties + "]";
+        }
     }
 
     public static class RemoveMessage extends TcpMessage {
@@ -77,6 +88,11 @@ public class TcpMessage implements Serializable {
 
         public String getEndpointId() {
             return endpointId;
+        }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() + "[endpointId=" + endpointId + "]";
         }
     }
 }

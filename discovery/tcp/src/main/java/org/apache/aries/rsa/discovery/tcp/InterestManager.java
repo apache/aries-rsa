@@ -22,6 +22,8 @@ import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +36,7 @@ import static org.osgi.service.remoteserviceadmin.EndpointEvent.*;
  * the former about the latter.
  */
 public class InterestManager {
+    private static final Logger LOG = LoggerFactory.getLogger(InterestManager.class);
     // listener to its interest
     private final Map<ServiceReference<EndpointEventListener>, Interest> interests = new ConcurrentHashMap<>();
     // peer framework UUID to endpointId to endpoint
@@ -45,6 +48,7 @@ public class InterestManager {
         // an existing listener is not notified, but we do need to update its scopes (interest)
         Interest interest = new Interest(sref, listener);
         interests.put(sref, interest); // if it already exists - replace it with the new interest (scopes)
+        LOG.trace("Updated interest {} (new={})", interest, isNew);
         if (isNew) {
             // notify new listener of all known remote endpoints
             remoteEndpoints.values().stream()
