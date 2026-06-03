@@ -177,6 +177,7 @@ public class RsaTestBase {
                          mvn("io.netty", "netty-resolver"),
                          mvn("io.netty", "netty-transport-native-unix-common"),
                          mvn("io.netty", "netty-codec"),
+                         mvn("io.netty", "netty-codec-base"),
                          mvn("io.dropwizard.metrics", "metrics-core"),
                          mvn("org.xerial.snappy", "snappy-java"),
                          mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.zookeeper"));
