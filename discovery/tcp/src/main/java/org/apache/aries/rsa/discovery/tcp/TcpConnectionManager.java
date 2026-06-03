@@ -74,6 +74,7 @@ public class TcpConnectionManager implements EndpointEventListener {
     }
 
     public void open(String bindAddress, int port, Collection<String> peers) throws IOException {
+        LOG.info("opening server socket at {}:{}", bindAddress, port);
         serverSocket = new ServerSocket();
         serverSocket.setReuseAddress(true);
         serverSocket.bind(new InetSocketAddress(bindAddress, port));
@@ -82,6 +83,7 @@ public class TcpConnectionManager implements EndpointEventListener {
     }
 
     public void close() throws IOException {
+        LOG.info("closing connection manager");
         closing = true;
         serverSocket.close(); // acceptLoop will get SocketException
         connections.forEach(TcpConnection::close);
@@ -93,7 +95,7 @@ public class TcpConnectionManager implements EndpointEventListener {
             .filter(peer -> !this.peers.contains(peer)) // only new ones
             .filter(peer -> !localAddress.equals(peer)) // exclude ourself
             .forEach(peer -> {
-                LOG.info("Adding peer {}", peer);
+                LOG.info("adding peer {}", peer);
                 this.peers.add(peer);
                 executor.submit(() -> connectLoop(peer));
             });
@@ -113,7 +115,7 @@ public class TcpConnectionManager implements EndpointEventListener {
             } catch (IOException ioe) {
                 return; // socket closed
             } catch (Throwable t) {
-                LOG.error("Unexpected error in accept loop - shutting down", t);
+                LOG.error("unexpected error in accept loop - shutting down", t);
                 return;
             }
         }
@@ -127,7 +129,7 @@ public class TcpConnectionManager implements EndpointEventListener {
                 onConnected(socket, address);
                 return; // connection established; onConnectionClosed will restart this loop if needed
             } catch (IOException ioe) {
-                LOG.debug("error connecting to {}, will retry soon", uri, ioe);
+                LOG.debug("error connecting to {}, will retry in {} ms", uri, reconnectDelay, ioe);
                 try {
                     Thread.sleep(reconnectDelay);
                 } catch (InterruptedException ie) {
@@ -142,8 +144,11 @@ public class TcpConnectionManager implements EndpointEventListener {
     }
 
     private void onConnected(Socket socket, String address) throws IOException {
+        LOG.debug("established connection with {} ({})", socket.getRemoteSocketAddress(),
+            address == null ? "incoming" : address);
         try {
             TcpConnection conn = new TcpConnection(socket, address, this::onMessage, this::onClosed);
+            LOG.debug("connection created: {}", conn);
             connections.add(conn);
             conn.send(new HandshakeMessage(localUuid, localAddress, new ArrayList<>(peers)));
             // don't send known endpoints yet, only after receiving handshake
@@ -158,6 +163,7 @@ public class TcpConnectionManager implements EndpointEventListener {
     }
 
     public void onClosed(TcpConnection conn) {
+        LOG.debug("connection closed: {}", conn);
         connections.remove(conn);
         String peerUuid = conn.getPeerUuid();
         if (peerUuid != null) { // passed the handshake
@@ -176,6 +182,7 @@ public class TcpConnectionManager implements EndpointEventListener {
     }
 
     private void onMessage(TcpConnection conn, TcpMessage message) {
+        LOG.debug("received message {} on connection {}", message, conn);
         if (message instanceof HandshakeMessage) {
             HandshakeMessage h = (HandshakeMessage) message;
             // update the peer data
@@ -200,6 +207,7 @@ public class TcpConnectionManager implements EndpointEventListener {
                 // keep retrying to connect. to solve this, only the outbound peer is the one
                 // that closes the connection. The inbound side just doesn't use it until then.
                 if (conn.isOutbound()) {
+                    LOG.debug("connection already exists with peer {}, closing {}", h.getUuid(), conn);
                     conn.close();
                 }
                 return;
