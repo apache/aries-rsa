@@ -44,3 +44,17 @@ jobs:
     - name: Build all
       shell: bash
       run: ./mvnw -U -e -B -ntp clean install
+    - name: Check for dirty workspace
+      # When dependency is updated then the tck bndruns may have updated version ranges
+      # If that happends we want to have it explicitly committed to the repository.
+      shell: bash
+      run: |
+        DIRTY=$(git status --porcelain)
+        if [ -n "$DIRTY" ]; then
+          echo "::error title=Dirty workspace::Build modified files. Please run the build locally and commit all the changes."
+          echo "$DIRTY" | while IFS= read -r line; do
+            file="${line:3}"
+            echo "::error file=$file,title=Unexpected change::This file was modified or created by the build"
+          done
+          exit 1
+        fi
