@@ -190,6 +190,11 @@
             <version>${netty.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-base</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.aries.rsa.provider</groupId>
             <artifactId>org.apache.aries.rsa.provider.tcp</artifactId>
             <version>${project.version}</version>
