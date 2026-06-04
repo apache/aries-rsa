@@ -18,6 +18,7 @@
  */
 package org.apache.aries.rsa.discovery.tcp;
 
+import org.apache.aries.rsa.spi.discovery.Interest;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;

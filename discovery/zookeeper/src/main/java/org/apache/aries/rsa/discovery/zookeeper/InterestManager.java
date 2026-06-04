@@ -21,6 +21,7 @@ package org.apache.aries.rsa.discovery.zookeeper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.aries.rsa.spi.discovery.Interest;
 import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
