@@ -23,8 +23,6 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,6 +49,8 @@ import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 @SuppressWarnings("rawtypes")
 public class FastBinProvider implements DistributionProvider {
@@ -120,15 +120,6 @@ public class FastBinProvider implements DistributionProvider {
         return new String[] {FASTBIN_CONFIG_TYPE};
     }
 
-    @SafeVarargs
-    private static <T> Set<T> union(Collection<T>... collections) {
-        Set<T> union = new HashSet<>();
-        for (Collection<T> c : collections)
-            if (c != null)
-                union.addAll(c);
-        return union;
-    }
-
     @Override
     public Endpoint exportService(final Object serviceO,
                                   BundleContext serviceContext,
@@ -137,8 +128,8 @@ public class FastBinProvider implements DistributionProvider {
 
         effectiveProperties.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, getSupportedTypes());
         Set<String> intents = union(
-                StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS)),
-                StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA)));
+            StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS)),
+            StringPlus.normalize(effectiveProperties.get(RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA)));
         intents.removeAll(Arrays.asList(SUPPORTED_INTENTS));
         if (!intents.isEmpty()) {
             LOG.warn("Unsupported intents found: {}. Not exporting service", intents);

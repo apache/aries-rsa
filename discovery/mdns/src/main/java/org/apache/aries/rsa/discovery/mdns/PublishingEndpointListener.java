@@ -20,8 +20,8 @@ package org.apache.aries.rsa.discovery.mdns;
 
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
-import static java.util.stream.Stream.concat;
 import static javax.ws.rs.core.MediaType.SERVER_SENT_EVENTS;
+import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +30,6 @@ import java.util.Hashtable;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Stream;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -105,7 +104,7 @@ public class PublishingEndpointListener {
                 localEndpoints.compute(id, (k,v) -> new SponsoredEndpoint(ed,
                     v == null
                     ? singleton(bundleId)
-                    : concat(v.sponsors.stream(), Stream.of(bundleId)).collect(toSet())));
+                    : union(v.sponsors, singleton(bundleId))));
                 String data = toEndpointData(ed);
                 listeners.forEach(s -> s.update(data));
                 break;
