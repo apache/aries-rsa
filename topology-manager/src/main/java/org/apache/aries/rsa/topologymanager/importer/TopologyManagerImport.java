@@ -23,7 +23,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
@@ -43,6 +42,8 @@ import org.osgi.service.remoteserviceadmin.RemoteServiceAdminEvent;
 import org.osgi.service.remoteserviceadmin.RemoteServiceAdminListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.aries.rsa.util.CollectionUtils.getChangedKeys;
 
 /**
  * Listens for remote endpoints using the EndpointListener. The scope of this listener is managed by
@@ -158,7 +159,7 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
                 // check if the currently imported endpoint is still valid and possible
                 EndpointDescription pe = possible.get(endpoint); // get the new (maybe modified) possible endpoint
                 if (pe != null) {
-                    if (getChangedProps(endpoint.getProperties(), pe.getProperties()).isEmpty())
+                    if (getChangedKeys(endpoint.getProperties(), pe.getProperties()).isEmpty())
                         valid.add(endpoint); // valid and possible
                     else
                         updated.put(reg, pe); // valid and possible and changed properties
@@ -211,20 +212,6 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
     private void unimportRegistration(ImportRegistration reg) {
         importedServices.remove(reg);
         reg.close();
-    }
-
-    private static Set<String> getChangedProps(Map<String, Object> p1, Map<String, Object> p2) {
-        Set<String> changed = new LinkedHashSet<>();
-        for (Map.Entry<String, Object> entry : p1.entrySet()) {
-            Object v = p2.get(entry.getKey());
-            if (!Objects.deepEquals(entry.getValue(), v) || v == null && !p2.containsKey(entry.getKey()))
-                changed.add(entry.getKey());
-        }
-        for (String k : p2.keySet()) {
-            if (!p1.containsKey(k))
-                changed.add(k);
-        }
-        return changed;
     }
 
     @Override

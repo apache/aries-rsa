@@ -20,6 +20,9 @@ package org.apache.aries.rsa.util;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -44,5 +47,27 @@ public class CollectionUtils {
             if (c != null)
                 union.addAll(c);
         return union;
+    }
+
+    /**
+     * Returns the set of keys whose entries have changed between two maps
+     * (added, removed, or changed value).
+     *
+     * @param p1 the first map
+     * @param p2 the second map
+     * @return the set of changed keys
+     */
+    public static Set<String> getChangedKeys(Map<String, Object> p1, Map<String, Object> p2) {
+        Set<String> changed = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : p1.entrySet()) {
+            Object v = p2.get(entry.getKey());
+            if (!Objects.deepEquals(entry.getValue(), v) || v == null && !p2.containsKey(entry.getKey()))
+                changed.add(entry.getKey());
+        }
+        for (String k : p2.keySet()) {
+            if (!p1.containsKey(k))
+                changed.add(k);
+        }
+        return changed;
     }
 }
