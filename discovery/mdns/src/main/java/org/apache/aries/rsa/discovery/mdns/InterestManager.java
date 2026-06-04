@@ -20,16 +20,15 @@ package org.apache.aries.rsa.discovery.mdns;
 
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
-import static java.util.stream.Stream.concat;
 import static org.apache.aries.rsa.discovery.mdns.PublishingEndpointListener.Subscription.ENDPOINT_REVOKED;
 import static org.apache.aries.rsa.discovery.mdns.PublishingEndpointListener.Subscription.ENDPOINT_UPDATED;
+import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Stream;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.sse.InboundSseEvent;
@@ -110,9 +109,7 @@ public class InterestManager {
 
         if (ENDPOINT_UPDATED.equals(name)) {
             EndpointDescription ed = parser.readEndpoint(event.readData(InputStream.class));
-            endpointsBySource.compute(source, (a,b) -> {
-                return b == null ? singleton(ed) : concat(b.stream(), Stream.of(ed)).collect(toSet());
-            });
+            endpointsBySource.compute(source, (a,b) -> b == null ? singleton(ed) : union(b, singleton(ed)));
             interests.values().forEach(i -> i.endpointChanged(ed));
         } else if (ENDPOINT_REVOKED.equals(name)) {
             String id = event.readData();

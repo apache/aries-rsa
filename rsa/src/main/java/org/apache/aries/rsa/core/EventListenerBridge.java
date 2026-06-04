@@ -28,7 +28,8 @@ import org.osgi.service.remoteserviceadmin.EndpointListener;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
+
+import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 /**
  * This service acts as a bridge between those consumers/producers of endpoint
@@ -247,7 +248,7 @@ public class EventListenerBridge implements ServiceListener, ListenerHook {
         // our listener's scope is the combined scope of all known consumers we may dispatch to
         Hashtable<String, Object> props = new Hashtable<>();
         props.put(OWN_LISTENER_PROP, "true"); // mark our own listener for exclusion from consumers
-        String[] scopes = Stream.concat(oldConsumers.stream(), newConsumers.stream())
+        String[] scopes = union(oldConsumers, newConsumers).stream()
             .flatMap(s -> StringPlus.normalize(s.getProperty(EndpointEventListener.ENDPOINT_LISTENER_SCOPE)).stream())
             .toArray(String[]::new);
         props.put(EndpointEventListener.ENDPOINT_LISTENER_SCOPE, scopes);

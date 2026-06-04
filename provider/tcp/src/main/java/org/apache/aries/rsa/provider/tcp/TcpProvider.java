@@ -27,9 +27,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,6 +48,8 @@ import org.slf4j.LoggerFactory;
 import javax.net.ServerSocketFactory;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLContext;
+
+import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 /**
  * The main TCP distribution provider class, which can import remote endpoints
@@ -81,15 +81,6 @@ public class TcpProvider implements DistributionProvider {
     @Override
     public String[] getSupportedTypes() {
         return new String[] {TCP_CONFIG_TYPE};
-    }
-
-    @SafeVarargs
-    private static <T> Set<T> union(Collection<T>... collections) {
-        Set<T> union = new HashSet<>();
-        for (Collection<T> c : collections)
-            if (c != null)
-                union.addAll(c);
-        return union;
     }
 
     private void initSocketFactories(Config config) {
