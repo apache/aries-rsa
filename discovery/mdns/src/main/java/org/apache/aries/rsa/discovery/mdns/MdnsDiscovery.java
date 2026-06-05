@@ -41,17 +41,14 @@ import javax.ws.rs.client.ClientBuilder;
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.jaxrs.client.SseEventSourceFactory;
 import org.osgi.service.jaxrs.runtime.JaxrsServiceRuntime;
 import org.osgi.service.jaxrs.runtime.dto.RuntimeDTO;
-import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,23 +76,11 @@ public class MdnsDiscovery {
     @Activate
     public MdnsDiscovery(BundleContext ctx, @Reference SseEventSourceFactory eventSourceFactory,
             @Reference ClientBuilder clientBuilder, @Reference EndpointDescriptionParser parser) {
-        this.client = clientBuilder.build();
-        this.interestManager = new InterestManager(eventSourceFactory, parser, client);
+        client = clientBuilder.build();
+        interestManager = new InterestManager(eventSourceFactory, parser, client);
+        interestManager.start(ctx, null);
         fwUuid = ctx.getProperty(FRAMEWORK_UUID);
-        this.publishingListener = new PublishingEndpointListener(parser, ctx, fwUuid);
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.addListener(sref, listener);
-    }
-
-    public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.updateListener(sref, listener);
-    }
-
-    public void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        interestManager.removeListener(sref);
+        publishingListener = new PublishingEndpointListener(parser, ctx, fwUuid);
     }
 
     @Reference(policy = ReferencePolicy.DYNAMIC)
@@ -198,7 +183,7 @@ public class MdnsDiscovery {
             LOG.warn("An exception occurred closing the mdns discovery");
         }
 
-        interestManager.deactivate();
+        interestManager.stop();
         publishingListener.stop();
     }
 

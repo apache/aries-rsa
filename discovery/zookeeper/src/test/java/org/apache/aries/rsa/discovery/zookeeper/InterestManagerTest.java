@@ -58,22 +58,22 @@ public class InterestManagerTest {
         // sref has no scope -> nothing should happen
         assertNumInterests(0);
 
-        im.bindEndpointEventListener(sref, epListener1);
+        im.addListener(sref, epListener1);
         assertNumInterests(1);
 
-        im.bindEndpointEventListener(sref, epListener1);
+        im.addListener(sref, epListener1);
         assertNumInterests(1);
 
-        im.bindEndpointEventListener(sref2, epListener2);
+        im.addListener(sref2, epListener2);
         assertNumInterests(2);
 
-        im.unbindEndpointEventListener(sref);
+        im.removeListener(sref);
         assertNumInterests(1);
 
-        im.unbindEndpointEventListener(sref);
+        im.removeListener(sref);
         assertNumInterests(1);
 
-        im.unbindEndpointEventListener(sref2);
+        im.removeListener(sref2);
         assertNumInterests(0);
     }
 

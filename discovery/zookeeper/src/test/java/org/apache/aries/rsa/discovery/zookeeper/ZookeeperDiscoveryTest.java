@@ -99,7 +99,7 @@ public class ZookeeperDiscoveryTest {
 
         String scope = "("+ Constants.OBJECTCLASS +"=*)";
         Mockito.when(sref.getProperty(Mockito.eq(EndpointEventListener.ENDPOINT_LISTENER_SCOPE))).thenReturn(scope);
-        im.bindEndpointEventListener(sref, this::onEndpointChanged);
+        im.addListener(sref, this::onEndpointChanged);
 
         assertThat(semConnected.tryAcquire(1, SECONDS), equalTo(true));
 

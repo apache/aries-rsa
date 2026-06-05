@@ -18,9 +18,14 @@
  */
 package org.apache.aries.rsa.spi.discovery;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.Filter;
+import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
+import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +46,27 @@ public class InterestManager {
     protected final Map<ServiceReference<EndpointEventListener>, Interest> interests = new ConcurrentHashMap<>();
     // source to endpointId to endpoint
     protected final Map<String , Map<String, EndpointDescription>> remoteEndpoints = new ConcurrentHashMap<>();
+    // service tracker for finding interested EndpointEventListeners
+    protected ServiceTracker<EndpointEventListener, EndpointEventListener> tracker;
+
+    public void start(BundleContext context, String excludeProperty) {
+        String classFilter = String.format("(%s=%s)", Constants.OBJECTCLASS, EndpointEventListener.class.getName());
+        String filter = excludeProperty == null
+            ? classFilter
+            : String.format("(&%s(!(%s=*)))", classFilter, excludeProperty);
+        try {
+            tracker = new EndpointEventListenerServiceTracker(context, context.createFilter(filter));
+            tracker.open();
+        } catch (InvalidSyntaxException ise) {
+            throw new RuntimeException(ise);
+        }
+    }
+
+    public void stop() {
+        if (tracker != null) {
+            tracker.close();
+        }
+    }
 
     public void addListener(ServiceReference<EndpointEventListener> sref,
             EndpointEventListener listener) {
@@ -96,6 +122,32 @@ public class InterestManager {
         Map<String, EndpointDescription> endpoints = remoteEndpoints.remove(source);
         if (endpoints != null) {
             endpoints.values().forEach(endpoint -> notifyAllListeners(endpoint, null));
+        }
+    }
+
+    protected class EndpointEventListenerServiceTracker extends ServiceTracker<EndpointEventListener, EndpointEventListener> {
+
+        public EndpointEventListenerServiceTracker(BundleContext context, Filter filter) {
+            super(context, filter, null);
+        }
+
+        @Override
+        public EndpointEventListener addingService(ServiceReference<EndpointEventListener> sref) {
+            EndpointEventListener service = super.addingService(sref);
+            addListener(sref, service);
+            return service;
+        }
+
+        @Override
+        public void modifiedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
+            super.modifiedService(reference, service);
+            updateListener(reference, service);
+        }
+
+        @Override
+        public void removedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
+            super.removedService(reference, service);
+            removeListener(reference);
         }
     }
 }

@@ -32,8 +32,8 @@ import java.util.*;
 class ConfigDiscovery implements ManagedServiceFactory {
     private final InterestManager interestManager;
 
-    public ConfigDiscovery() {
-        this.interestManager = new InterestManager();
+    public ConfigDiscovery(InterestManager interestManager) {
+        this.interestManager = interestManager;
     }
 
     @Override
