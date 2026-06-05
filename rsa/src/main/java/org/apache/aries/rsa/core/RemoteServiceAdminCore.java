@@ -504,22 +504,21 @@ public class RemoteServiceAdminCore implements RemoteServiceAdmin {
     }
 
     protected void removeImportRegistration(ImportRegistration iri) {
-        synchronized (importedServices) {
-            LOG.debug("Removing importRegistration {}", iri);
-
-            ImportReference importRef = iri.getException() != null ? null : iri.getImportReference();
-            if (importRef == null) {
-                return;
+        LOG.debug("Removing importRegistration {}", iri);
+        ImportReference importRef = iri.getException() != null ? null : iri.getImportReference();
+        EndpointDescription endpoint = importRef == null ? null : importRef.getImportedEndpoint();
+        if (endpoint != null) {
+            boolean removed;
+            synchronized (importedServices) {
+                Collection<ImportRegistration> imRegs = importedServices.get(endpoint);
+                removed = imRegs != null && imRegs.contains(iri) && imRegs.remove(iri);
+                if (removed && imRegs.isEmpty()) {
+                    importedServices.remove(endpoint);
+                }
             }
-
-            EndpointDescription endpoint = importRef.getImportedEndpoint();
-            Collection<ImportRegistration> imRegs = importedServices.get(endpoint);
-            if (imRegs != null && imRegs.contains(iri)) {
-                imRegs.remove(iri);
+            // notify without holding lock to prevent deadlock
+            if (removed) {
                 eventProducer.notifyRemoval(iri);
-            }
-            if (imRegs == null || imRegs.isEmpty()) {
-                importedServices.remove(endpoint);
             }
         }
     }
