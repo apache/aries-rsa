@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.osgi.service.remoteserviceadmin.EndpointEventListener.ENDPOINT_LISTENER_SCOPE;
 
@@ -49,13 +50,41 @@ public class Interest {
         this.listener = listener;
     }
 
-    public void notifyListener(EndpointEvent event) {
-        EndpointDescription endpoint = event.getEndpoint();
-        scopes.stream().filter(endpoint::matches).findFirst().ifPresent(scope -> { // notify with first scope
+    /**
+     * Notify the listener about an endpoint change (added, removed, modified
+     * properties or end of match), according to the listener's interest scope
+     * and its previous endpoint data.
+     *
+     * @param prev the previous endpoint data (before this update),
+     *        or null if this is a newly added endpoint
+     * @param endpoint the new endpoint data, or null if the previously
+     *        known endpoint is being removed
+     */
+    public void notifyListener(EndpointDescription prev, EndpointDescription endpoint) {
+        Optional<String> oldScope = prev == null ? Optional.empty() : scopes.stream().filter(prev::matches).findFirst();
+        Optional<String> scope = endpoint == null ? Optional.empty() : scopes.stream().filter(endpoint::matches).findFirst();
+        EndpointEvent event = null;
+        if (oldScope.isEmpty()) { // new endpoint
+            if (scope.isPresent()) { // new endpoint matched
+                event = new EndpointEvent(EndpointEvent.ADDED, endpoint);
+            }
+        } else if (scope.isPresent()) { // previously matched and currently matched endpoint
+            event = new EndpointEvent(EndpointEvent.MODIFIED, endpoint);
+        } else if (endpoint != null) { // previously matched and currently unmatched endpoint
+            event = new EndpointEvent(EndpointEvent.MODIFIED_ENDMATCH, endpoint);
+            scope = oldScope;
+        } else { // previously matched and now removed endpoint
+            event = new EndpointEvent(EndpointEvent.REMOVED, prev);
+            scope = oldScope;
+        }
+
+        if (event != null) {
             LOG.info("Calling endpointChanged on {} for filter {}, type {}, endpoint {}",
-                listener, scope, event.getType(), endpoint);
-            listener.endpointChanged(event, scope);
-        });
+                    listener, scope, event.getType(), endpoint);
+            listener.endpointChanged(event, scope.get()); // notify with first matched scope
+        } else { // new unmatched endpoint - ignore
+            LOG.trace("interest {} ignoring unmatched endpoint {}", this, endpoint);
+        }
     }
 
     @Override

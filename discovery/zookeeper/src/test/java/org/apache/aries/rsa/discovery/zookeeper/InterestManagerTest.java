@@ -21,8 +21,6 @@ package org.apache.aries.rsa.discovery.zookeeper;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
-import java.util.Collections;
-
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
 import org.junit.Test;
@@ -53,7 +51,6 @@ public class InterestManagerTest {
     @Test
     public void testEndpointListenerTrackerCustomizer() {
         when(repository.createListener(Mockito.any())).thenReturn(listener);
-        when(listener.getEndpoints()).thenReturn(Collections.emptyList());
         im = new InterestManager();
         im.bindARepository(repository);
         ServiceReference<EndpointEventListener> sref = createService("(objectClass=mine)");

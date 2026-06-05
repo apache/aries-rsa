@@ -169,7 +169,7 @@ public class LocalDiscoveryTest {
         assertEquals(2, listener.getEndpoints().size());
 
         // remove listener
-        ld.unbindListener(listener);
+        ld.unbindListener(listener.getServiceReference());
 
         // add new listener with scope A
         listener = new Listener("(objectClass=org.example.ClassA)");
@@ -181,7 +181,7 @@ public class LocalDiscoveryTest {
 
         // unbind the listener, modify its scope to A+B, and bind again
         listener.setFilter("(|(objectClass=org.example.ClassA)(objectClass=org.example.ClassB))");
-        ld.unbindListener(listener);
+        ld.unbindListener(listener.getServiceReference());
         listener.clear();
         ld.bindListener(listener.getServiceReference(), listener);
 
@@ -206,7 +206,7 @@ public class LocalDiscoveryTest {
         assertEquals(1, listener.getEndpoints().size());
 
         // remove the EndpointListener service
-        ld.unbindListener(listener);
+        ld.unbindListener(listener.getServiceReference());
     }
 
     @Test
@@ -246,7 +246,7 @@ public class LocalDiscoveryTest {
         ld.bindListener(listener2.getServiceReference(), listener2);
 
         // remove first listener and start bundle
-        ld.unbindListener(listener);
+        ld.unbindListener(listener.getServiceReference());
         Bundle bundle = mockBundle();
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
 
@@ -262,7 +262,7 @@ public class LocalDiscoveryTest {
         assertEquals(0, listener2.getEndpoints().size());
 
         // remove the second bundle and start the bundle
-        ld.unbindListener(listener2);
+        ld.unbindListener(listener2.getServiceReference());
         bundle = mockBundle();
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
 
@@ -291,6 +291,7 @@ public class LocalDiscoveryTest {
             .map(r -> LocalDiscoveryTest.class.getResource("/" + r))
             .collect(Collectors.toList());
         Bundle bundle = createMock(Bundle.class);
+        expect(bundle.getBundleId()).andReturn(Math.round(Math.random())).anyTimes();
         expect(bundle.getState()).andReturn(Bundle.ACTIVE).anyTimes();
         Dictionary<String, String> headers = new Hashtable<>();
         headers.put("Remote-Service", "OSGI-INF/rsa/");

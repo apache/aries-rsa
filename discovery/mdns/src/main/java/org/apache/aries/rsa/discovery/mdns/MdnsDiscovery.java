@@ -41,6 +41,7 @@ import javax.ws.rs.client.ClientBuilder;
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
 import org.apache.aries.rsa.util.StringPlus;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -85,16 +86,16 @@ public class MdnsDiscovery {
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    public void bindEndpointEventListener(EndpointEventListener epListener, Map<String, Object> props) {
-        interestManager.addInterest(epListener, props);
+    public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
+        interestManager.addListener(sref, listener);
     }
 
-    public void updatedEndpointEventListener(Map<String, Object> props) {
-        interestManager.updateInterest(props);
+    public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
+        interestManager.updateListener(sref, listener);
     }
 
-    public void unbindEndpointEventListener(Map<String, Object> props) {
-        interestManager.removeInterest(props);
+    public void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
+        interestManager.removeListener(sref);
     }
 
     @Reference(policy = ReferencePolicy.DYNAMIC)

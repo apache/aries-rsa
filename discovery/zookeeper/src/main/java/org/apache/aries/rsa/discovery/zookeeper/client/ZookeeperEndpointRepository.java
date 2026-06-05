@@ -25,9 +25,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -79,8 +79,8 @@ public class ZookeeperEndpointRepository {
         }
     }
 
-    public ZookeeperEndpointListener createListener(Consumer<EndpointEvent> listener) {
-        return new ZookeeperEndpointListener(zk, parser, listener);
+    public ZookeeperEndpointListener createListener(InterestManager interestManager) {
+        return new ZookeeperEndpointListener(zk, parser, interestManager);
     }
 
     public void endpointChanged(EndpointEvent event) {

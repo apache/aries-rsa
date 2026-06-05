@@ -20,7 +20,6 @@ package org.apache.aries.rsa.discovery.zookeeper.client;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
 import org.junit.Test;
 
 public class ZookeeperEndpointRepositoryPathTest {
