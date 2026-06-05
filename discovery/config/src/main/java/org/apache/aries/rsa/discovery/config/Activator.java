@@ -67,26 +67,20 @@ public class Activator implements BundleActivator {
         @Override
         public EndpointEventListener addingService(ServiceReference<EndpointEventListener> reference) {
             EndpointEventListener service = super.addingService(reference);
-            configDiscovery.addListener(reference, service);
+            configDiscovery.getInterestManager().addListener(reference, service);
             return service;
         }
 
         @Override
         public void modifiedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
             super.modifiedService(reference, service);
-            configDiscovery.removeListener(service);
-
-            // This may cause duplicate registrations of remote services,
-            // but that's fine and should be filtered out on another level.
-            // See Remote Service Admin spec section 122.6.3
-            configDiscovery.addListener(reference, service);
+            configDiscovery.getInterestManager().updateListener(reference, service);
         }
 
         @Override
         public void removedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
             super.removedService(reference, service);
-            configDiscovery.removeListener(service);
+            configDiscovery.getInterestManager().removeListener(reference);
         }
     }
-
 }

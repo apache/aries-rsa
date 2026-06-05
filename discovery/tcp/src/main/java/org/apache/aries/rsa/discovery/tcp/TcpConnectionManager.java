@@ -19,6 +19,7 @@
 package org.apache.aries.rsa.discovery.tcp;
 
 import org.apache.aries.rsa.discovery.tcp.TcpMessage.*;
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
@@ -169,7 +170,7 @@ public class TcpConnectionManager implements EndpointEventListener {
         if (peerUuid != null) { // passed the handshake
             boolean removed = connectionsByUuid.remove(peerUuid, conn); // remove if this is the active connection
             if (removed && !closing) {
-                interestManager.removePeer(peerUuid); // no active connections with peer
+                interestManager.removeSource(peerUuid); // no active connections with peer
             }
         }
         // re-start the connect retry thread if necessary:
@@ -217,7 +218,7 @@ public class TcpConnectionManager implements EndpointEventListener {
         } else if (message instanceof UpdateMessage) {
             UpdateMessage u = (UpdateMessage) message;
             EndpointDescription endpoint = new EndpointDescription(u.getProperties());
-            interestManager.addEndpoint(endpoint);
+            interestManager.addEndpoint(endpoint.getFrameworkUUID(), endpoint);
         } else if (message instanceof RemoveMessage) {
             RemoveMessage r = (RemoveMessage) message;
             interestManager.removeEndpoint(conn.getPeerUuid(), r.getEndpointId());

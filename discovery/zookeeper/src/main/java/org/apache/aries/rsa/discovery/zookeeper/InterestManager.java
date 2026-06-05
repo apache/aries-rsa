@@ -18,10 +18,6 @@
  */
 package org.apache.aries.rsa.discovery.zookeeper;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.aries.rsa.spi.discovery.Interest;
 import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
@@ -31,7 +27,6 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,62 +37,34 @@ import org.slf4j.LoggerFactory;
  * Events from repository are then forwarded to all interested {@link EndpointEventListener}s.
  */
 @Component(immediate = true)
-public class InterestManager {
+public class InterestManager extends org.apache.aries.rsa.spi.discovery.InterestManager {
     private static final Logger LOG = LoggerFactory.getLogger(InterestManager.class);
 
-    private final Map<ServiceReference<EndpointEventListener>, Interest> interests = new ConcurrentHashMap<>();
-
     private ZookeeperEndpointListener zkListener;
-
-    public InterestManager() {
-    }
 
     // Using ARepository name to make sure it is injected first
     @Reference
     public void bindARepository(ZookeeperEndpointRepository repository) {
-        zkListener = repository.createListener(this::onEndpointEvent);
+        zkListener = repository.createListener(this);
     }
 
     @Deactivate
     public void deactivate() {
         zkListener.close();
-        interests.clear();
     }
 
-    private void onEndpointEvent(EndpointEvent event) {
-        interests.values().forEach(interest -> interest.notifyListener(event));
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC,
+        target = "(!(" + ClientManager.DISCOVERY_ZOOKEEPER_ID + "=*))")
     public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        addInterest(sref, listener);
+        addListener(sref, listener);
     }
 
     public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        addInterest(sref, listener);
+        updateListener(sref, listener);
     }
 
     public void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        interests.remove(sref);
-    }
-
-    private void addInterest(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        if (isOurOwnEndpointEventListener(sref)) {
-            LOG.debug("Skipping our own EndpointEventListener");
-            return;
-        }
-        Interest interest = new Interest(sref, listener);
-        boolean exists = interests.put(sref, interest) != null;
-        LOG.debug("{} Interest: {}", exists ? "Updating" : "Adding", interest);
-        if (zkListener != null) {
-            zkListener.getEndpoints().stream()
-                .map(endpoint -> new EndpointEvent(EndpointEvent.ADDED, endpoint))
-                .forEach(interest::notifyListener);
-        }
-    }
-
-    private static boolean isOurOwnEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        return Boolean.parseBoolean(String.valueOf(sref.getProperty(ClientManager.DISCOVERY_ZOOKEEPER_ID)));
+        removeListener(sref);
     }
 
     int size() {

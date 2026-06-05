@@ -20,13 +20,10 @@ package org.apache.aries.rsa.discovery.zookeeper.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -35,11 +32,8 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
-import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.aries.rsa.util.CollectionUtils.getChangedKeys;
 
 /**
  * Listens to endpoint changes in Zookeeper and forwards changes in Endpoints to InterestManager.
@@ -47,27 +41,21 @@ import static org.apache.aries.rsa.util.CollectionUtils.getChangedKeys;
 public class ZookeeperEndpointListener implements Closeable {
     private static final Logger LOG = LoggerFactory.getLogger(ZookeeperEndpointListener.class);
 
-    private Map<String, EndpointDescription> endpoints = new ConcurrentHashMap<>();
     private ZooKeeper zk;
     private EndpointDescriptionParser parser;
-    private Consumer<EndpointEvent> listener;
+    private InterestManager interestManager;
     private volatile boolean closed;
 
-    ZookeeperEndpointListener(ZooKeeper zk, EndpointDescriptionParser parser, Consumer<EndpointEvent> listener) {
+    ZookeeperEndpointListener(ZooKeeper zk, EndpointDescriptionParser parser, InterestManager interestManager) {
         this.zk = zk;
         this.parser = parser;
-        this.listener = listener;
+        this.interestManager = interestManager;
         watchRecursive(ZookeeperEndpointRepository.PATH_PREFIX);
-    }
-
-    public Collection<EndpointDescription> getEndpoints() {
-        return endpoints.values();
     }
 
     @Override
     public void close() {
         closed = true;
-        endpoints.clear();
     }
 
     private void process(WatchedEvent event) {
@@ -114,22 +102,11 @@ public class ZookeeperEndpointListener implements Closeable {
     }
 
     private void onChanged(String path, EndpointDescription endpoint) {
-        EndpointDescription old = endpoints.put(path, endpoint);
-        if (old != null && getChangedKeys(old.getProperties(), endpoint.getProperties()).isEmpty()) {
-            LOG.trace("ignoring endpoint that hasn't changed: {}", endpoint);
-            return;
-        }
-        int type = old == null ? EndpointEvent.ADDED : EndpointEvent.MODIFIED;
-        EndpointEvent event = new EndpointEvent(type, endpoint);
-        listener.accept(event);
+        interestManager.addEndpoint(path, endpoint);
     }
 
     private void onRemoved(String path) {
-        EndpointDescription endpoint = endpoints.remove(path);
-        if (endpoint != null) {
-            EndpointEvent event = new EndpointEvent(EndpointEvent.REMOVED, endpoint);
-            listener.accept(event);
-        }
+        interestManager.removeSource(path);
     }
 
     private EndpointDescription read(String path) throws KeeperException, InterruptedException {

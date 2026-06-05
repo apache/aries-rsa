@@ -19,6 +19,7 @@
 package org.apache.aries.rsa.discovery.tcp;
 
 import org.apache.aries.rsa.annotations.RSADiscoveryProvider;
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
@@ -192,11 +193,11 @@ public class TcpDiscovery {
 
     @Reference(cardinality = MULTIPLE, policy = DYNAMIC, target = "(!(" + OWN_LISTENER_PROP + "=*))")
     void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.addListener(sref, listener, true);
+        interestManager.addListener(sref, listener);
     }
 
     void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.addListener(sref, listener, false);
+        interestManager.updateListener(sref, listener);
     }
 
     void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
