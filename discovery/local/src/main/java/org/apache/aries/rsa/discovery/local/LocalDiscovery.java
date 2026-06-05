@@ -25,15 +25,10 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
-import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,11 +50,13 @@ public class LocalDiscovery implements BundleListener {
     public void activate(BundleContext context) {
         context.addBundleListener(this);
         processExistingBundles(context.getBundles());
+        interestManager.start(context, null);
     }
 
     @Deactivate
     public void deactivate(BundleContext context) {
         context.removeBundleListener(this);
+        interestManager.stop();
     }
 
     protected void processExistingBundles(Bundle[] bundles) {
@@ -68,19 +65,6 @@ public class LocalDiscovery implements BundleListener {
                 addEndpoints(bundle);
             }
         }
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
-    void bindListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.addListener(sref, listener);
-    }
-
-    void unbindListener(ServiceReference<EndpointEventListener> sref) {
-        interestManager.removeListener(sref);
-    }
-
-    void updatedListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.updateListener(sref, listener);
     }
 
     // BundleListener method

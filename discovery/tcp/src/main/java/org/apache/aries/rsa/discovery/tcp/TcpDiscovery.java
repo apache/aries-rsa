@@ -21,12 +21,10 @@ package org.apache.aries.rsa.discovery.tcp;
 import org.apache.aries.rsa.annotations.RSADiscoveryProvider;
 import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +42,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.osgi.framework.Constants.FRAMEWORK_UUID;
-import static org.osgi.service.component.annotations.ReferenceCardinality.MULTIPLE;
-import static org.osgi.service.component.annotations.ReferencePolicy.DYNAMIC;
 import static org.osgi.service.remoteserviceadmin.EndpointEventListener.ENDPOINT_LISTENER_SCOPE;
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_FRAMEWORK_UUID;
 
@@ -179,6 +175,7 @@ public class TcpDiscovery {
         } catch (IOException ioe) {
             LOG.error("failed to start TCP connection manager", ioe);
         }
+        interestManager.start(context, OWN_LISTENER_PROP);
     }
 
     @Deactivate
@@ -189,18 +186,6 @@ public class TcpDiscovery {
         if (connectionManager != null) {
             connectionManager.close();
         }
-    }
-
-    @Reference(cardinality = MULTIPLE, policy = DYNAMIC, target = "(!(" + OWN_LISTENER_PROP + "=*))")
-    void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.addListener(sref, listener);
-    }
-
-    void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        interestManager.updateListener(sref, listener);
-    }
-
-    void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        interestManager.removeListener(sref);
+        interestManager.stop();
     }
 }

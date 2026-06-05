@@ -20,15 +20,13 @@ package org.apache.aries.rsa.discovery.config;
 
 import java.util.Hashtable;
 
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.osgi.annotation.bundle.Header;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.cm.ManagedServiceFactory;
-import org.osgi.service.remoteserviceadmin.EndpointEventListener;
-import org.osgi.util.tracker.ServiceTracker;
 
 @Header(name = Constants.BUNDLE_ACTIVATOR, value = "${@class}")
 @org.osgi.annotation.bundle.Capability( //
@@ -39,13 +37,13 @@ import org.osgi.util.tracker.ServiceTracker;
 public class Activator implements BundleActivator {
     private static final String FACTORY_PID = "org.apache.aries.rsa.discovery.config";
 
-    private ServiceTracker<EndpointEventListener, EndpointEventListener> listenerTracker;
+    private InterestManager interestManager;
     private ServiceRegistration<ManagedServiceFactory> registration;
 
     public void start(BundleContext context) {
-        ConfigDiscovery configDiscovery = new ConfigDiscovery();
-        listenerTracker = new EPListenerTracker(context, configDiscovery);
-        listenerTracker.open();
+        interestManager = new InterestManager();
+        ConfigDiscovery configDiscovery = new ConfigDiscovery(interestManager);
+        interestManager.start(context, null);
         Hashtable<String, Object> props = new Hashtable<>();
         props.put(Constants.SERVICE_PID, FACTORY_PID);
         registration = context.registerService(ManagedServiceFactory.class, configDiscovery, props);
@@ -53,34 +51,6 @@ public class Activator implements BundleActivator {
 
     public void stop(BundleContext context) {
         registration.unregister();
-        listenerTracker.close();
-    }
-
-    private final class EPListenerTracker extends ServiceTracker<EndpointEventListener, EndpointEventListener> {
-        private final ConfigDiscovery configDiscovery;
-
-        private EPListenerTracker(BundleContext context, ConfigDiscovery configDiscovery) {
-            super(context, EndpointEventListener.class, null);
-            this.configDiscovery = configDiscovery;
-        }
-
-        @Override
-        public EndpointEventListener addingService(ServiceReference<EndpointEventListener> reference) {
-            EndpointEventListener service = super.addingService(reference);
-            configDiscovery.getInterestManager().addListener(reference, service);
-            return service;
-        }
-
-        @Override
-        public void modifiedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
-            super.modifiedService(reference, service);
-            configDiscovery.getInterestManager().updateListener(reference, service);
-        }
-
-        @Override
-        public void removedService(ServiceReference<EndpointEventListener> reference, EndpointEventListener service) {
-            super.removedService(reference, service);
-            configDiscovery.getInterestManager().removeListener(reference);
-        }
+        interestManager.stop();
     }
 }

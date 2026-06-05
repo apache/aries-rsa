@@ -19,8 +19,10 @@
 package org.apache.aries.rsa.discovery.local;
 
 import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.getCurrentArguments;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 
@@ -38,12 +40,16 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.aries.rsa.spi.discovery.InterestManager;
 import org.easymock.EasyMock;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.BundleListener;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
@@ -120,7 +126,8 @@ public class LocalDiscoveryTest {
 
         LocalDiscovery ld = new LocalDiscovery();
         Listener listener = new Listener();
-        ld.bindListener(listener.getServiceReference(), listener);
+        InterestManager im = ld.interestManager;
+        im.addListener(listener.getServiceReference(), listener);
 
         ld.activate(context); // should get all endpoints from existing bundles on activation
 
@@ -137,7 +144,8 @@ public class LocalDiscoveryTest {
 
         LocalDiscovery ld = new LocalDiscovery();
         Listener listener = new Listener();
-        ld.bindListener(listener.getServiceReference(), listener);
+        InterestManager im = ld.interestManager;
+        im.addListener(listener.getServiceReference(), listener);
 
         // install the bundle
         ld.bundleChanged(new BundleEvent(BundleEvent.INSTALLED, bundle));
@@ -162,18 +170,19 @@ public class LocalDiscoveryTest {
     public void testEndpointListenerLifecycle() {
         LocalDiscovery ld = new LocalDiscovery();
         Listener listener = new Listener();
-        ld.bindListener(listener.getServiceReference(), listener);
+        InterestManager im = ld.interestManager;
+        im.addListener(listener.getServiceReference(), listener);
 
         Bundle bundle = mockBundle(); // created with two endpoint descriptions, ClassA and ClassB
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
         assertEquals(2, listener.getEndpoints().size());
 
         // remove listener
-        ld.unbindListener(listener.getServiceReference());
+        im.removeListener(listener.getServiceReference());
 
         // add new listener with scope A
         listener = new Listener("(objectClass=org.example.ClassA)");
-        ld.bindListener(listener.getServiceReference(), listener);
+        im.addListener(listener.getServiceReference(), listener);
 
         Collection<String> filters = listener.getFilters();
         assertEquals(1, filters.size());
@@ -181,9 +190,9 @@ public class LocalDiscoveryTest {
 
         // unbind the listener, modify its scope to A+B, and bind again
         listener.setFilter("(|(objectClass=org.example.ClassA)(objectClass=org.example.ClassB))");
-        ld.unbindListener(listener.getServiceReference());
+        im.removeListener(listener.getServiceReference());
         listener.clear();
-        ld.bindListener(listener.getServiceReference(), listener);
+        im.addListener(listener.getServiceReference(), listener);
 
         Set<String> expectedInterfaces = new HashSet<>(Arrays.asList("org.example.ClassA", "org.example.ClassB"));
         Set<String> interfaces = listener.getEndpointData(EndpointDescription::getInterfaces).stream()
@@ -194,38 +203,39 @@ public class LocalDiscoveryTest {
         // now change the scope to C via updated listener service properties
         listener.setFilter("(objectClass=org.example.ClassC)");
         listener.clear();
-        ld.updatedListener(listener.getServiceReference(), listener);
+        im.updateListener(listener.getServiceReference(), listener);
 
         assertEquals(0, listener.getEndpoints().size());
 
         // and update again to scope B
         listener.setFilter("(objectClass=org.example.ClassB)");
         listener.clear();
-        ld.updatedListener(listener.getServiceReference(), listener);
+        im.updateListener(listener.getServiceReference(), listener);
 
         assertEquals(1, listener.getEndpoints().size());
 
         // remove the EndpointListener service
-        ld.unbindListener(listener.getServiceReference());
+        im.removeListener(listener.getServiceReference());
     }
 
     @Test
     public void testRegisterListener() {
         LocalDiscovery ld = new LocalDiscovery();
         Listener listener = new Listener("(objectClass=org.example.ClassA)");
-        ld.bindListener(listener.getServiceReference(), listener);
+        InterestManager im = ld.interestManager;
+        im.addListener(listener.getServiceReference(), listener);
 
         assertEquals("Precondition failed", 0, listener.getEndpoints().size());
 
-        ld.bindListener(listener.getServiceReference(), listener);
+        im.addListener(listener.getServiceReference(), listener);
 
         // add another one with the same scope filter
         Listener listener2 = new Listener("(objectClass=org.example.ClassA)");
-        ld.bindListener(listener2.getServiceReference(), listener2);
+        im.addListener(listener2.getServiceReference(), listener2);
 
         // add another listener with a multi-value scope
         Listener listener3 = new Listener("(objectClass=org.example.ClassA)", "(objectClass=org.example.ClassB)");
-        ld.bindListener(listener3.getServiceReference(), listener3);
+        im.addListener(listener3.getServiceReference(), listener3);
 
         Bundle bundle = mockBundle();
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
@@ -239,14 +249,15 @@ public class LocalDiscoveryTest {
     @Test
     public void testUnregisterListener() {
         LocalDiscovery ld = new LocalDiscovery();
+        InterestManager im = ld.interestManager;
         // start with two listeners
         Listener listener = new Listener("(objectClass=org.example.ClassA)");
-        ld.bindListener(listener.getServiceReference(), listener);
+        im.addListener(listener.getServiceReference(), listener);
         Listener listener2 = new Listener("(objectClass=org.example.ClassA)");
-        ld.bindListener(listener2.getServiceReference(), listener2);
+        im.addListener(listener2.getServiceReference(), listener2);
 
         // remove first listener and start bundle
-        ld.unbindListener(listener.getServiceReference());
+        im.removeListener(listener.getServiceReference());
         Bundle bundle = mockBundle();
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
 
@@ -262,7 +273,7 @@ public class LocalDiscoveryTest {
         assertEquals(0, listener2.getEndpoints().size());
 
         // remove the second bundle and start the bundle
-        ld.unbindListener(listener2.getServiceReference());
+        im.removeListener(listener2.getServiceReference());
         bundle = mockBundle();
         ld.bundleChanged(new BundleEvent(BundleEvent.STARTED, bundle));
 
@@ -311,6 +322,14 @@ public class LocalDiscoveryTest {
         expect(context.getBundles()).andReturn(bundles).anyTimes();
         context.addBundleListener(anyObject(BundleListener.class));
         context.removeBundleListener(anyObject(BundleListener.class));
+        try {
+            expect(context.createFilter(anyString()))
+                .andAnswer(() -> FrameworkUtil.createFilter((String)getCurrentArguments()[0]));
+            context.addServiceListener(anyObject(ServiceListener.class), anyString());
+            expect(context.getServiceReferences(anyString(), anyString())).andReturn(null);
+        } catch (InvalidSyntaxException e) {
+            throw new RuntimeException(e);
+        }
         replay(context);
         return context;
     }

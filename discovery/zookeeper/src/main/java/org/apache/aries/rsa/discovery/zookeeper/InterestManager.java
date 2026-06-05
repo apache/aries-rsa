@@ -21,12 +21,11 @@ package org.apache.aries.rsa.discovery.zookeeper;
 import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointListener;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
-import org.osgi.framework.ServiceReference;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,23 +47,15 @@ public class InterestManager extends org.apache.aries.rsa.spi.discovery.Interest
         zkListener = repository.createListener(this);
     }
 
+    @Activate
+    public void activate(BundleContext context) {
+        start(context, ClientManager.DISCOVERY_ZOOKEEPER_ID);
+    }
+
     @Deactivate
     public void deactivate() {
+        stop();
         zkListener.close();
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC,
-        target = "(!(" + ClientManager.DISCOVERY_ZOOKEEPER_ID + "=*))")
-    public void bindEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        addListener(sref, listener);
-    }
-
-    public void updatedEndpointEventListener(ServiceReference<EndpointEventListener> sref, EndpointEventListener listener) {
-        updateListener(sref, listener);
-    }
-
-    public void unbindEndpointEventListener(ServiceReference<EndpointEventListener> sref) {
-        removeListener(sref);
     }
 
     int size() {

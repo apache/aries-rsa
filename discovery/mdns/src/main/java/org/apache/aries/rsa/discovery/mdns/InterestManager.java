@@ -58,7 +58,9 @@ public class InterestManager extends org.apache.aries.rsa.spi.discovery.Interest
         this.client = client;
     }
 
-    public void deactivate() {
+    @Override
+    public void stop() {
+        super.stop();
         streams.values().forEach(SseEventSource::close);
         streams.clear();
     }
