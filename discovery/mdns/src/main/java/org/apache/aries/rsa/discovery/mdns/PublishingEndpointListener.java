@@ -18,18 +18,13 @@
  */
 package org.apache.aries.rsa.discovery.mdns;
 
-import static java.util.Collections.singleton;
-import static java.util.stream.Collectors.toSet;
 import static javax.ws.rs.core.MediaType.SERVER_SENT_EVENTS;
-import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -39,17 +34,14 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 
 import org.apache.aries.rsa.spi.EndpointDescriptionParser;
-import org.osgi.framework.Bundle;
+import org.apache.aries.rsa.spi.discovery.LocalEndpointManager;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceFactory;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.jaxrs.whiteboard.annotations.RequireJaxrsWhiteboard;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
-import org.osgi.service.remoteserviceadmin.RemoteConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,78 +54,46 @@ public class PublishingEndpointListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishingEndpointListener.class);
 
-    private final String uuid;
-
     private final EndpointDescriptionParser parser;
 
-    private final ServiceRegistration<?> listenerReg;
-    private final ServiceRegistration<?> resourceReg;
+    private final LocalEndpointManager localEndpointManager;
 
-    private final ConcurrentMap<String, SponsoredEndpoint> localEndpoints = new ConcurrentHashMap<>();
+    private final ServiceRegistration<?> resourceReg;
 
     private final Set<Subscription> listeners = ConcurrentHashMap.newKeySet();
 
     @SuppressWarnings("serial")
-    public PublishingEndpointListener(EndpointDescriptionParser parser, BundleContext bctx, String uuid) {
+    public PublishingEndpointListener(EndpointDescriptionParser parser, BundleContext context) {
         this.parser = parser;
-        this.uuid = uuid;
-        String[] ifAr = { EndpointEventListener.class.getName() };
-        Dictionary<String, Object> props = serviceProperties(uuid);
-        listenerReg = bctx.registerService(ifAr, new ListenerFactory(), props);
-        resourceReg = bctx.registerService(PublishingEndpointListener.class, this,
-                new Hashtable<>() {{put("osgi.jaxrs.resource", Boolean.TRUE);}});
+        this.localEndpointManager = new LocalEndpointManager();
+        localEndpointManager.setListener((event, filter) -> endpointUpdate(event.getEndpoint(), event.getType()));
+        localEndpointManager.start(context, getClass().getName());
+        resourceReg = context.registerService(PublishingEndpointListener.class, this,
+            new Hashtable<>() {{put("osgi.jaxrs.resource", Boolean.TRUE);}});
     }
 
     @Deactivate
     public void stop() {
-        listenerReg.unregister();
+        localEndpointManager.stop();
         listeners.forEach(Subscription::close);
         resourceReg.unregister();
     }
 
-    private void endpointUpdate(Long bundleId, EndpointDescription ed, int type) {
-        String edFwUuid = ed.getFrameworkUUID();
-        if (edFwUuid == null || !edFwUuid.equals(uuid)) {
-            LOG.warn("This listener has been called with an endpoint {} for a remote framework {}", ed.getId(), edFwUuid);
-            return;
-        }
+    private void endpointUpdate(EndpointDescription ed, int type) {
         String id = ed.getId();
         switch(type) {
             case EndpointEvent.ADDED:
             case EndpointEvent.MODIFIED:
-                localEndpoints.compute(id, (k,v) -> new SponsoredEndpoint(ed,
-                    v == null
-                    ? singleton(bundleId)
-                    : union(v.sponsors, singleton(bundleId))));
                 String data = toEndpointData(ed);
                 listeners.forEach(s -> s.update(data));
                 break;
             case EndpointEvent.MODIFIED_ENDMATCH:
             case EndpointEvent.REMOVED:
-                boolean act = localEndpoints.compute(id, (k,v) -> {
-                    if (v == null) {
-                        return null;
-                    } else {
-                      Set<Long> updated = v.sponsors.stream().filter(l -> !bundleId.equals(l)).collect(toSet());
-                      return updated.isEmpty() ? null : new SponsoredEndpoint(v.ed, updated);
-                    }
-                }) == null;
-
-                if (act) {
-                    listeners.forEach(s -> s.revoke(id));
-                }
+                listeners.forEach(s -> s.revoke(id));
                 break;
             default:
                 LOG.error("Unknown event type {} for endpoint {}", type, ed);
         }
-    }
-
-    private Dictionary<String, Object> serviceProperties(String uuid) {
-        String scope = String.format("(&(%s=*)(%s=%s))", Constants.OBJECTCLASS,
-                        RemoteConstants.ENDPOINT_FRAMEWORK_UUID, uuid);
-        Dictionary<String, Object> props = new Hashtable<>();
-        props.put(EndpointEventListener.ENDPOINT_LISTENER_SCOPE, scope);
-        return props;
     }
 
     private String toEndpointData(EndpointDescription ed) {
@@ -154,43 +114,9 @@ public class PublishingEndpointListener {
         Subscription subscription = new Subscription(sse, sink);
         listeners.add(subscription);
 
-        localEndpoints.values().stream()
-            .map(s -> toEndpointData(s.ed))
+        localEndpointManager.getEndpoints().stream()
+            .map(this::toEndpointData)
             .forEach(subscription::update);
-    }
-
-    private class ListenerFactory implements ServiceFactory<PerClientEndpointEventListener> {
-
-        @Override
-        public PerClientEndpointEventListener getService(Bundle bundle,
-                ServiceRegistration<PerClientEndpointEventListener> registration) {
-            return new PerClientEndpointEventListener(bundle.getBundleId());
-        }
-
-        @Override
-        public void ungetService(Bundle bundle, ServiceRegistration<PerClientEndpointEventListener> registration,
-                PerClientEndpointEventListener service) {
-            Long bundleId = service.bundleId;
-            localEndpoints.values().stream()
-                .filter(s -> s.sponsors.contains(bundleId))
-                .forEach(s -> endpointUpdate(bundleId, s.ed, EndpointEvent.REMOVED));
-        }
-
-    }
-
-    private class PerClientEndpointEventListener implements EndpointEventListener {
-
-        private final Long bundleId;
-
-        public PerClientEndpointEventListener(Long bundleId) {
-            super();
-            this.bundleId = bundleId;
-        }
-
-        @Override
-        public void endpointChanged(EndpointEvent event, String filter) {
-            endpointUpdate(bundleId, event.getEndpoint(), event.getType());
-        }
     }
 
     class Subscription {
@@ -227,16 +153,6 @@ public class PublishingEndpointListener {
                 listeners.remove(this);
                 eventSink.close();
             }
-        }
-    }
-
-    private static class SponsoredEndpoint {
-        private final EndpointDescription ed;
-        private final Set<Long> sponsors;
-
-        public SponsoredEndpoint(EndpointDescription ed, Set<Long> sponsors) {
-            this.ed = ed;
-            this.sponsors = sponsors;
         }
     }
 }

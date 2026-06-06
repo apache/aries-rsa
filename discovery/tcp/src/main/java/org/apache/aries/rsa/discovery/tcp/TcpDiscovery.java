@@ -20,8 +20,8 @@ package org.apache.aries.rsa.discovery.tcp;
 
 import org.apache.aries.rsa.annotations.RSADiscoveryProvider;
 import org.apache.aries.rsa.spi.discovery.InterestManager;
+import org.apache.aries.rsa.spi.discovery.LocalEndpointManager;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -36,14 +36,10 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Hashtable;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.osgi.framework.Constants.FRAMEWORK_UUID;
-import static org.osgi.service.remoteserviceadmin.EndpointEventListener.ENDPOINT_LISTENER_SCOPE;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_FRAMEWORK_UUID;
 
 /**
  * The main TCP Discovery provider component.
@@ -72,11 +68,12 @@ public class TcpDiscovery {
 
     private InterestManager interestManager;
     private TcpConnectionManager connectionManager;
-    private ServiceRegistration<?> listenerRegistration;
+    private LocalEndpointManager localEndpointManager;
 
     public TcpDiscovery() {
         // initialize in constructor before we start getting reference bind events
         interestManager = new InterestManager();
+        localEndpointManager = new LocalEndpointManager();
     }
 
     public static URI toURI(String address) {
@@ -151,16 +148,8 @@ public class TcpDiscovery {
         URI uri = toURI(address);
         bindAddress = bindAddress == null ? uri.getHost() : toURI(bindAddress).getHost(); // just the host
         connectionManager = new TcpConnectionManager(
-            interestManager, address, uuid, config.reconnectDelay(), config.gossip());
+            interestManager, localEndpointManager, address, uuid, config.reconnectDelay(), config.gossip());
         connectionManager.open(bindAddress, uri.getPort(), Arrays.asList(peers));
-    }
-
-    private void registerListener(BundleContext context, String uuid) {
-        Dictionary<String, Object> props = new Hashtable<>();
-        props.put(OWN_LISTENER_PROP, Boolean.TRUE); // mark our own listener for exclusion
-        String scope = "(&(objectClass=*)(" + ENDPOINT_FRAMEWORK_UUID + "=" + uuid + "))";
-        props.put(ENDPOINT_LISTENER_SCOPE, scope);
-        listenerRegistration = context.registerService(EndpointEventListener.class, connectionManager, props);
     }
 
     @Activate
@@ -170,18 +159,17 @@ public class TcpDiscovery {
         LOG.info("Starting TCP discovery for framework {} with config {}", uuid, config);
         try {
             initConnectionManager(config, uuid);
-            // register ourselves to capture local endpoint exports
-            registerListener(context, uuid);
         } catch (IOException ioe) {
             LOG.error("failed to start TCP connection manager", ioe);
         }
         interestManager.start(context, OWN_LISTENER_PROP);
+        localEndpointManager.start(context, OWN_LISTENER_PROP);
     }
 
     @Deactivate
     void stop() throws IOException {
-        if (listenerRegistration != null) {
-            listenerRegistration.unregister();
+        if (localEndpointManager != null) {
+            localEndpointManager.stop();
         }
         if (connectionManager != null) {
             connectionManager.close();
