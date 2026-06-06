@@ -20,6 +20,7 @@ package org.apache.aries.rsa.discovery.tcp;
 
 import org.apache.aries.rsa.discovery.tcp.TcpMessage.*;
 import org.apache.aries.rsa.spi.discovery.InterestManager;
+import org.apache.aries.rsa.spi.discovery.LocalEndpointManager;
 import org.osgi.service.remoteserviceadmin.EndpointDescription;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
@@ -51,6 +52,7 @@ public class TcpConnectionManager implements EndpointEventListener {
     private static final Logger LOG = LoggerFactory.getLogger(TcpConnectionManager.class);
 
     private final InterestManager interestManager;
+    private final LocalEndpointManager localEndpointManager;
     private final String localAddress;
     private final String localUuid;
     private final long reconnectDelay;
@@ -59,15 +61,16 @@ public class TcpConnectionManager implements EndpointEventListener {
     private final ExecutorService executor = Executors.newCachedThreadPool(); // for connect/accept threads
     private final Set<TcpConnection> connections = ConcurrentHashMap.newKeySet(); // all connections, including before handshake
     private final Map<String, TcpConnection> connectionsByUuid = new ConcurrentHashMap<>(); // connections after handshake (known uuid)
-    private final Map<String, EndpointDescription> localEndpoints = new ConcurrentHashMap<>();
     private final Set<String> peers = ConcurrentHashMap.newKeySet(); // all configured and discovered (gossip) peer addresses
 
     private ServerSocket serverSocket;
     private volatile boolean closing;
 
-    public TcpConnectionManager(InterestManager interestManager, String localAddress,
-            String localUuid, long reconnectDelay, boolean gossip) {
+    public TcpConnectionManager(InterestManager interestManager, LocalEndpointManager localEndpointManager,
+            String localAddress, String localUuid, long reconnectDelay, boolean gossip) {
         this.interestManager = interestManager;
+        this.localEndpointManager = localEndpointManager;
+        localEndpointManager.setListener(this);
         this.localAddress = localAddress;
         this.localUuid = localUuid;
         this.reconnectDelay = reconnectDelay;
@@ -214,7 +217,8 @@ public class TcpConnectionManager implements EndpointEventListener {
                 return;
             }
             // send all of our known local endpoints to the new peer
-            localEndpoints.values().forEach(endpoint -> conn.send(new UpdateMessage(endpoint.getProperties())));
+            localEndpointManager.getEndpoints().forEach(
+                endpoint -> conn.send(new UpdateMessage(endpoint.getProperties())));
         } else if (message instanceof UpdateMessage) {
             UpdateMessage u = (UpdateMessage) message;
             EndpointDescription endpoint = new EndpointDescription(u.getProperties());
@@ -236,12 +240,10 @@ public class TcpConnectionManager implements EndpointEventListener {
         switch (event.getType()) {
             case EndpointEvent.ADDED:
             case EndpointEvent.MODIFIED:
-                localEndpoints.put(endpointId, endpoint);
                 message = new UpdateMessage(endpoint.getProperties());
                 break;
             case EndpointEvent.MODIFIED_ENDMATCH:
             case EndpointEvent.REMOVED:
-                localEndpoints.remove(endpointId);
                 message = new RemoveMessage(endpointId);
                 break;
             default: throw new RuntimeException("Unknown event type: " + event.getType());

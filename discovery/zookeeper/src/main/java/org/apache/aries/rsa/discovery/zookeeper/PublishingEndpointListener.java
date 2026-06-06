@@ -18,21 +18,16 @@
  */
 package org.apache.aries.rsa.discovery.zookeeper;
 
-import java.util.Dictionary;
-import java.util.Hashtable;
-
 import org.apache.aries.rsa.discovery.zookeeper.client.ClientManager;
 import org.apache.aries.rsa.discovery.zookeeper.client.ZookeeperEndpointRepository;
+import org.apache.aries.rsa.spi.discovery.LocalEndpointManager;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.remoteserviceadmin.EndpointEvent;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
-import org.osgi.service.remoteserviceadmin.RemoteConstants;
 
 /**
  * Listens for local {@link EndpointEvent}s using {@link EndpointEventListener}
@@ -40,38 +35,22 @@ import org.osgi.service.remoteserviceadmin.RemoteConstants;
  */
 @SuppressWarnings("deprecation")
 @Component(service = {}, immediate = true)
-public class PublishingEndpointListener implements EndpointEventListener {
+public class PublishingEndpointListener {
 
-    private ServiceRegistration<?> listenerReg;
+    protected LocalEndpointManager localEndpointManager;
 
     @Reference
     private ZookeeperEndpointRepository repository;
 
     @Activate
-    public void start(BundleContext bctx) {
-        String uuid = bctx.getProperty(Constants.FRAMEWORK_UUID);
-        String[] ifAr = { EndpointEventListener.class.getName() };
-        Dictionary<String, String> props = serviceProperties(uuid);
-        listenerReg = bctx.registerService(ifAr, this, props);
+    public void start(BundleContext context) {
+        localEndpointManager = new LocalEndpointManager();
+        localEndpointManager.setListener((event, filter) -> repository.endpointChanged(event));
+        localEndpointManager.start(context, ClientManager.DISCOVERY_ZOOKEEPER_ID);
     }
 
     @Deactivate
     public void stop() {
-        listenerReg.unregister();
+        localEndpointManager.stop();
     }
-
-    @Override
-    public void endpointChanged(EndpointEvent event, String filter) {
-        repository.endpointChanged(event);
-    }
-
-    private Dictionary<String, String> serviceProperties(String uuid) {
-        String scope = String.format("(&(%s=*)(%s=%s))", Constants.OBJECTCLASS,
-                        RemoteConstants.ENDPOINT_FRAMEWORK_UUID, uuid);
-        Dictionary<String, String> props = new Hashtable<>();
-        props.put(EndpointEventListener.ENDPOINT_LISTENER_SCOPE, scope);
-        props.put(ClientManager.DISCOVERY_ZOOKEEPER_ID, "true");
-        return props;
-    }
-
 }

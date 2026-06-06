@@ -80,7 +80,7 @@ public class MdnsDiscovery {
         interestManager = new InterestManager(eventSourceFactory, parser, client);
         interestManager.start(ctx, null);
         fwUuid = ctx.getProperty(FRAMEWORK_UUID);
-        publishingListener = new PublishingEndpointListener(parser, ctx, fwUuid);
+        publishingListener = new PublishingEndpointListener(parser, ctx);
     }
 
     @Reference(policy = ReferencePolicy.DYNAMIC)
