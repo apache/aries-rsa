@@ -33,7 +33,6 @@ import org.osgi.service.remoteserviceadmin.EndpointEventListener;
  * Listens for local {@link EndpointEvent}s using {@link EndpointEventListener}
  * and publishes changes to the {@link ZookeeperEndpointRepository}
  */
-@SuppressWarnings("deprecation")
 @Component(service = {}, immediate = true)
 public class PublishingEndpointListener {
 

@@ -31,7 +31,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.remoteserviceadmin.EndpointEventListener;
 
-@SuppressWarnings("deprecation")
 public class EndpointListenerImplTest extends Assert {
 
     int testCase;

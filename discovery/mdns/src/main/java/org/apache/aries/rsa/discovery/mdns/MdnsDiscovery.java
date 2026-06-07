@@ -52,7 +52,6 @@ import org.osgi.service.jaxrs.runtime.dto.RuntimeDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@SuppressWarnings("deprecation")
 @org.apache.aries.rsa.annotations.RSADiscoveryProvider(protocols = "aries.mdns")
 @Component
 public class MdnsDiscovery {

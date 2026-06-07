@@ -97,7 +97,6 @@ import static org.apache.aries.rsa.util.CollectionUtils.union;
  * exclusively are urged to upgrade to use of {@code EndpointEventListener}
  * rather than relying on this bridge moving forward.
  */
-@SuppressWarnings("deprecation")
 public class EventListenerBridge implements ServiceListener, ListenerHook {
 
     /**
