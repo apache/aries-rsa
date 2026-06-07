@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
  * Discovery will then send callbacks when external endpoints are added / removed that match
  * the interest in the local system.
  */
-@SuppressWarnings("deprecation")
 public class EndpointListenerManager implements ServiceInterestListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(EndpointListenerManager.class);
