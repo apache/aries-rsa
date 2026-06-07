@@ -197,11 +197,51 @@ public class RsaTestBase {
                          mvn("org.apache.aries.rsa.provider", "org.apache.aries.rsa.provider.fastbin"));
     }
 
+    protected static Option rsaDiscoveryMdns() {
+        return composite(
+                mvn("org.ops4j.pax.logging", "pax-logging-api"),
+                mvn("org.ops4j.pax.logging", "pax-logging-logback"),
+                mvn("org.jmdns", "jmdns"),
+                mvn("org.apache.aries.spec", "org.apache.aries.javax.jax.rs-api"),
+                mvn("org.apache.aries.component-dsl", "org.apache.aries.component-dsl.component-dsl"),
+                mvn("org.apache.aries.jax.rs", "org.apache.aries.jax.rs.whiteboard"),
+                mvn("jakarta.xml.bind", "jakarta.xml.bind-api"),
+                mvn("jakarta.activation", "jakarta.activation-api"),
+                mavenBundle("jakarta.activation", "jakarta.activation-api", "1.2.2"),
+                mavenBundle("jakarta.xml.bind", "jakarta.xml.bind-api", "2.3.3"),
+                mvn("com.fasterxml.woodstox", "woodstox-core"),
+                mvn("org.codehaus.woodstox", "stax2-api"),
+                mvn("com.sun.istack", "istack-commons-runtime"),
+                mvn("org.glassfish.jaxb", "jaxb-runtime"),
+                mvn("org.apache.geronimo.specs", "geronimo-servlet_3.0_spec"),
+                mvn("org.apache.geronimo.specs", "geronimo-annotation_1.3_spec"),
+                mvn("org.apache.geronimo.specs", "geronimo-jaxws_2.2_spec"),
+                mvn("org.apache.geronimo.specs", "geronimo-saaj_1.3_spec"),
+                mvn("org.apache.ws.xmlschema", "xmlschema-core"),
+                mvn("org.apache.cxf", "cxf-core"),
+                mvn("org.apache.cxf", "cxf-rt-features-logging"),
+                mvn("org.apache.cxf", "cxf-rt-frontend-jaxrs"),
+                mvn("org.apache.cxf", "cxf-rt-rs-client"),
+                mvn("org.apache.cxf", "cxf-rt-security"),
+                mvn("org.apache.cxf", "cxf-rt-transports-http"),
+                mvn("org.apache.cxf", "cxf-rt-rs-sse"),
+                mvn("org.osgi", "org.osgi.service.http.whiteboard"),
+                mvn("org.osgi", "org.osgi.service.jaxrs"),
+                mvn("org.apache.felix", "org.apache.felix.http.servlet-api"),
+                mvn("org.apache.felix", "org.apache.felix.http.jetty"),
+                mvn("org.apache.aries.rsa.discovery", "org.apache.aries.rsa.discovery.mdns"));
+    }
+
     protected static Option configTcpDiscovery(int instance, int peerInstance) {
         return newConfiguration("org.apache.aries.rsa.discovery.tcp") //
                 .put("address", "127.0.0.1:" + (7667 + instance)) //
                 .put("peers", "127.0.0.1:" + (7667 + peerInstance)) //
                 .asOption();
+    }
+
+    protected static Option configMdnsDiscovery() throws IOException {
+        int port = getFreePort();
+        return systemProperty("org.osgi.service.http.port").value(String.valueOf(port));
     }
 
     protected static Option configZKDiscovery() {
