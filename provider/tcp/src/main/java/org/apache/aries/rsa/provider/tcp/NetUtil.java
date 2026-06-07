@@ -18,7 +18,6 @@
  */
 package org.apache.aries.rsa.provider.tcp;
 
-import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
 import java.io.FileInputStream;
 import java.io.IOException;
