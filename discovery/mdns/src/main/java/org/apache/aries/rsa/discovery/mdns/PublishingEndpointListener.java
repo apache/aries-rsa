@@ -53,6 +53,7 @@ import org.slf4j.LoggerFactory;
 public class PublishingEndpointListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishingEndpointListener.class);
+    public static final String LISTEN_PATH = "/aries/rsa/discovery";
 
     private final EndpointDescriptionParser parser;
 
@@ -109,7 +110,7 @@ public class PublishingEndpointListener {
 
     @GET
     @Produces(SERVER_SENT_EVENTS)
-    @Path("aries/rsa/discovery")
+    @Path(LISTEN_PATH)
     public void listen(@Context Sse sse, @Context SseEventSink sink) {
         Subscription subscription = new Subscription(sse, sink);
         listeners.add(subscription);

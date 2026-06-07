@@ -115,28 +115,25 @@ public class MdnsDiscovery {
         if (jmdns != null) {
             RuntimeDTO runtimeDTO = runtime.getRuntimeDTO();
             List<String> uris = StringPlus.normalize(runtimeDTO.serviceDTO.properties.get(JAX_RS_SERVICE_ENDPOINT));
-
             if (uris == null || uris.isEmpty()) {
                 LOG.warn("Unable to advertise discovery as there are no endpoint URIs");
                 return;
             }
-
-            String base = runtimeDTO.defaultApplication.base;
-            if (base == null) {
-                base = "";
-            }
-
-            base += "/aries/rsa/discovery";
-
             URI uri = uris.stream()
                 .filter(s -> s.matches(".*(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*"))
                 .findFirst()
                 .map(URI::create)
                 .orElseGet(() -> URI.create(uris.get(0)));
+            String path = uri.getPath();
+            String base = runtimeDTO.defaultApplication.base;
+            path = ((path == null ? "" : path) + "/"
+                  + (base == null ? "" : base) + "/"
+                  + PublishingEndpointListener.LISTEN_PATH)
+                .replaceAll("//+", "/");
 
             Map<String, Object> props = new HashMap<>();
             props.put("scheme", uri.getScheme() == null ? "" : uri.getScheme());
-            props.put("path", uri.getPath() == null ? base : uri.getPath() + base);
+            props.put("path", path);
             props.put("frameworkUuid", fwUuid);
 
             ServiceInfo info = ServiceInfo.create(_ARIES_DISCOVERY_HTTP_TCP_LOCAL, fwUuid, uri.getPort(), 0, 0, props);
