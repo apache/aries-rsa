@@ -20,7 +20,6 @@ package org.apache.aries.rsa.discovery.command;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
