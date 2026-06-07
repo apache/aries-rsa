@@ -128,7 +128,11 @@ public class ZookeeperEndpointRepository {
     private void remove(EndpointDescription endpoint) throws KeeperException, InterruptedException {
         String path = getZooKeeperPath(endpoint.getId());
         LOG.info("Removing endpoint in zookeeper. Endpoint: {}, Path: {}", endpoint, path);
-        zk.delete(path, -1);
+        try {
+            zk.delete(path, -1);
+        } catch (NoNodeException nne) {
+            // ignore - we wanted it deleted and it already is
+        }
     }
 
     private boolean notEmpty(String part) {
