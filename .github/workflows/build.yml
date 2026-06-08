@@ -58,3 +58,13 @@ jobs:
           done
           exit 1
         fi
+    - name: Upload pax-logging logs
+      if: always()   # run even on build failure
+      uses: actions/upload-artifact@v4
+      with:
+        name: pax-logs-jdk${{ matrix.java }}-${{ matrix.os }}-${{ github.run_id }}
+        path: |
+          **/target/**/*.log
+          **/target/exam/**
+          **/target/surefire-reports/**
+        retention-days: 7
