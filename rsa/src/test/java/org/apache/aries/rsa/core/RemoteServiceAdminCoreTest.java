@@ -126,10 +126,10 @@ public class RemoteServiceAdminCoreTest {
 
         c.replay();
 
-        List<ExportRegistration> exRefs = rsaCore.exportService(sref, null);
+        List<ExportRegistration> eregs = rsaCore.exportService(sref, null);
 
-        assertNotNull(exRefs);
-        assertEquals(0, exRefs.size());
+        assertNotNull(eregs);
+        assertEquals(0, eregs.size());
         assertEquals(rsaCore.getExportedServices().size(), 0);
 
         c.verify();

@@ -22,6 +22,6 @@ import org.osgi.service.remoteserviceadmin.ExportRegistration;
 import org.osgi.service.remoteserviceadmin.ImportRegistration;
 
 public interface CloseHandler {
-    public void onClose(ExportRegistration exportReg);
-    public void onClose(ImportRegistration importReg);
+    public void onClose(ExportRegistration ereg);
+    public void onClose(ImportRegistration ireg);
 }

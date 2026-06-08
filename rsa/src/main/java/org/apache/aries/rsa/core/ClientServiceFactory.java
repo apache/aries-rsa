@@ -51,10 +51,10 @@ public class ClientServiceFactory implements ServiceFactory {
     private Map<Object, ImportedService> services = new HashMap<>();
 
     public ClientServiceFactory(EndpointDescription endpoint,
-                                DistributionProvider handler, ImportRegistrationImpl ir) {
+                                DistributionProvider handler, ImportRegistrationImpl ireg) {
         this.endpoint = endpoint;
         this.handler = handler;
-        this.importRegistration = ir;
+        this.importRegistration = ireg;
     }
 
     public Object getService(final Bundle requestingBundle, final ServiceRegistration sreg) {

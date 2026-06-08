@@ -110,11 +110,11 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
 
     @Override
     public void remoteAdminEvent(RemoteServiceAdminEvent event) {
-        ImportReference ref = event.getImportReference();
-        if (event.getType() == RemoteServiceAdminEvent.IMPORT_UNREGISTRATION && ref != null) {
+        ImportReference iref = event.getImportReference();
+        if (event.getType() == RemoteServiceAdminEvent.IMPORT_UNREGISTRATION && iref != null) {
             synchronized (this) {
                 List<ImportRegistration> closing = importedServices.allValues().stream()
-                    .filter(reg -> ref.equals(reg.getImportReference()))
+                    .filter(reg -> iref.equals(reg.getImportReference()))
                     .collect(Collectors.toList()); // make a copy to prevent CME
                 closing.forEach(this::unimportRegistration);
             }
@@ -153,18 +153,18 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
             Set<EndpointDescription> valid = new HashSet<>(); // imports that are still valid and possible
             Set<ImportRegistration> invalid = new LinkedHashSet<>(); // imports that are no longer valid/possible
             Map<ImportRegistration, EndpointDescription> updated = new LinkedHashMap<>(); // valid with changed props
-            for (ImportRegistration reg : imported) {
-                ImportReference ref = reg.getImportReference();
-                EndpointDescription endpoint = ref == null ? null : ref.getImportedEndpoint();
+            for (ImportRegistration ireg : imported) {
+                ImportReference iref = ireg.getImportReference();
+                EndpointDescription endpoint = iref == null ? null : iref.getImportedEndpoint();
                 // check if the currently imported endpoint is still valid and possible
                 EndpointDescription pe = possible.get(endpoint); // get the new (maybe modified) possible endpoint
                 if (pe != null) {
                     if (getChangedKeys(endpoint.getProperties(), pe.getProperties()).isEmpty())
                         valid.add(endpoint); // valid and possible
                     else
-                        updated.put(reg, pe); // valid and possible and changed properties
+                        updated.put(ireg, pe); // valid and possible and changed properties
                 } else {
-                    invalid.add(reg); // invalid (reg or ref or endpoint is null) or no longer possible
+                    invalid.add(ireg); // invalid (reg or ref or endpoint is null) or no longer possible
                 }
             }
             // now that we figured out what needs to be done, apply the changes to each group
@@ -195,23 +195,23 @@ public class TopologyManagerImport implements EndpointEventListener, RemoteServi
      */
     private void importService(String filter, EndpointDescription endpoint) {
         for (RemoteServiceAdmin rsa : rsaSet) {
-            ImportRegistration reg = rsa.importService(endpoint);
-            if (reg != null) {
-                if (reg.getException() == null) {
-                    LOG.debug("Service import was successful {}", reg);
-                    importedServices.put(filter, reg);
+            ImportRegistration ireg = rsa.importService(endpoint);
+            if (ireg != null) {
+                if (ireg.getException() == null) {
+                    LOG.debug("Service import was successful {}", ireg);
+                    importedServices.put(filter, ireg);
                     return;
                 } else {
-                    LOG.warn("Error importing service {}", endpoint, reg.getException());
-                    reg.close();
+                    LOG.warn("Error importing service {}", endpoint, ireg.getException());
+                    ireg.close();
                 }
             }
         }
     }
 
-    private void unimportRegistration(ImportRegistration reg) {
-        importedServices.remove(reg);
-        reg.close();
+    private void unimportRegistration(ImportRegistration ireg) {
+        importedServices.remove(ireg);
+        ireg.close();
     }
 
     @Override

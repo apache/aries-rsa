@@ -50,10 +50,10 @@ public class EventAdminSenderTest {
         EasyMock.replay(epd);
         final ServiceReference sref = EasyMock.createNiceMock(ServiceReference.class);
         EasyMock.replay(sref);
-        final ExportReference er = EasyMock.createNiceMock(ExportReference.class);
-        EasyMock.expect(er.getExportedEndpoint()).andReturn(epd).anyTimes();
-        EasyMock.expect(er.getExportedService()).andReturn(sref).anyTimes();
-        EasyMock.replay(er);
+        final ExportReference eref = EasyMock.createNiceMock(ExportReference.class);
+        EasyMock.expect(eref.getExportedEndpoint()).andReturn(epd).anyTimes();
+        EasyMock.expect(eref.getExportedService()).andReturn(sref).anyTimes();
+        EasyMock.replay(eref);
 
         final Bundle bundle = EasyMock.createNiceMock(Bundle.class);
         EasyMock.expect(bundle.getBundleId()).andReturn(42L).anyTimes();
@@ -93,9 +93,9 @@ public class EventAdminSenderTest {
                 Assert.assertNull(rsae.getException());
                 Assert.assertEquals(RemoteServiceAdminEvent.EXPORT_REGISTRATION, rsae.getType());
                 Assert.assertSame(bundle, rsae.getSource());
-                ExportReference er = rsae.getExportReference();
-                Assert.assertSame(epd, er.getExportedEndpoint());
-                Assert.assertSame(sref, er.getExportedService());
+                ExportReference eref = rsae.getExportReference();
+                Assert.assertSame(epd, eref.getExportedEndpoint());
+                Assert.assertSame(sref, eref.getExportedService());
 
                 return null;
             }
@@ -114,11 +114,11 @@ public class EventAdminSenderTest {
         RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(
                 RemoteServiceAdminEvent.EXPORT_REGISTRATION,
                 bundle,
-                er,
+                eref,
                 null
         );
         new EventAdminSender(bc).send(event);
-        EasyMock.verify(epd, sref, er, ea, eaSref, bc);
+        EasyMock.verify(epd, sref, eref, ea, eaSref, bc);
     }
 
     @Test
@@ -128,10 +128,10 @@ public class EventAdminSenderTest {
         EasyMock.replay(epd);
         final ServiceReference sref = EasyMock.createNiceMock(ServiceReference.class);
         EasyMock.replay(sref);
-        final ExportReference er = EasyMock.createNiceMock(ExportReference.class);
-        EasyMock.expect(er.getExportedEndpoint()).andReturn(epd).anyTimes();
-        EasyMock.expect(er.getExportedService()).andReturn(sref).anyTimes();
-        EasyMock.replay(er);
+        final ExportReference eref = EasyMock.createNiceMock(ExportReference.class);
+        EasyMock.expect(eref.getExportedEndpoint()).andReturn(epd).anyTimes();
+        EasyMock.expect(eref.getExportedService()).andReturn(sref).anyTimes();
+        EasyMock.replay(eref);
 
         final Bundle bundle = EasyMock.createNiceMock(Bundle.class);
         EasyMock.expect(bundle.getBundleId()).andReturn(42L).anyTimes();
@@ -163,9 +163,9 @@ public class EventAdminSenderTest {
                 Assert.assertSame(exportException, rsae.getException());
                 Assert.assertEquals(RemoteServiceAdminEvent.EXPORT_ERROR, rsae.getType());
                 Assert.assertSame(bundle, rsae.getSource());
-                ExportReference er = rsae.getExportReference();
-                Assert.assertSame(epd, er.getExportedEndpoint());
-                Assert.assertSame(sref, er.getExportedService());
+                ExportReference eref = rsae.getExportReference();
+                Assert.assertSame(epd, eref.getExportedEndpoint());
+                Assert.assertSame(sref, eref.getExportedService());
 
                 return null;
             }
@@ -185,10 +185,10 @@ public class EventAdminSenderTest {
         RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(
                 RemoteServiceAdminEvent.EXPORT_ERROR,
                 bundle,
-                er,
+                eref,
                 exportException
         );
         new EventAdminSender(bc).send(event);
-        EasyMock.verify(epd, sref, er, ea, eaSref, bc);
+        EasyMock.verify(epd, sref, eref, ea, eaSref, bc);
     }
 }

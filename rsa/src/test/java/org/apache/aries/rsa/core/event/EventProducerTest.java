@@ -84,9 +84,9 @@ public class EventProducerTest {
         Assert.assertNull(rsae.getException());
         Assert.assertEquals(RemoteServiceAdminEvent.EXPORT_REGISTRATION, rsae.getType());
         Assert.assertSame(bundle, rsae.getSource());
-        ExportReference er = rsae.getExportReference();
-        Assert.assertSame(epd, er.getExportedEndpoint());
-        Assert.assertSame(sref, er.getExportedService());
+        ExportReference eref = rsae.getExportReference();
+        Assert.assertSame(epd, eref.getExportedEndpoint());
+        Assert.assertSame(sref, eref.getExportedService());
 
         c.verify();
     }
