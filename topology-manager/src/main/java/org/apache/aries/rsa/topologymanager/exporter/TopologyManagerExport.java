@@ -143,13 +143,13 @@ public class TopologyManagerExport implements ServiceListener {
 
         LOG.debug("exporting Service {} using RemoteServiceAdmin {}", sref, rsa.getClass().getName());
         Map<String, ?> addProps = policy.additionalParameters(sref);
-        Collection<ExportRegistration> regs = rsa.exportService(sref, addProps);
-        if (regs.isEmpty()) {
+        Collection<ExportRegistration> eregs = rsa.exportService(sref, addProps);
+        if (eregs.isEmpty()) {
             LOG.warn("no supported configs found for exporting service {}", sref);
         }
 
         // process successful/failed registrations
-        for (ExportRegistration reg : regs) {
+        for (ExportRegistration reg : eregs) {
             if (reg.getException() == null) {
                 EndpointDescription endpoint = reg.getExportReference().getExportedEndpoint();
                 LOG.info("TopologyManager: export succeeded for {}, endpoint {}, rsa {}", sref, endpoint, rsa.getClass().getName());
@@ -163,12 +163,12 @@ public class TopologyManagerExport implements ServiceListener {
         // with the unregister event which may have already been handled, so we'll miss it)
         if (sref.getBundle() == null) {
             LOG.info("TopologyManager: export reverted for {} since service was unregistered", sref);
-            for (ExportRegistration reg : regs) {
+            for (ExportRegistration reg : eregs) {
                 reg.close();
             }
         }
 
-        return regs;
+        return eregs;
     }
 
     private boolean shouldExport(ServiceReference<?> sref) {

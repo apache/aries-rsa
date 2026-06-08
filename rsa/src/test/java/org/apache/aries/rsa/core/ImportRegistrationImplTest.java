@@ -35,12 +35,12 @@ public class ImportRegistrationImplTest {
         Exception e = c.createMock(Exception.class);
         c.replay();
 
-        ImportRegistrationImpl i = new ImportRegistrationImpl(null, null, null);
-        i.init(e);
+        ImportRegistrationImpl ireg = new ImportRegistrationImpl(null, null, null);
+        ireg.init(e);
 
-        assertEquals(e, i.getException());
-        assertNull(i.getImportedEndpoint());
-        assertNull(i.getImportedService());
+        assertEquals(e, ireg.getException());
+        assertNull(ireg.getImportedEndpoint());
+        assertNull(ireg.getImportedService());
     }
 
     @Test
@@ -51,10 +51,10 @@ public class ImportRegistrationImplTest {
 
         c.replay();
 
-        ImportRegistrationImpl i = new ImportRegistrationImpl(endpoint, closeHandler, null);
+        ImportRegistrationImpl ireg = new ImportRegistrationImpl(endpoint, closeHandler, null);
 
-        assertNull(i.getException());
-        assertEquals(endpoint, i.getImportedEndpoint());
+        assertNull(ireg.getException());
+        assertEquals(endpoint, ireg.getImportedEndpoint());
     }
 
     @SuppressWarnings("rawtypes")
@@ -70,51 +70,51 @@ public class ImportRegistrationImplTest {
 
         c.replay();
 
-        ImportRegistrationImpl i1 = new ImportRegistrationImpl(endpoint, closeHandler, null);
-        i1.init(null, sr);
+        ImportRegistrationImpl ireg1 = new ImportRegistrationImpl(endpoint, closeHandler, null);
+        ireg1.init(null, sr);
 
-        ImportRegistrationImpl i2 = new ImportRegistrationImpl(i1);
+        ImportRegistrationImpl ireg2 = new ImportRegistrationImpl(ireg1);
 
-        ImportRegistrationImpl i3 = new ImportRegistrationImpl(i2);
+        ImportRegistrationImpl ireg3 = new ImportRegistrationImpl(ireg2);
 
         try {
-            i2.init(null, sr);
+            ireg2.init(null, sr);
             fail("An exception should be thrown here !");
         } catch (IllegalStateException e) {
             // must be thrown here
         }
 
-        assertEquals(endpoint, i1.getImportedEndpoint());
-        assertEquals(endpoint, i2.getImportedEndpoint());
-        assertEquals(endpoint, i3.getImportedEndpoint());
+        assertEquals(endpoint, ireg1.getImportedEndpoint());
+        assertEquals(endpoint, ireg2.getImportedEndpoint());
+        assertEquals(endpoint, ireg3.getImportedEndpoint());
 
         c.verify();
         c.reset();
 
-        closeHandler.onClose(EasyMock.eq(i3));
+        closeHandler.onClose(EasyMock.eq(ireg3));
         EasyMock.expectLastCall().once();
 
         c.replay();
 
-        i3.close();
-        i3.close(); // shouldn't change anything
+        ireg3.close();
+        ireg3.close(); // shouldn't change anything
 
-        assertNull(i3.getImportedEndpoint());
+        assertNull(ireg3.getImportedEndpoint());
 
         c.verify();
         c.reset();
 
-        closeHandler.onClose(EasyMock.eq(i1));
+        closeHandler.onClose(EasyMock.eq(ireg1));
         EasyMock.expectLastCall().once();
 
         c.replay();
 
-        i1.close();
+        ireg1.close();
 
         c.verify();
         c.reset();
 
-        closeHandler.onClose(EasyMock.eq(i2));
+        closeHandler.onClose(EasyMock.eq(ireg2));
         EasyMock.expectLastCall().once();
 
         sr.unregister();
@@ -122,7 +122,7 @@ public class ImportRegistrationImplTest {
 
         c.replay();
 
-        i2.close();
+        ireg2.close();
 
         c.verify();
     }
@@ -135,32 +135,32 @@ public class ImportRegistrationImplTest {
 
         c.replay();
 
-        ImportRegistrationImpl i1 = new ImportRegistrationImpl(endpoint, closeHandler, null);
+        ImportRegistrationImpl ireg1 = new ImportRegistrationImpl(endpoint, closeHandler, null);
 
-        ImportRegistrationImpl i2 = new ImportRegistrationImpl(i1);
+        ImportRegistrationImpl ireg2 = new ImportRegistrationImpl(ireg1);
 
-        ImportRegistrationImpl i3 = new ImportRegistrationImpl(i2);
-
-        c.verify();
-        c.reset();
-
-        closeHandler.onClose(EasyMock.eq(i2));
-        EasyMock.expectLastCall().once();
-
-        c.replay();
-
-        i2.close();
+        ImportRegistrationImpl ireg3 = new ImportRegistrationImpl(ireg2);
 
         c.verify();
         c.reset();
 
-        closeHandler.onClose(EasyMock.eq(i1));
-        EasyMock.expectLastCall().once();
-        closeHandler.onClose(EasyMock.eq(i3));
+        closeHandler.onClose(EasyMock.eq(ireg2));
         EasyMock.expectLastCall().once();
 
         c.replay();
-        i3.closeAll();
+
+        ireg2.close();
+
+        c.verify();
+        c.reset();
+
+        closeHandler.onClose(EasyMock.eq(ireg1));
+        EasyMock.expectLastCall().once();
+        closeHandler.onClose(EasyMock.eq(ireg3));
+        EasyMock.expectLastCall().once();
+
+        c.replay();
+        ireg3.closeAll();
         c.verify();
     }
 }

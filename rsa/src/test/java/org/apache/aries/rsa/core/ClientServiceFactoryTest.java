@@ -46,7 +46,7 @@ public class ClientServiceFactoryTest {
 
         IMocksControl control = EasyMock.createControl();
         EndpointDescription endpoint = createTestEndpointDesc();
-        ImportRegistrationImpl iri = new ImportRegistrationImpl(endpoint, null, null);
+        ImportRegistrationImpl ireg = new ImportRegistrationImpl(endpoint, null, null);
 
         BundleContext consumerContext = control.createMock(BundleContext.class);
         Bundle consumerBundle = control.createMock(Bundle.class);
@@ -59,7 +59,7 @@ public class ClientServiceFactoryTest {
         DistributionProvider handler = mockDistributionProvider(myTestProxyObject);
         control.replay();
 
-        ClientServiceFactory csf = new ClientServiceFactory(endpoint, handler, iri);
+        ClientServiceFactory csf = new ClientServiceFactory(endpoint, handler, ireg);
         assertSame(myTestProxyObject, csf.getService(consumerBundle, sreg));
     }
 
