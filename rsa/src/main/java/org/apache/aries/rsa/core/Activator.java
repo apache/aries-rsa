@@ -36,13 +36,13 @@ public class Activator implements BundleActivator {
     private EventListenerBridge bridge;
 
     public void start(BundleContext bundlecontext) throws Exception {
-        tracker = new DistributionProviderTracker(bundlecontext);
-        tracker.open();
         // enable optional event listener bridge for backwards compatibility
         if (Boolean.getBoolean("org.apache.aries.rsa.bridge")) {
             bridge = new EventListenerBridge(bundlecontext);
             bridge.start();
         }
+        tracker = new DistributionProviderTracker(bundlecontext);
+        tracker.open();
     }
 
     public void stop(BundleContext context) throws Exception {

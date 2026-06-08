@@ -28,9 +28,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.singleton;
+import static org.apache.aries.rsa.util.CollectionUtils.getChangedKeys;
 import static org.apache.aries.rsa.util.CollectionUtils.union;
 
 /**
@@ -158,24 +160,35 @@ public class LocalEndpointManager {
         EndpointDescription endpoint = event.getEndpoint();
         LOG.debug("got endpointChanged event of type {} from bundle {}: {}",
             event.getType(), bundleId, endpoint);
+        // according to the spec this interface should be idempotent, however
+        // the TCK is picky about its event testing so we make an effort to
+        // notify only when there was a real update
+        AtomicBoolean updated = new AtomicBoolean(false);
         switch (event.getType()) {
             case EndpointEvent.ADDED:
             case EndpointEvent.MODIFIED:
                 localEndpoints.compute(endpoint.getId(),
-                    (e, eb) -> new EndpointBundles(endpoint,
-                        eb == null ? singleton(bundleId) : union(eb.bundleIds, singleton(bundleId))));
+                    (e, eb) -> {
+                        Set<Long> ids = eb == null ? singleton(bundleId) : union(eb.bundleIds, singleton(bundleId));
+                        updated.set(eb == null || !eb.bundleIds.equals(ids)
+                            || !getChangedKeys(eb.endpoint.getProperties(), endpoint.getProperties()).isEmpty());
+                        return new EndpointBundles(endpoint, ids);
+                    });
                 break;
             case EndpointEvent.REMOVED:
             case EndpointEvent.MODIFIED_ENDMATCH:
                 localEndpoints.computeIfPresent(endpoint.getId(),
                     (e, eb) -> {
-                        Set<Long> bundleIds = eb.bundleIds.stream()
+                        Set<Long> ids = eb.bundleIds.stream()
                             .filter(id -> !bundleId.equals(id))
                             .collect(Collectors.toSet());
-                        return bundleIds.isEmpty() ? null : new EndpointBundles(endpoint, bundleIds);
+                        updated.set(!eb.bundleIds.equals(ids));
+                        return ids.isEmpty() ? null : new EndpointBundles(endpoint, ids);
                     });
                 break;
         }
-        listener.endpointChanged(event, filter);
+        if (updated.get()) {
+            listener.endpointChanged(event, filter);
+        }
     }
 }
