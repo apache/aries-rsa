@@ -74,15 +74,15 @@ public class TopologyManagerImportTest {
         props.put(RemoteConstants.SERVICE_IMPORTED_CONFIGS, "config1");
         EndpointDescription endpoint = new EndpointDescription(props);
 
-        final ImportRegistration ir = mockImportRegistration(c, endpoint, expectUpdate);
-        ir.close(); // must be closed
+        final ImportRegistration ireg = mockImportRegistration(c, endpoint, expectUpdate);
+        ireg.close(); // must be closed
         expectLastCall().andAnswer(() -> {
             endpoints.get(endpoint).decrementAndGet();
             return null;
         });
         expect(rsa.importService(eq(endpoint))).andAnswer(() -> {
             endpoints.get(endpoint).incrementAndGet();
-            return ir;
+            return ireg;
         });
         endpoints.put(endpoint, new AtomicInteger());
         return endpoint;

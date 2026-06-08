@@ -67,21 +67,21 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
         /**
          * Add a linked ImportRegistration instance to the shared data.
          *
-         * @param ir the instance to add
+         * @param ireg the instance to add
          */
-        private synchronized void addInstance(ImportRegistrationImpl ir) {
-            instances.add(ir);
+        private synchronized void addInstance(ImportRegistrationImpl ireg) {
+            instances.add(ireg);
         }
 
         /**
          * Remove a linked ImportRegistration from the shared data.
          *
-         * @param ir the instance to remove
+         * @param ireg the instance to remove
          */
-        private void removeInstance(ImportRegistrationImpl ir) {
+        private void removeInstance(ImportRegistrationImpl ireg) {
             // close the underlying service only once on the last remove (not before or after)
             synchronized (this) {
-                boolean removed = instances.remove(ir);
+                boolean removed = instances.remove(ireg);
                 if (!removed || !instances.isEmpty()) {
                     return;
                 }
@@ -109,8 +109,8 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
                 copy = new ArrayList<>(instances);
             }
             LOG.info("closing all linked ImportRegistrations");
-            for (ImportRegistrationImpl ir : copy) {
-                ir.close();
+            for (ImportRegistrationImpl ireg : copy) {
+                ireg.close();
             }
         }
     }
@@ -145,10 +145,10 @@ public class ImportRegistrationImpl implements ImportRegistration, ImportReferen
      * <p>
      * The {@link #close} method must eventually be invoked on this instance.
      *
-     * @param ir the import registration that this instance is linked to
+     * @param ireg the import registration that this instance is linked to
      */
-    public ImportRegistrationImpl(ImportRegistration ir) {
-        shared = ((ImportRegistrationImpl)ir).shared;
+    public ImportRegistrationImpl(ImportRegistration ireg) {
+        shared = ((ImportRegistrationImpl)ireg).shared;
         shared.addInstance(this);
     }
 

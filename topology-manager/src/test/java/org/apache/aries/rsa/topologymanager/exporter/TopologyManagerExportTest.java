@@ -160,9 +160,9 @@ public class TopologyManagerExportTest {
     private void expectServiceExported(
             final ServiceReference sref,
             EndpointDescription epd) {
-        ExportRegistration exportRegistration = createExportRegistration(c, epd);
+        ExportRegistration ereg = createExportRegistration(c, epd);
         expect(rsa.exportService(EasyMock.same(sref), EasyMock.anyObject()))
-            .andReturn(Collections.singletonList(exportRegistration)).once();
+            .andReturn(Collections.singletonList(ereg)).once();
     }
 
     private Executor syncExecutor() {
@@ -175,15 +175,15 @@ public class TopologyManagerExportTest {
     }
 
     private ExportRegistration createExportRegistration(IMocksControl c, EndpointDescription endpoint) {
-        ExportRegistration exportRegistration = c.createMock(ExportRegistration.class);
-        ExportReference exportReference = c.createMock(ExportReference.class);
-        expect(exportRegistration.getExportReference()).andReturn(exportReference).anyTimes();
-        expect(exportRegistration.getException()).andReturn(null).anyTimes();
-        expect(exportReference.getExportedEndpoint()).andReturn(endpoint).anyTimes();
-        exportRegistration.close();
+        ExportRegistration ereg = c.createMock(ExportRegistration.class);
+        ExportReference eref = c.createMock(ExportReference.class);
+        expect(ereg.getExportReference()).andReturn(eref).anyTimes();
+        expect(ereg.getException()).andReturn(null).anyTimes();
+        expect(eref.getExportedEndpoint()).andReturn(endpoint).anyTimes();
+        ereg.close();
         expectLastCall().anyTimes();
-        expect(exportRegistration.update(EasyMock.anyObject(Map.class))).andReturn(endpoint).anyTimes();
-        return exportRegistration;
+        expect(ereg.update(EasyMock.anyObject(Map.class))).andReturn(endpoint).anyTimes();
+        return ereg;
     }
 
     private EndpointDescription createEndpoint() {

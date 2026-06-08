@@ -44,47 +44,47 @@ public class EventProducer {
         eventAdminSender = new EventAdminSender(bc);
     }
 
-    public void publishNotification(List<ExportRegistration> erl) {
-        for (ExportRegistration exportRegistration : erl) {
+    public void publishNotification(List<ExportRegistration> ereg) {
+        for (ExportRegistration exportRegistration : ereg) {
             publishNotification(exportRegistration);
         }
     }
 
-    protected void publishNotification(ExportRegistration er) {
-        if (er.getException() == null) {
-            notify(RemoteServiceAdminEvent.EXPORT_REGISTRATION, er.getExportReference(), null);
+    protected void publishNotification(ExportRegistration ereg) {
+        if (ereg.getException() == null) {
+            notify(RemoteServiceAdminEvent.EXPORT_REGISTRATION, ereg.getExportReference(), null);
         } else {
-            notify(RemoteServiceAdminEvent.EXPORT_ERROR, (ExportReference) null, er.getException());
+            notify(RemoteServiceAdminEvent.EXPORT_ERROR, (ExportReference) null, ereg.getException());
         }
     }
 
-    public void publishNotification(ImportRegistration ir) {
-        if (ir.getException() == null) {
-            notify(RemoteServiceAdminEvent.IMPORT_REGISTRATION, ir.getImportReference(), null);
+    public void publishNotification(ImportRegistration ireg) {
+        if (ireg.getException() == null) {
+            notify(RemoteServiceAdminEvent.IMPORT_REGISTRATION, ireg.getImportReference(), null);
         } else {
-            notify(RemoteServiceAdminEvent.IMPORT_ERROR, (ImportReference) null, ir.getException());
+            notify(RemoteServiceAdminEvent.IMPORT_ERROR, (ImportReference) null, ireg.getException());
         }
     }
 
-    public void notifyRemoval(ExportReference er) {
-        notify(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, er, null);
+    public void notifyRemoval(ExportReference eref) {
+        notify(RemoteServiceAdminEvent.EXPORT_UNREGISTRATION, eref, null);
     }
 
-    public void notifyRemoval(ImportRegistration ir) {
-        notify(RemoteServiceAdminEvent.IMPORT_UNREGISTRATION, ir.getImportReference(), null);
+    public void notifyRemoval(ImportRegistration ireg) {
+        notify(RemoteServiceAdminEvent.IMPORT_UNREGISTRATION, ireg.getImportReference(), null);
     }
 
-    private void notify(int type, ExportReference er, Throwable ex) {
+    private void notify(int type, ExportReference eref, Throwable ex) {
         try {
-            RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(type, bctx.getBundle(), er, ex);
+            RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(type, bctx.getBundle(), eref, ex);
             notifyListeners(event);
         } catch (IllegalStateException ise) {
             LOG.debug("can't send notifications since bundle context is no longer valid");
         }
     }
-    private void notify(int type, ImportReference ir, Throwable ex) {
+    private void notify(int type, ImportReference iref, Throwable ex) {
         try {
-            RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(type, bctx.getBundle(), ir, ex);
+            RemoteServiceAdminEvent event = new RemoteServiceAdminEvent(type, bctx.getBundle(), iref, ex);
             notifyListeners(event);
         } catch (IllegalStateException ise) {
             LOG.debug("can't send notifications since bundle context is no longer valid");
@@ -121,11 +121,11 @@ public class EventProducer {
         eventAdminSender.send(rsae);
     }
 
-    public void notifyUpdate(ExportReference exportRef) {
-        notify(RemoteServiceAdminEvent.EXPORT_UPDATE, exportRef, null);
+    public void notifyUpdate(ExportReference eref) {
+        notify(RemoteServiceAdminEvent.EXPORT_UPDATE, eref, null);
     }
 
-    public void notifyUpdate(ImportRegistration importReg) {
-        notify(RemoteServiceAdminEvent.IMPORT_UPDATE, importReg.getImportReference(), importReg.getException());
+    public void notifyUpdate(ImportRegistration ireg) {
+        notify(RemoteServiceAdminEvent.IMPORT_UPDATE, ireg.getImportReference(), ireg.getException());
     }
 }

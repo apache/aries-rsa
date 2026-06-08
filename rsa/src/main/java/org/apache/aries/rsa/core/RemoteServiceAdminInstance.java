@@ -58,11 +58,11 @@ public class RemoteServiceAdminInstance implements RemoteServiceAdmin, CloseHand
 
     @Override
     public List<ExportRegistration> exportService(final ServiceReference ref, final Map properties) {
-        List<ExportRegistration> regs = rsaCore.exportService(ref, properties);
+        List<ExportRegistration> ereg = rsaCore.exportService(ref, properties);
         // we need to keep track of our open registrations, and be notified when they are closed
-        regs.forEach(reg -> ((ExportRegistrationImpl)reg).addCloseHandler(this));
-        exportRegistrations.addAll(regs);
-        return regs;
+        ereg.forEach(reg -> ((ExportRegistrationImpl)reg).addCloseHandler(this));
+        exportRegistrations.addAll(ereg);
+        return ereg;
     }
 
     @Override
@@ -81,14 +81,14 @@ public class RemoteServiceAdminInstance implements RemoteServiceAdmin, CloseHand
     public ImportRegistration importService(final EndpointDescription endpoint) {
         String frameworkUUID = context.getProperty(Constants.FRAMEWORK_UUID);
         checkPermission(new EndpointPermission(endpoint, frameworkUUID, EndpointPermission.IMPORT));
-        ImportRegistration reg = AccessController.doPrivileged((PrivilegedAction<ImportRegistration>)
+        ImportRegistration ireg = AccessController.doPrivileged((PrivilegedAction<ImportRegistration>)
             () -> rsaCore.importService(endpoint));
-        if (reg != null) {
+        if (ireg != null) {
             // we need to keep track of our open registrations, and be notified when they are closed
-            ((ImportRegistrationImpl)reg).addCloseHandler(this);
-            importRegistrations.add(reg);
+            ((ImportRegistrationImpl)ireg).addCloseHandler(this);
+            importRegistrations.add(ireg);
         }
-        return reg;
+        return ireg;
     }
 
     /**
@@ -107,12 +107,12 @@ public class RemoteServiceAdminInstance implements RemoteServiceAdmin, CloseHand
     }
 
     @Override
-    public void onClose(ExportRegistration reg) {
-        exportRegistrations.remove(reg); // registration was closed, no need to track it anymore
+    public void onClose(ExportRegistration ereg) {
+        exportRegistrations.remove(ereg); // registration was closed, no need to track it anymore
     }
 
     @Override
-    public void onClose(ImportRegistration reg) {
-        importRegistrations.remove(reg); // registration was closed, no need to track it anymore
+    public void onClose(ImportRegistration ireg) {
+        importRegistrations.remove(ireg); // registration was closed, no need to track it anymore
     }
 }

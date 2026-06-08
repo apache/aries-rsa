@@ -130,10 +130,10 @@ public class EventAdminSender {
         }
 
         // endpoint properties
-        ImportReference importReference = rsae.getImportReference();
-        ExportReference exportReference = rsae.getExportReference();
-        EndpointDescription endpoint = importReference == null ? null : importReference.getImportedEndpoint();
-        endpoint = endpoint == null && exportReference != null ? exportReference.getExportedEndpoint() : endpoint;
+        ImportReference iref = rsae.getImportReference();
+        ExportReference eref = rsae.getExportReference();
+        EndpointDescription endpoint = iref == null ? null : iref.getImportedEndpoint();
+        endpoint = endpoint == null && eref != null ? eref.getExportedEndpoint() : endpoint;
         if (endpoint != null) {
             putIfNotNull(props, "endpoint.service.id", endpoint.getServiceId());
             putIfNotNull(props, "endpoint.framework.uuid", endpoint.getFrameworkUUID());

@@ -63,13 +63,13 @@ public class ServiceExportsRepository implements Closeable {
         new ArrayList<>(exports.keySet()).forEach(this::removeService); // iterate over copy to avoid CME
     }
 
-    public synchronized void addService(ServiceReference<?> sref, Collection<ExportRegistration> registrations) {
+    public synchronized void addService(ServiceReference<?> sref, Collection<ExportRegistration> eregs) {
         Map<ExportRegistration, EndpointDescription> regs = new LinkedHashMap<>();
-        for (ExportRegistration reg : registrations) {
-            ExportReference ref = reg.getException() != null ? null : reg.getExportReference();
-            EndpointDescription endpoint = ref == null ? null : ref.getExportedEndpoint();
+        for (ExportRegistration ereg : eregs) {
+            ExportReference eref = ereg.getException() != null ? null : ereg.getExportReference();
+            EndpointDescription endpoint = eref == null ? null : eref.getExportedEndpoint();
             if (endpoint != null) {
-                regs.put(reg, endpoint);
+                regs.put(ereg, endpoint);
                 notifier.sendEvent(new EndpointEvent(EndpointEvent.ADDED, endpoint));
             }
         }
@@ -79,10 +79,10 @@ public class ServiceExportsRepository implements Closeable {
     }
 
     public synchronized void modifyService(ServiceReference<?> sref) {
-        Map<ExportRegistration, EndpointDescription> regs = exports.get(sref);
-        if (regs != null) {
+        Map<ExportRegistration, EndpointDescription> eregs = exports.get(sref);
+        if (eregs != null) {
             Map<String, ?> props = getServiceProps(sref);
-            for (Map.Entry<ExportRegistration, EndpointDescription> entry: regs.entrySet()) {
+            for (Map.Entry<ExportRegistration, EndpointDescription> entry: eregs.entrySet()) {
                 try {
                     EndpointDescription updated = entry.getKey().update(props);
                     if (updated != null) {
@@ -97,11 +97,11 @@ public class ServiceExportsRepository implements Closeable {
     }
 
     public synchronized void removeService(ServiceReference<?> sref) {
-        Map<ExportRegistration, EndpointDescription> regs = exports.remove(sref);
-        if (regs != null) {
-            regs.forEach((reg, endpoint) -> {
+        Map<ExportRegistration, EndpointDescription> eregs = exports.remove(sref);
+        if (eregs != null) {
+            eregs.forEach((ereg, endpoint) -> {
                 notifier.sendEvent(new EndpointEvent(EndpointEvent.REMOVED, endpoint));
-                reg.close();
+                ereg.close();
             });
         }
     }
