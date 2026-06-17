@@ -189,9 +189,10 @@ public class TcpConnectionManager implements EndpointEventListener {
         LOG.debug("received message {} on connection {}", message, conn);
         if (message instanceof HandshakeMessage) {
             HandshakeMessage h = (HandshakeMessage) message;
+            String peerUuid = h.getUuid();
             // update the peer data
             conn.setPeerAddress(h.getAddress());
-            conn.setPeerUuid(h.getUuid());
+            conn.setPeerUuid(peerUuid);
             // if gossip is enabled, try adding all of this peer's peers,
             // as well as the peer itself (in case it found us via its
             // own gossip, and we haven't met before)
@@ -200,21 +201,54 @@ public class TcpConnectionManager implements EndpointEventListener {
                 addPeers(Collections.singleton(h.getAddress()));
             }
             // if we already have another connection with this peer (e.g. reverse direction)
-            // then we keep the old one (which is already in use) and close the new one
-            boolean existing = connectionsByUuid.putIfAbsent(h.getUuid(), conn) != null;
+            // then we use the outbound connection from the peer with the higher uuid -
+            // this way both peers agree on which connection to use in case of a race.
+            // Once the decision is made about which connection to keep and which to close,
+            // there is still the question of which side performs the closing:
+            // there is a possible race condition where one peer receives the handshake
+            // and closes the connection before it even had a chance to send its handshake -
+            // so the other peer will never know that the connection is intentionally closed
+            // and not simply experiencing connection errors. If it is the outbound side, it
+            // will keep retrying to connect. to solve this, only the outbound originator is the
+            // one that closes the connection. The inbound side just avoids using it until then.
+            boolean existing = connectionsByUuid.putIfAbsent(peerUuid, conn) != null;
             if (existing) {
-                // both sides can check if a connection between them already exists, but
-                // there is a possible race condition where one peer receives the handshake
-                // and closes the connection before it even had a chance to send its handshake -
-                // so the other peer will never know the connection is intentionally closed
-                // and not experiencing connection errors. If it is the outbound side, it will
-                // keep retrying to connect. to solve this, only the outbound peer is the one
-                // that closes the connection. The inbound side just doesn't use it until then.
-                if (conn.isOutbound()) {
-                    LOG.debug("connection already exists with peer {}, closing {}", h.getUuid(), conn);
-                    conn.close();
+                boolean winner = localUuid.compareTo(peerUuid) > 0; // we have higher uuid
+                TcpConnection prev = null;
+                if (winner) {
+                    if (conn.isOutbound()) {
+                        // new connection is our winner outbound -
+                        // use it instead of existing (and loser peer will close their outbound)
+                        prev = connectionsByUuid.put(peerUuid, conn);
+                        LOG.debug("connection already exists with peer {}, switching from {} to {}",
+                            peerUuid, prev, conn);
+                    } else {
+                        // new connection is the loser's outbound (our inbound) -
+                        // leave the existing winner outbound as-is
+                        LOG.debug("connection already exists with peer {}, ignoring {}",
+                            peerUuid, conn);
+                    }
+                } else {
+                    if (conn.isOutbound()) {
+                        // new connection is our loser outbound -
+                        // close it and leave the existing winner outbound as-is
+                        LOG.debug("connection already exists with peer {}, ignoring {} and closing it",
+                            peerUuid, conn);
+                        conn.close();
+                    } else {
+                        // new connection is the winner's outbound (our inbound) -
+                        // use it instead of existing and close our outbound
+                        prev = connectionsByUuid.put(peerUuid, conn);
+                        LOG.debug("connection already exists with peer {}, switching from {} to {} and closing",
+                            peerUuid, prev, conn);
+                        prev.close();
+                    }
                 }
-                return;
+                // if we didn't swap connections, we already sent the known endpoints
+                // on the existing connection so no need to send them again
+                if (prev == null) {
+                    return;
+                }
             }
             // send all of our known local endpoints to the new peer
             localEndpointManager.getEndpoints().forEach(
