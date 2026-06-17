@@ -125,7 +125,7 @@ public class LocalEndpointManager {
         @Override
         public EndpointEventListener getService(Bundle bundle, ServiceRegistration<EndpointEventListener> registration) {
             long bundleId = bundle.getBundleId();
-            LOG.debug("service factory getting EndpointEventListener for bundle {} ({})",
+            LOG.trace("service factory getting EndpointEventListener for bundle {} ({})",
                 bundleId, bundle.getSymbolicName());
             return ((event, filter) -> endpointChanged(event, filter, bundleId));
         }
@@ -133,11 +133,15 @@ public class LocalEndpointManager {
         @Override
         public void ungetService(Bundle bundle, ServiceRegistration<EndpointEventListener> registration, EndpointEventListener service) {
             long bundleId = bundle.getBundleId();
-            LOG.debug("service factory ungetting EndpointEventListener for bundle {} ({})",
-                bundleId, bundle.getSymbolicName());
-            localEndpoints.values().stream()
-                .filter(eb -> eb.bundleIds.contains(bundleId))
-                .forEach(eb -> endpointChanged(new EndpointEvent(EndpointEvent.REMOVED, eb.endpoint), "", bundleId));
+            LOG.trace("service factory ungetting EndpointEventListener for bundle {} ({}) state {}",
+                bundleId, bundle.getSymbolicName(), bundle.getState());
+            if (bundle.getState() == Bundle.STOPPING) {
+                LOG.debug("bundle {} is stopping ({}), removing all of its endpoints",
+                    bundleId, bundle.getSymbolicName());
+                localEndpoints.values().stream()
+                    .filter(eb -> eb.bundleIds.contains(bundleId))
+                    .forEach(eb -> endpointChanged(new EndpointEvent(EndpointEvent.REMOVED, eb.endpoint), "", bundleId));
+            }
         }
     }
 
