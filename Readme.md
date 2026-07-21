@@ -26,10 +26,23 @@ The discovery providers are responsible for finding the available endpoint descr
 
 ## Releasing
 
+### Dry run the release
+
+```bash
+./mvnw clean release:prepare -DreleaseArguments="-DskipTests=true -Dbnd.testing.skip=true"  -DdryRun
+./mvnw release:perform -DreleaseArguments="-DskipTests=true -Dbnd.testing.skip=true"  -DdryRun
+# Check the generated poms and cleanup before real release
+git add .
+git reset --hard
+rm release.properties
+```
+
 ### Maven release
 
-    ./mvnw clean release:prepare -DskipTests -Darguments=-DskipTests
-    ./mvnw release:perform -DskipTests -Darguments=-DskipTests
+```bash
+./mvnw clean release:prepare -DreleaseArguments="-DskipTests=true -Dbnd.testing.skip=true"
+./mvnw release:perform -DreleaseArguments="-DskipTests=true -Dbnd.testing.skip=true"
+```
 
 This creates a staging repository. After all artifacts are deployed login to the [Apache maven repo](https://repository.apache.org) and close the staging repository.
 
