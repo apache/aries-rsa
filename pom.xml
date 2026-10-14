@@ -58,17 +58,6 @@
         <module>itests</module>
     </modules>
 
-    <profiles>
-        <profile>
-            <id>rat</id>
-            <build>
-                <plugins>
-
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <build>
         <defaultGoal>install</defaultGoal>
         <plugins>
@@ -96,6 +85,7 @@
                         <autoVersionSubmodules>true</autoVersionSubmodules>
                         <mavenExecutorId>forked-path</mavenExecutorId>
                         <tagNameFormat>org.apache.aries.rsa-@{project.version}</tagNameFormat>
+                        <arguments>-Daether.connector.basic.parallelPut=${releaseParallelPut} ${releaseArguments}</arguments>
                     </configuration>
                 </plugin>
             </plugins>
