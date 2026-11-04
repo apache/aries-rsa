@@ -36,7 +36,7 @@
 
     <properties>
         <asm.version>9.10.1</asm.version>
-        <cxf.version>3.5.11</cxf.version>
+        <cxf.version>4.2.2</cxf.version>
     </properties>
 
     <dependencies>
